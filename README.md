@@ -182,7 +182,7 @@ g++ -I./include test.cpp -lboost_iostreams-mt -lboost_system-mt -lboost_filesyst
 
 ## License
 
-[Specify your license here - e.g., MIT, Apache 2.0, GPL, etc.]
+ Apache 2.0
 
 ---
 
