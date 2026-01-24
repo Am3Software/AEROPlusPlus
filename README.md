@@ -1,6 +1,6 @@
 # AERO++
 
-A C++ header-only library for [brief description of what AERO++ does].
+A C++ header-only library for aeronautical engineering, statistical analysis, and data visualization
 
 ## Features
 
@@ -62,7 +62,7 @@ pacman -S make
 1. **Clone the repository:**
 ```bash
 git clone https://github.com/Am3Software/AEROPlusPlus.git
-cd AERoPlusPlus
+cd AEROPlusPlus
 ```
 
 2. **Build the test:**
@@ -98,14 +98,14 @@ g++ -I./include test/RegressionTest.cpp -lboost_iostreams -lboost_system -o Regr
 2. Add the include path to your compiler:
 
 ```cpp
-#include "AERoPlusPlus/include/your_header.h"
+#include "AEROPlusPlus/include/your_header.h"
 #include <Eigen/Dense>
 #include "gnuplot-iostream.h"
 ```
 
 Compile with:
 ```bash
-g++ -I/path/to/AERoPlusPlus/include your_code.cpp -lboost_iostreams -lboost_system -o your_program
+g++ -I/path/to/AEROPlusPlus/include your_code.cpp -lboost_iostreams -lboost_system -o your_program
 ```
 
 ### Method 2: CMake integration
@@ -114,7 +114,7 @@ Add to your `CMakeLists.txt`:
 
 ```cmake
 # Add include directory
-include_directories(/path/to/AERoPlusPlus/include)
+include_directories(/path/to/AEROPlusPlus/include)
 
 # Find Boost
 find_package(Boost COMPONENTS iostreams system filesystem REQUIRED)
@@ -129,7 +129,7 @@ target_link_libraries(your_program ${Boost_LIBRARIES})
 ## Project Structure
 
 ```
-AERoPlusPlus/
+AEROPlusPlus/
 ├── include/              # Header files
 │   ├── Eigen/           # Eigen library (included)
 │   ├── gnuplot-iostream.h  # Gnuplot wrapper (included)
