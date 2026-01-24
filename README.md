@@ -61,7 +61,7 @@ pacman -S make
 
 1. **Clone the repository:**
 ```bash
-git clone https://github.com/AmedeoFalco/AERoPlusPlus.git
+git clone https://github.com/Am3Software/AEROPlusPlus.git
 cd AERoPlusPlus
 ```
 
