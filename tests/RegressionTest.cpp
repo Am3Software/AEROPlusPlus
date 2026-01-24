@@ -52,7 +52,7 @@ int main()
 
     //============================= Excel Reader Test ==============================
 
-    ExcelReader excelReader("ExcelFiles", "UNINA_UAV_Statistics_Input.xlsx");
+    ExcelReader excelReader("ExcelFiles", "Test.xlsx");
     
 
     excelReader.getData("FUSELAGE", 3, 1, 2, 3);
