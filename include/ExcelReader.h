@@ -17,6 +17,7 @@
 #include "ConvPower.h"
 #include "ConvForce.h"
 #include "ConvAngle.h"
+#include "ConvArea.h"
 
 /// @brief Constructs an ExcelReader object and opens the specified Excel file.
 /// @param folderName The name of the folder containing the Excel file.
@@ -80,7 +81,7 @@ private:
         
         worksheet = workbook.workbook().worksheet("INFO");
 
-        for (int col = 22; col <= 26; col++)
+        for (int col = 22; col <= 27; col++)
         {
             std::string unit = worksheet.cell(OpenXLSX::XLCellReference(3, col)).value().get<std::string>();
             units.emplace_back(unit);
@@ -221,6 +222,22 @@ private:
             xData = convAngle.getConvertedValues();
         }
 
+        else if (unitToPassX == "ft^2" && detectedUnits[5] == "m^2")
+        {
+
+            ConvArea convArea(Area::SQUARE_METER, Area::SQUARE_FEET, xData);
+
+            xData = convArea.getConvertedValues();
+        }
+
+        else if (unitToPassX == "m^2" && detectedUnits[5] == "ft^2")
+        {
+
+            ConvArea convArea(Area::SQUARE_FEET, Area::SQUARE_METER, xData);
+
+            xData = convArea.getConvertedValues();
+        }
+
         return xData;
     }
 
@@ -348,6 +365,22 @@ private:
             ConvAngle convAngle(Angle::DEG, Angle::RAD, yData);
 
             yData = convAngle.getConvertedValues();
+        }
+
+        else if (unitToPassY == "ft^2" && detectedUnits[5] == "m^2")
+        {
+
+            ConvArea convArea(Area::SQUARE_METER, Area::SQUARE_FEET, yData);
+
+            yData = convArea.getConvertedValues();
+        }
+
+        else if (unitToPassY == "m^2" && detectedUnits[5] == "ft^2")
+        {
+
+            ConvArea convArea(Area::SQUARE_FEET, Area::SQUARE_METER, yData);
+
+            yData = convArea.getConvertedValues();
         }
         
 
