@@ -49,6 +49,10 @@ endif()
 # ==========================================
 add_executable(RegressionTest test/RegressionTest.cpp)
 
+# Copia ExcelFiles nella cartella build
+file(COPY ${CMAKE_SOURCE_DIR}/ExcelFiles 
+     DESTINATION ${CMAKE_BINARY_DIR})
+
 # Link libraries to test
 target_link_libraries(RegressionTest 
     ${Boost_LIBRARIES}
