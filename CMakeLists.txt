@@ -13,20 +13,20 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 # ==========================================
 # OpenXLSX (optional - uncomment if needed)
 # ==========================================
-# find_package(OpenXLSX QUIET)
-# 
-# if(NOT OpenXLSX_FOUND)
-#     message(STATUS "OpenXLSX not found, downloading via FetchContent")
-#     include(FetchContent)
-#     
-#     FetchContent_Declare(
-#         OpenXLSX
-#         GIT_REPOSITORY https://github.com/troldal/OpenXLSX.git
-#         GIT_TAG        v0.4.0
-#     )
-#     
-#     FetchContent_MakeAvailable(OpenXLSX)
-# endif()
+ find_package(OpenXLSX QUIET)
+ 
+ if(NOT OpenXLSX_FOUND)
+     message(STATUS "OpenXLSX not found, downloading via FetchContent")
+     include(FetchContent)
+     
+     FetchContent_Declare(
+         OpenXLSX
+         GIT_REPOSITORY https://github.com/troldal/OpenXLSX.git
+         GIT_TAG        v0.4.0
+     )
+     
+     FetchContent_MakeAvailable(OpenXLSX)
+ endif()
 
 # ==========================================
 # Boost (required for gnuplot-iostream)
@@ -52,7 +52,7 @@ add_executable(RegressionTest test/RegressionTest.cpp)
 # Link libraries to test
 target_link_libraries(RegressionTest 
     ${Boost_LIBRARIES}
-    # OpenXLSX::OpenXLSX  # Uncomment if using OpenXLSX
+    OpenXLSX::OpenXLSX  # Uncomment if using OpenXLSX
 )
 
 # ==========================================

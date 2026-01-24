@@ -8,8 +8,8 @@
 #include <sstream>
 #include <vector>
 #include <utility>
-#include "include/Interpolant.h"
-#include "include/RegressionMethod.h"
+#include "Interpolant.h"
+#include "RegressionMethod.h"
 #include "ExcelReader.h"
 #include "EnumMASS.h"
 #include "ConvMass.h"
@@ -52,7 +52,7 @@ int main()
 
     //============================= Excel Reader Test ==============================
 
-    ExcelReader excelReader("ExcelFiles", "Test.xlsx");
+    ExcelReader excelReader("ExcelFiles", "UNINA_UAV_Statistics_Input.xlsx");
     
 
     excelReader.getData("FUSELAGE", 3, 1, 2, 3);

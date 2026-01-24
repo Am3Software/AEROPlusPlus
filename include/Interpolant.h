@@ -13,9 +13,7 @@
 #include <string>
 #include <algorithm>
 #include <cctype>
-#include "matplotlibcpp.h"
 
-namespace plt = matplotlibcpp;
 
 /// =========================== Constructor ==============================
 /**
