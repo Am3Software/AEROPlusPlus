@@ -427,7 +427,7 @@ int main()
         const auto &headers = reader.getHeaders();
 
         std::cout << "\n--- POLAR DATA ---" << std::endl;
-        
+
         for (const auto &point : polarData)
         {
             std::cout << "AoA: " << point.AoA
@@ -436,7 +436,7 @@ int main()
                       << std::endl;
         }
 
-        std::cout << "\nHeaders:" << std::endl;
+        std::cout << "\n--- HEADERS ---" << std::endl;
 
         for (const auto &header : headers)
         {
@@ -445,7 +445,7 @@ int main()
     }
     catch (const std::exception &e)
     {
-        std::cerr << "ERRORE: " << e.what() << std::endl;
+        std::cerr << "ERROR: " << e.what() << std::endl;
         return 1;
     }
 
