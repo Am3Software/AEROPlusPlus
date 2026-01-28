@@ -426,6 +426,8 @@ int main()
 
         const auto &headers = reader.getHeaders();
 
+        std::cout << "\n--- POLAR DATA ---" << std::endl;
+        
         for (const auto &point : polarData)
         {
             std::cout << "AoA: " << point.AoA
