@@ -36,6 +36,7 @@ int main()
     string yLabelFromExcel;
     string xUnitFromExcel;
     string yUnitFromExcel;
+    string enableChartFromExcel;
 
     double inputKnownSweep = 35.7;
     double taperRatio = 0.28;
@@ -52,7 +53,7 @@ int main()
 
     //============================= Excel Reader Test ==============================
 
-    ExcelReader excelReader("ExcelFiles", "Test.xlsx");
+    ExcelReader excelReader("ExcelFiles", "UNINA_UAV_Statistics_Input.xlsx");
     
 
     excelReader.getData("FUSELAGE", 3, 1, 2, 3);
@@ -69,7 +70,7 @@ int main()
     methodLabelFromExcel = excelReader.getMethodOfRegressionFromExcel();
     degreeOfPolynomialFromExcel = excelReader.getDegreeOfPolynomialFromExcel();
 
-    
+    enableChartFromExcel = excelReader.getFlagToEnableChartFromExcel();
     //============================= Interpolant Test ==============================
     // RegressionMethod method = RegressionMethod::LINEAR;
 
@@ -91,7 +92,7 @@ int main()
 
     cout << "The Y value retrieved in main is: " << YValue << endl;
 
-    interp1.getChartOfRegression(xLabelFromExcel, yLabelFromExcel, xUnitFromExcel, yUnitFromExcel);
+    interp1.getChartOfRegression(xLabelFromExcel, yLabelFromExcel, xUnitFromExcel, yUnitFromExcel,enableChartFromExcel,"TestAircraft");
 
 
     //============================= ODE45 + Plot Test ==============================
@@ -103,24 +104,77 @@ int main()
     // Opzioni: [] = nulla, [=] = tutto per valore, [&] = tutto per riferimento,
     // [var] = specifica variabile per valore, [&var] = per riferimento.
 
-    double RC = 0.2;
-    double v_tension = 2.0;
-    double t0 = 0.0;
-    double tf = 1.0;
-    double y0 = 0.0;
-    double dt = 1.0 / 99.0;
+    double VA = 10.0; // Constraint shear force in kN
+    double q = 10.0; // Distributed load in kN/m
+    double x0 = 0.0; // Initial length
+    double xf = 1.0; // Final length
+    double y0 = -5.0; // Bending moment at root
+    double dx = 1.0 / 99.0; // Step size
     
     
-    ODE45 odeSolver45([RC, v_tension](double t, double y){return 1.0/RC *(-y + v_tension);},
-    t0, 
-    tf, 
+    ODE45 odeSolver45([VA,q](double x, double y){return VA-q*x;},
+    x0, 
+    xf, 
     y0, 
-    dt);
+    dx);
 
     odeSolver45.getT();
     odeSolver45.getY();
 
-    Plot plot(odeSolver45.getT(), odeSolver45.getY(), "Time(s)", "Current (Amperes)", "ODE45 - Solver","Current","points","1","1","7","1","#FF5733");
+    Plot plot(odeSolver45.getT(), odeSolver45.getY(), "Length(m)", 
+    "Bending Moment(KNm)", 
+    "ODE45 - Solver",
+    "Bending Moment",
+    "lines","1","1","","","#FF5733");
+
+
+      //============================= NEW AIRCRAFT DATA TEST ============================
+    
+    cout << "\n========== AIRCRAFT DATA TEST ==========\n" << endl;
+    
+    ExcelReader reader("ExcelFiles", "UNINA_UAV_Statistics_Input.xlsx");
+    AERO::AircraftData aircraft = reader.readAllAircraftData("DroneTest");
+    
+    // Test FUSELAGE
+    cout << "=== FUSELAGE ===" << endl;
+    const AERO::ComponentData& fus = aircraft.fuselage;
+    cout << "Number of variables: " << fus.getNumVariables() << endl;
+    
+    for (const auto& varName : fus.getAvailableVariables()) {
+        const auto& var = fus.getVariable(varName);
+        cout << varName << ": " 
+             << var.xLabel << " [" << var.xUnit << "] -> " 
+             << var.yLabel << " [" << var.yUnit << "]" << endl;
+        cout << "  Method: ";
+        if (var.method == RegressionMethod::LINEAR){
+            cout << "LINEAR";
+        }
+        else if (var.method == RegressionMethod::POLYNOMIAL){
+            cout << "POLYNOMIAL";
+        }
+        else if (var.method == RegressionMethod::EXPONENTIAL){
+            cout << "EXPONENTIAL";
+        }
+        else if (var.method == RegressionMethod::POWER){
+            cout << "POWER";
+        }
+        else if (var.method == RegressionMethod::LOGARITHMIC){
+            cout << "LOGARITHMIC";
+        }
+        else if (var.method == RegressionMethod::CONSTANT){
+            cout << "CONSTANT";
+        }
+        cout << ", Degree: " << var.polynomialDegree 
+             << ", Points: " << var.xData.size() << endl;
+    }
+    
+    // Test interpolazione VAR 1
+    if (fus.hasVariable("VAR 1")) {
+        double weightPayload = 1701.0;
+        double result = fus.interpolate("VAR 1", weightPayload);
+        cout << "\nInterpolation VAR 1 for " << weightPayload << " kg: " 
+             << result << endl;
+    }
 
 
     return 0;

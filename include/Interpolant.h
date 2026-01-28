@@ -13,7 +13,8 @@
 #include <string>
 #include <algorithm>
 #include <cctype>
-
+#include <filesystem>
+#include <ctime>
 
 /// =========================== Constructor ==============================
 /**
@@ -374,11 +375,11 @@ public:
 
         case RegressionMethod::POLYNOMIAL:
 
-            for (int i = 0; i < polyCoeff.size(); i++)
-            {
-                std::cout << "p_" << i + 1 << " :" << polyCoeff[i] << "\n";
-            }
-            std::cout << std::endl;
+            // for (int i = 0; i < polyCoeff.size(); i++)
+            // {
+            //     std::cout << "p_" << i + 1 << " :" << polyCoeff[i] << "\n";
+            // }
+            // std::cout << std::endl;
 
             return polyCoeff;
 
@@ -410,8 +411,23 @@ public:
     /// @param yLabelChart Label for the Y axis.
     /// @param xUnit Unit of measurement for the X axis.
     /// @param yUnit Unit of measurement for the Y axis.
-    void getChartOfRegression(std::string xLabelChart, std::string yLabelChart, std::string xUnit, std::string yUnit)
+    void getChartOfRegression(std::string xLabelChart, std::string yLabelChart, std::string xUnit, std::string yUnit, std::string enableChart,std::string nameOfAircraft)
     {
+
+        if (!std::filesystem::exists(std::filesystem::current_path() / "Regression_charts"))
+        {
+
+            std::filesystem::create_directories(std::filesystem::current_path() / "Regression_charts"); // Crea la cartella per salvare i grafici se non esiste già;
+        }
+
+        // Combina la current path con la cartella e il nome del file, salva il percorso risultante e carica il workbook.
+        auto baseDirToRegressionChartFolder = std::filesystem::current_path() / "Regression_charts"; // auto deduce std::filesystem::path, ottenendo il path della cartella base.
+
+        if (!std::filesystem::exists(baseDirToRegressionChartFolder / nameOfAircraft))
+        {
+
+            std::filesystem::create_directories(baseDirToRegressionChartFolder / nameOfAircraft); // Crea la cartella per salvare i grafici se non esiste già;
+        }
 
         switch (this->Method)
         {
@@ -420,7 +436,7 @@ public:
         {
             std::vector<double> xLinear;
             std::vector<double> yLinear;
-           
+
             double deltaH = 0.0;
             double vectorLength = 0.0;
             double minVale = *std::min_element(xValues.begin(), xValues.end());
@@ -453,86 +469,116 @@ public:
                 }
             }
 
-            try
+            if (enableChart == "Yes")
             {
-                Gnuplot gp;
-                // Mantiene il terminale wxt persistente, così la finestra del grafico resta valida anche se ridotta a icona
-                // gp << "set term wxt persist\n";
-                // gp << "set title 'Linear regression'\n";
-                // gp << "set xlabel '" << xLabelChart << "'\n";
-                // gp << "set ylabel '" << yLabelChart << "'\n";
-                // gp << "set grid\n";
 
-                std::string xCmd = "set xlabel '" + xLabelChart + " (" + xUnit + ")'\n";
-                std::string yCmd = "set ylabel '" + yLabelChart + " (" + yUnit + ")'\n";
+                try
+                {
+                    Gnuplot gp;
+                    // Mantiene il terminale wxt persistente, così la finestra del grafico resta valida anche se ridotta a icona
+                    // gp << "set term wxt persist\n";
+                    // gp << "set title 'Linear regression'\n";
+                    // gp << "set xlabel '" << xLabelChart << "'\n";
+                    // gp << "set ylabel '" << yLabelChart << "'\n";
+                    // gp << "set grid\n";
 
-                gp << "set term wxt enhanced font 'Arial,10'\n";
+                    std::string xCmd = "set xlabel '" + xLabelChart + " (" + xUnit + ")'\n";
+                    std::string yCmd = "set ylabel '" + yLabelChart + " (" + yUnit + ")'\n";
 
-                gp << "set encoding utf8\n";
-                gp << "unset margins\n"; // Lascia che gnuplot calcoli i margini corretti
+                    gp << "set term wxt enhanced font 'Arial,10' persist\n";
 
-                gp << "set title 'Linear regression'\n";
+                    gp << "set encoding utf8\n";
+                    gp << "unset margins\n"; // Lascia che gnuplot calcoli i margini corretti
 
-                // Imposta le label
-                gp << xCmd;
-                gp << yCmd;
+                    gp << "set title 'Linear regression'\n";
 
-                gp << "set grid\n";
-                /* ============================================================
-                  STILE DELLE CURVE (colori, linee, marker)
-             ============================================================ */
+                    // Imposta le label
+                    gp << xCmd;
+                    gp << yCmd;
 
-                /*
-                   Definizione stile linea 1
-                   - lc rgb '#0072BD' : colore blu (palette MATLAB-like)
-                   - lw 2.5           : spessore linea
-                   - lt 1             : tipo di linea (continua)
-                   - pt 7             : tipo di marker (cerchio)
-                   - ps 1.0           : dimensione marker
-                */
-                gp << "set style line 1 lc rgb '#0072BD' lw 2.5 lt 1\n";
-
-                /*
-                   Definizione stile linea 2
-                   - lc rgb '#D95319' : colore arancio
-                   - lw 2.5           : spessore linea
-                   - lt 1             : linea continua
-                   - pt 5             : marker quadrato
-                   - ps 1.0           : dimensione marker
-                */
-                gp << "set style line 2 lc rgb '#0bec16' lw 2.5 lt 1 pt 7 ps 1.0\n";
-
-                /* ============================================================
-                Se voglio solo le linee senza marker, rimuovo pt e ps dalle definizioni di stile
+                    gp << "set grid\n";
+                    gp << "set key outside right top\n";
+                    gp << "set key box\n"; // Opzionale: aggiunge un bordo alla leggenda
+                   
+                    /* ============================================================
+                      STILE DELLE CURVE (colori, linee, marker)
                  ============================================================ */
 
-                /*
-                   gp << "plot '-' with lines ls 1 title 'CP upper', "
-                          "'-' with lines ls 2 title 'CP lower'\n";
-                */
+                    /*
+                       Definizione stile linea 1
+                       - lc rgb '#0072BD' : colore blu (palette MATLAB-like)
+                       - lw 2.5           : spessore linea
+                       - lt 1             : tipo di linea (continua)
+                       - pt 7             : tipo di marker (cerchio)
+                       - ps 1.0           : dimensione marker
+                    */
+                    gp << "set style line 1 lc rgb '#0072BD' lw 2.5 lt 1\n";
 
-                /* ============================================================
-                Se voglio linee con marker
-                 ============================================================ */
+                    /*
+                       Definizione stile linea 2
+                       - lc rgb '#D95319' : colore arancio
+                       - lw 2.5           : spessore linea
+                       - lt 1             : linea continua
+                       - pt 5             : marker quadrato
+                       - ps 1.0           : dimensione marker
+                    */
+                    gp << "set style line 2 lc rgb '#0bec16' lw 2.5 lt 1 pt 7 ps 1.0\n";
 
-                // gp << "plot '-' with lines ls 1 title 'Regression line', "
-                //       "'-' with points ls 2 title 'Data points'\n";
+                    /* ============================================================
+                    Se voglio solo le linee senza marker, rimuovo pt e ps dalle definizioni di stile
+                     ============================================================ */
 
-                gp << "plot '-' with lines ls 1 title 'Regression line', "
-                      "'-' with points ls 2 title 'Data points'\n";
+                    /*
+                       gp << "plot '-' with lines ls 1 title 'CP upper', "
+                              "'-' with lines ls 2 title 'CP lower'\n";
+                    */
 
-                // Plotto i grafici come se fosse l'hold on di MATLAB
-                gp.send1d_raw(dataForChart);
-                gp.send1d_raw(xyPoint);
+                    /* ============================================================
+                    Se voglio linee con marker
+                     ============================================================ */
 
-                // gp << "set output\n";  // Chiude il file PNG
-                // gp << "replot\n";
-                gp.flush();
-                gp << "pause -1\n";
-            }
-            catch (const std::exception &ex)
-            {
-                std::cerr << "Errore: " << ex.what() << std::endl;
+                    // gp << "plot '-' with lines ls 1 title 'Regression line', "
+                    //       "'-' with points ls 2 title 'Data points'\n";
+
+                    gp << "plot '-' with lines ls 1 title 'Regression line', "
+                          "'-' with points ls 2 title 'Data points'\n";
+
+                    // Plotto i grafici come se fosse l'hold on di MATLAB
+                    gp.send1d_raw(dataForChart);
+                    gp.send1d_raw(xyPoint);
+
+                    // gp << "set output\n";  // Chiude il file PNG
+                    // gp << "replot\n";
+                    gp.flush();
+
+                    // Salva PNG
+                    std::string pngFilename = (baseDirToRegressionChartFolder / nameOfAircraft / (xLabelChart + "_" + yLabelChart + "_" + std::to_string(std::time(nullptr)) + ".png")).string();
+
+                    std::string pngCmd = "set output '" + pngFilename + "'\n";
+                    gp << "set terminal pngcairo enhanced font 'Arial,12' size 800,600\n";
+                    gp << pngCmd;
+                    gp << "replot\n";
+                    std::cout << "PNG saved in: " << pngFilename << std::endl;
+
+                    // Salva SVG
+                    std::string svgFilename = (baseDirToRegressionChartFolder / nameOfAircraft /(xLabelChart + "_" + yLabelChart + "_" + std::to_string(std::time(nullptr)) + ".svg")).string();
+                    std::string svgCmd = "set output '" + svgFilename + "'\n";
+                    gp << "set terminal svg enhanced font 'Arial,12' size 800,600\n";
+                    gp << svgCmd;
+                    gp << "replot\n";
+                    std::cout << "SVG saved in: " << svgFilename << std::endl;
+
+                    // Mostra a schermo dinuovo per riabilitare il mouse tracking
+                    gp << "set terminal wxt enhanced font 'Arial,10' persist\n";
+                    gp << "set output\n";  // Chiude il file di output
+                    gp << "replot\n";
+                    
+                    
+                }
+                catch (const std::exception &ex)
+                {
+                    std::cerr << "Error: " << ex.what() << std::endl;
+                }
             }
 
             break;
@@ -578,86 +624,114 @@ public:
                 }
             }
 
-            try
+            if (enableChart == "Yes")
             {
-                Gnuplot gp;
-                // Mantiene il terminale wxt persistente, così la finestra del grafico resta valida anche se ridotta a icona
-                // gp << "set term wxt persist\n";
-                // gp << "set title 'Linear regression'\n";
-                // gp << "set xlabel '" << xLabelChart << "'\n";
-                // gp << "set ylabel '" << yLabelChart << "'\n";
-                // gp << "set grid\n";
 
-                std::string xCmd = "set xlabel '" + xLabelChart + "'\n";
-                std::string yCmd = "set ylabel '" + yLabelChart + "'\n";
+                try
+                {
+                    Gnuplot gp;
+                    // Mantiene il terminale wxt persistente, così la finestra del grafico resta valida anche se ridotta a icona
+                    // gp << "set term wxt persist\n";
+                    // gp << "set title 'Linear regression'\n";
+                    // gp << "set xlabel '" << xLabelChart << "'\n";
+                    // gp << "set ylabel '" << yLabelChart << "'\n";
+                    // gp << "set grid\n";
 
-                gp << "set term wxt enhanced font 'Arial,10'\n";
+                    std::string xCmd = "set xlabel '" + xLabelChart + " (" + xUnit + ")'\n";
+                    std::string yCmd = "set ylabel '" + yLabelChart + " (" + yUnit + ")'\n";
 
-                gp << "set encoding utf8\n";
-                gp << "unset margins\n"; // Lascia che gnuplot calcoli i margini corretti
+                    gp << "set terminal wxt enhanced font 'Arial,10' persist\n";
+                    gp << "set encoding utf8\n";
+                    gp << "unset margins\n"; // Lascia che gnuplot calcoli i margini corretti
 
-                gp << "set title 'Linear regression'\n";
+                    gp << "set title 'Polynomial regression'\n";
 
-                // Imposta le label
-                gp << xCmd;
-                gp << yCmd;
+                    // Imposta le label
+                    gp << xCmd;
+                    gp << yCmd;
 
-                gp << "set grid\n";
-                /* ============================================================
-                  STILE DELLE CURVE (colori, linee, marker)
-             ============================================================ */
-
-                /*
-                   Definizione stile linea 1
-                   - lc rgb '#0072BD' : colore blu (palette MATLAB-like)
-                   - lw 2.5           : spessore linea
-                   - lt 1             : tipo di linea (continua)
-                   - pt 7             : tipo di marker (cerchio)
-                   - ps 1.0           : dimensione marker
-                */
-                gp << "set style line 1 lc rgb '#0072BD' lw 2.5 lt 1\n";
-
-                /*
-                   Definizione stile linea 2
-                   - lc rgb '#D95319' : colore arancio
-                   - lw 2.5           : spessore linea
-                   - lt 1             : linea continua
-                   - pt 5             : marker quadrato
-                   - ps 1.0           : dimensione marker
-                */
-                gp << "set style line 2 lc rgb '#0bec16' lw 2.5 lt 1 pt 7 ps 1.0\n";
-
-                /* ============================================================
-                Se voglio solo le linee senza marker, rimuovo pt e ps dalle definizioni di stile
+                    gp << "set grid\n";
+                    gp << "set key outside right top\n";
+                    gp << "set key box\n"; // Opzionale: aggiunge un bordo alla leggenda
+                    /* ============================================================
+                      STILE DELLE CURVE (colori, linee, marker)
                  ============================================================ */
 
-                /*
-                   gp << "plot '-' with lines ls 1 title 'CP upper', "
-                          "'-' with lines ls 2 title 'CP lower'\n";
-                */
+                    /*
+                       Definizione stile linea 1
+                       - lc rgb '#0072BD' : colore blu (palette MATLAB-like)
+                       - lw 2.5           : spessore linea
+                       - lt 1             : tipo di linea (continua)
+                       - pt 7             : tipo di marker (cerchio)
+                       - ps 1.0           : dimensione marker
+                    */
+                    gp << "set style line 1 lc rgb '#0072BD' lw 2.5 lt 1\n";
 
-                /* ============================================================
-                Se voglio linee con marker
-                 ============================================================ */
+                    /*
+                       Definizione stile linea 2
+                       - lc rgb '#D95319' : colore arancio
+                       - lw 2.5           : spessore linea
+                       - lt 1             : linea continua
+                       - pt 5             : marker quadrato
+                       - ps 1.0           : dimensione marker
+                    */
+                    gp << "set style line 2 lc rgb '#0bec16' lw 2.5 lt 1 pt 7 ps 1.0\n";
 
-                // gp << "plot '-' with lines ls 1 title 'Regression line', "
-                //       "'-' with points ls 2 title 'Data points'\n";
+                    /* ============================================================
+                    Se voglio solo le linee senza marker, rimuovo pt e ps dalle definizioni di stile
+                     ============================================================ */
 
-                gp << "plot '-' with lines ls 1 title 'Regression line', "
-                      "'-' with points ls 2 title 'Data points'\n";
+                    /*
+                       gp << "plot '-' with lines ls 1 title 'CP upper', "
+                              "'-' with lines ls 2 title 'CP lower'\n";
+                    */
 
-                // Plotto i grafici come se fosse l'hold on di MATLAB
-                gp.send1d_raw(dataForChart);
-                gp.send1d_raw(xyPoint);
+                    /* ============================================================
+                    Se voglio linee con marker
+                     ============================================================ */
 
-                // gp << "set output\n";  // Chiude il file PNG
-                // gp << "replot\n";
-                gp.flush();
-                gp << "pause -1\n";
-            }
-            catch (const std::exception &ex)
-            {
-                std::cerr << "Errore: " << ex.what() << std::endl;
+                    // gp << "plot '-' with lines ls 1 title 'Regression line', "
+                    //       "'-' with points ls 2 title 'Data points'\n";
+
+                    gp << "plot '-' with lines ls 1 title 'Regression line', "
+                          "'-' with points ls 2 title 'Data points'\n";
+
+                    // Plotto i grafici come se fosse l'hold on di MATLAB
+                    gp.send1d_raw(dataForChart);
+                    gp.send1d_raw(xyPoint);
+
+                    // gp << "set output\n";  // Chiude il file PNG
+                    // gp << "replot\n";
+
+                    gp.flush();
+
+                    // Salva PNG
+                    std::string pngFilename = (baseDirToRegressionChartFolder / nameOfAircraft / (xLabelChart + "_" + yLabelChart + "_" + std::to_string(std::time(nullptr)) + ".png")).string();
+
+                    std::string pngCmd = "set output '" + pngFilename + "'\n";
+                    gp << "set terminal pngcairo enhanced font 'Arial,12' size 800,600\n";
+                    gp << pngCmd;
+                    gp << "replot\n";
+                    std::cout << "PNG saved in: " << pngFilename << std::endl;
+
+                    // Salva SVG
+                    std::string svgFilename = (baseDirToRegressionChartFolder / nameOfAircraft / (xLabelChart + "_" + yLabelChart + "_" + std::to_string(std::time(nullptr)) + ".svg")).string();
+                    std::string svgCmd = "set output '" + svgFilename + "'\n";
+                    gp << "set terminal svg enhanced font 'Arial,12' size 800,600\n";
+                    gp << svgCmd;
+                    gp << "replot\n";
+                    std::cout << "SVG saved in: " << svgFilename << std::endl;
+
+                     // Mostra a schermo dinuovo per riabilitare il mouse tracking
+                    gp << "set terminal wxt enhanced font 'Arial,10' persist\n";
+                    gp << "set output\n";  // Chiude il file di output
+                    gp << "replot\n";
+                    
+                }
+                catch (const std::exception &ex)
+                {
+                    std::cerr << "Error: " << ex.what() << std::endl;
+                }
             }
 
             break;
@@ -699,89 +773,118 @@ public:
                 }
             }
 
-            try
+            if (enableChart == "Yes")
             {
-                Gnuplot gp;
-                // Mantiene il terminale wxt persistente, così la finestra del grafico resta valida anche se ridotta a icona
-                // gp << "set term wxt persist\n";
-                // gp << "set title 'Linear regression'\n";
-                // gp << "set xlabel '" << xLabelChart << "'\n";
-                // gp << "set ylabel '" << yLabelChart << "'\n";
-                // gp << "set grid\n";
+                try
+                {
+                    Gnuplot gp;
+                    // Mantiene il terminale wxt persistente, così la finestra del grafico resta valida anche se ridotta a icona
+                    // gp << "set term wxt persist\n";
+                    // gp << "set title 'Linear regression'\n";
+                    // gp << "set xlabel '" << xLabelChart << "'\n";
+                    // gp << "set ylabel '" << yLabelChart << "'\n";
+                    // gp << "set grid\n";
 
-                std::string xCmd = "set xlabel '" + xLabelChart + "'\n";
-                std::string yCmd = "set ylabel '" + yLabelChart + "'\n";
+                    std::string xCmd = "set xlabel '" + xLabelChart + " (" + xUnit + ")'\n";
+                    std::string yCmd = "set ylabel '" + yLabelChart + " (" + yUnit + ")'\n";
 
-                gp << "set term wxt enhanced font 'Arial,10'\n";
+                    gp << "set terminal wxt enhanced font 'Arial,10' persist\n";
 
-                gp << "set encoding utf8\n";
-                gp << "unset margins\n"; // Lascia che gnuplot calcoli i margini corretti
+                    gp << "set encoding utf8\n";
+                    gp << "unset margins\n"; // Lascia che gnuplot calcoli i margini corretti
 
-                gp << "set title 'Linear regression'\n";
+                    gp << "set title 'Exponential regression'\n";
 
-                // Imposta le label
-                gp << xCmd;
-                gp << yCmd;
+                    // Imposta le label
+                    gp << xCmd;
+                    gp << yCmd;
 
-                gp << "set grid\n";
-                /* ============================================================
-                  STILE DELLE CURVE (colori, linee, marker)
-             ============================================================ */
-
-                /*
-                   Definizione stile linea 1
-                   - lc rgb '#0072BD' : colore blu (palette MATLAB-like)
-                   - lw 2.5           : spessore linea
-                   - lt 1             : tipo di linea (continua)
-                   - pt 7             : tipo di marker (cerchio)
-                   - ps 1.0           : dimensione marker
-                */
-                gp << "set style line 1 lc rgb '#0072BD' lw 2.5 lt 1\n";
-
-                /*
-                   Definizione stile linea 2
-                   - lc rgb '#D95319' : colore arancio
-                   - lw 2.5           : spessore linea
-                   - lt 1             : linea continua
-                   - pt 5             : marker quadrato
-                   - ps 1.0           : dimensione marker
-                */
-                gp << "set style line 2 lc rgb '#0bec16' lw 2.5 lt 1 pt 7 ps 1.0\n";
-
-                /* ============================================================
-                Se voglio solo le linee senza marker, rimuovo pt e ps dalle definizioni di stile
+                    gp << "set grid\n";
+                    gp << "set key outside right top\n";
+                    gp << "set key box\n"; // Opzionale: aggiunge un bordo alla leggenda
+                    /* ============================================================
+                      STILE DELLE CURVE (colori, linee, marker)
                  ============================================================ */
 
-                /*
-                   gp << "plot '-' with lines ls 1 title 'CP upper', "
-                          "'-' with lines ls 2 title 'CP lower'\n";
-                */
+                    /*
+                       Definizione stile linea 1
+                       - lc rgb '#0072BD' : colore blu (palette MATLAB-like)
+                       - lw 2.5           : spessore linea
+                       - lt 1             : tipo di linea (continua)
+                       - pt 7             : tipo di marker (cerchio)
+                       - ps 1.0           : dimensione marker
+                    */
+                    gp << "set style line 1 lc rgb '#0072BD' lw 2.5 lt 1\n";
 
-                /* ============================================================
-                Se voglio linee con marker
-                 ============================================================ */
+                    /*
+                       Definizione stile linea 2
+                       - lc rgb '#D95319' : colore arancio
+                       - lw 2.5           : spessore linea
+                       - lt 1             : linea continua
+                       - pt 5             : marker quadrato
+                       - ps 1.0           : dimensione marker
+                    */
+                    gp << "set style line 2 lc rgb '#0bec16' lw 2.5 lt 1 pt 7 ps 1.0\n";
 
-                // gp << "plot '-' with lines ls 1 title 'Regression line', "
-                //       "'-' with points ls 2 title 'Data points'\n";
+                    /* ============================================================
+                    Se voglio solo le linee senza marker, rimuovo pt e ps dalle definizioni di stile
+                     ============================================================ */
 
-                gp << "plot '-' with lines ls 1 title 'Regression line', "
-                      "'-' with points ls 2 title 'Data points'\n";
+                    /*
+                       gp << "plot '-' with lines ls 1 title 'CP upper', "
+                              "'-' with lines ls 2 title 'CP lower'\n";
+                    */
 
-                // Plotto i grafici come se fosse l'hold on di MATLAB
-                gp.send1d_raw(dataForChart);
-                gp.send1d_raw(xyPoint);
+                    /* ============================================================
+                    Se voglio linee con marker
+                     ============================================================ */
 
-                // gp << "set output\n";  // Chiude il file PNG
-                // gp << "replot\n";
-                gp.flush();
-                gp << "pause -1\n";
+                    // gp << "plot '-' with lines ls 1 title 'Regression line', "
+                    //       "'-' with points ls 2 title 'Data points'\n";
+
+                    gp << "plot '-' with lines ls 1 title 'Regression line', "
+                          "'-' with points ls 2 title 'Data points'\n";
+
+                    // Plotto i grafici come se fosse l'hold on di MATLAB
+                    gp.send1d_raw(dataForChart);
+                    gp.send1d_raw(xyPoint);
+
+                    // gp << "set output\n";  // Chiude il file PNG
+                    // gp << "replot\n";
+
+                    gp.flush();
+
+                    // Salva PNG
+                    std::string pngFilename = (baseDirToRegressionChartFolder / nameOfAircraft / (xLabelChart + "_" + yLabelChart + "_" + std::to_string(std::time(nullptr)) + ".png")).string();
+
+                    std::string pngCmd = "set output '" + pngFilename + "'\n";
+                    gp << "set terminal pngcairo enhanced font 'Arial,12' size 800,600\n";
+                    gp << pngCmd;
+                    gp << "replot\n";
+                    std::cout << "PNG saved in: " << pngFilename << std::endl;
+
+                    // Salva SVG
+                    std::string svgFilename = (baseDirToRegressionChartFolder / nameOfAircraft / (xLabelChart + "_" + yLabelChart + "_" + std::to_string(std::time(nullptr)) + ".svg")).string();
+                    std::string svgCmd = "set output '" + svgFilename + "'\n";
+                    gp << "set terminal svg enhanced font 'Arial,12' size 800,600\n";
+                    gp << svgCmd;
+                    gp << "replot\n";
+                    std::cout << "SVG saved in: " << svgFilename << std::endl;
+
+                    // Mostra a schermo dinuovo per riabilitare il mouse tracking
+                    gp << "set terminal wxt enhanced font 'Arial,10' persist\n";
+                    gp << "set output\n";  // Chiude il file di output
+                    gp << "replot\n";
+                    
+
+                }
+                catch (const std::exception &ex)
+                {
+                    std::cerr << "Error: " << ex.what() << std::endl;
+                }
+
+                break;
             }
-            catch (const std::exception &ex)
-            {
-                std::cerr << "Errore: " << ex.what() << std::endl;
-            }
-
-            break;
         }
 
         case RegressionMethod::POWER:
@@ -818,68 +921,104 @@ public:
                 }
             }
 
-            try
+            if (enableChart == "Yes")
             {
-                Gnuplot gp;
-                // Mantiene il terminale wxt persistente, così la finestra del grafico resta valida anche se ridotta a icona
-                gp << "set term wxt persist\n";
-                gp << "set title 'Power regression'\n";
-                gp << "set xlabel '" << xLabelChart << "'\n";
-                gp << "set ylabel '" << yLabelChart << "'\n";
-                gp << "set grid\n";
+                try
+                {
+                    Gnuplot gp;
+                    // Mantiene il terminale wxt persistente, così la finestra del grafico resta valida anche se ridotta a icona
+                    std::string xCmd = "set xlabel '" + xLabelChart + " (" + xUnit + ")'\n";
+                    std::string yCmd = "set ylabel '" + yLabelChart + " (" + yUnit + ")'\n";
 
-                /* ============================================================
-                  STILE DELLE CURVE (colori, linee, marker)
-             ============================================================ */
+                    gp << "set terminal wxt enhanced font 'Arial,10' persist\n";
 
-                /*
-                   Definizione stile linea 1
-                   - lc rgb '#0072BD' : colore blu (palette MATLAB-like)
-                   - lw 2.5           : spessore linea
-                   - lt 1             : tipo di linea (continua)
-                   - pt 7             : tipo di marker (cerchio)
-                   - ps 1.0           : dimensione marker
-                */
-                gp << "set style line 1 lc rgb '#0072BD' lw 2.5 lt 1\n";
+                    gp << "set encoding utf8\n";
+                    gp << "unset margins\n"; // Lascia che gnuplot calcoli i margini corretti
+                    gp << "set title 'Power regression'\n";
 
-                /*
-                   Definizione stile linea 2
-                   - lc rgb '#D95319' : colore arancio
-                   - lw 2.5           : spessore linea
-                   - lt 1             : linea continua
-                   - pt 5             : marker quadrato
-                   - ps 1.0           : dimensione marker
-                */
-                gp << "set style line 2 lc rgb '#0bec16' lw 2.5 lt 1 pt 7 ps 1.0\n";
+                    
+                    gp << "set grid\n";
+                    gp << "set key outside right top\n";
+                    gp << "set key box\n"; // Opzionale: aggiunge un bordo alla leggenda
 
-                /* ============================================================
-                Se voglio solo le linee senza marker, rimuovo pt e ps dalle definizioni di stile
+                    /* ============================================================
+                      STILE DELLE CURVE (colori, linee, marker)
                  ============================================================ */
 
-                /*
-                   gp << "plot '-' with lines ls 1 title 'CP upper', "
-                          "'-' with lines ls 2 title 'CP lower'\n";
-                */
+                    /*
+                       Definizione stile linea 1
+                       - lc rgb '#0072BD' : colore blu (palette MATLAB-like)
+                       - lw 2.5           : spessore linea
+                       - lt 1             : tipo di linea (continua)
+                       - pt 7             : tipo di marker (cerchio)
+                       - ps 1.0           : dimensione marker
+                    */
+                    gp << "set style line 1 lc rgb '#0072BD' lw 2.5 lt 1\n";
 
-                /* ============================================================
-                Se voglio linee con marker
-                 ============================================================ */
+                    /*
+                       Definizione stile linea 2
+                       - lc rgb '#D95319' : colore arancio
+                       - lw 2.5           : spessore linea
+                       - lt 1             : linea continua
+                       - pt 5             : marker quadrato
+                       - ps 1.0           : dimensione marker
+                    */
+                    gp << "set style line 2 lc rgb '#0bec16' lw 2.5 lt 1 pt 7 ps 1.0\n";
 
-                gp << "plot '-' with lines ls 1 title 'Regression line', "
-                      "'-' with points ls 2 title 'Data points'\n";
+                    /* ============================================================
+                    Se voglio solo le linee senza marker, rimuovo pt e ps dalle definizioni di stile
+                     ============================================================ */
 
-                // Plotto i grafici come se fosse l'hold on di MATLAB
-                gp.send1d_raw(dataForChart);
-                gp.send1d_raw(xyPoint);
+                    /*
+                       gp << "plot '-' with lines ls 1 title 'CP upper', "
+                              "'-' with lines ls 2 title 'CP lower'\n";
+                    */
 
-                gp << "pause -1\n";
+                    /* ============================================================
+                    Se voglio linee con marker
+                     ============================================================ */
+
+                    gp << "plot '-' with lines ls 1 title 'Regression line', "
+                          "'-' with points ls 2 title 'Data points'\n";
+
+                    // Plotto i grafici come se fosse l'hold on di MATLAB
+                    gp.send1d_raw(dataForChart);
+                    gp.send1d_raw(xyPoint);
+
+
+                    gp.flush();
+
+                    // Salva PNG
+                    std::string pngFilename = (baseDirToRegressionChartFolder / nameOfAircraft / (xLabelChart + "_" + yLabelChart + "_" + std::to_string(std::time(nullptr)) + ".png")).string();
+
+                    std::string pngCmd = "set output '" + pngFilename + "'\n";
+                    gp << "set terminal pngcairo enhanced font 'Arial,12' size 800,600\n";
+                    gp << pngCmd;
+                    gp << "replot\n";
+                    std::cout << "PNG saved in: " << pngFilename << std::endl;
+
+                    // Salva SVG
+                    std::string svgFilename = (baseDirToRegressionChartFolder / nameOfAircraft / (xLabelChart + "_" + yLabelChart + "_" + std::to_string(std::time(nullptr)) + ".svg")).string();
+                    std::string svgCmd = "set output '" + svgFilename + "'\n";
+                    gp << "set terminal svg enhanced font 'Arial,12' size 800,600\n";
+                    gp << svgCmd;
+                    gp << "replot\n";
+                    std::cout << "SVG saved in: " << svgFilename << std::endl;
+
+                    // Mostra a schermo dinuovo per riabilitare il mouse tracking
+                    gp << "set terminal wxt enhanced font 'Arial,10' persist\n";
+                    gp << "set output\n";  // Chiude il file di output
+                    gp << "replot\n";
+                    
+
+                }
+                catch (const std::exception &ex)
+                {
+                    std::cerr << "Error: " << ex.what() << std::endl;
+                }
+
+                break;
             }
-            catch (const std::exception &ex)
-            {
-                std::cerr << "Errore: " << ex.what() << std::endl;
-            }
-
-            break;
         }
 
         case RegressionMethod::LOGARITHMIC:
@@ -917,89 +1056,114 @@ public:
                 }
             }
 
-            try
+            if (enableChart == "Yes")
             {
-                Gnuplot gp;
-                // Mantiene il terminale wxt persistente, così la finestra del grafico resta valida anche se ridotta a icona
-                // gp << "set term wxt persist\n";
-                // gp << "set title 'Linear regression'\n";
-                // gp << "set xlabel '" << xLabelChart << "'\n";
-                // gp << "set ylabel '" << yLabelChart << "'\n";
-                // gp << "set grid\n";
+                try
+                {
+                    Gnuplot gp;
+                    // Mantiene il terminale wxt persistente, così la finestra del grafico resta valida anche se ridotta a icona
+                    // gp << "set term wxt persist\n";
+                    // gp << "set title 'Linear regression'\n";
+                    // gp << "set xlabel '" << xLabelChart << "'\n";
+                    // gp << "set ylabel '" << yLabelChart << "'\n";
+                    // gp << "set grid\n";
 
-                std::string xCmd = "set xlabel '" + xLabelChart + "'\n";
-                std::string yCmd = "set ylabel '" + yLabelChart + "'\n";
+                    std::string xCmd = "set xlabel '" + xLabelChart + " (" + xUnit + ")'\n";
+                    std::string yCmd = "set ylabel '" + yLabelChart + " (" + yUnit + ")'\n";
 
-                gp << "set term wxt enhanced font 'Arial,10'\n";
+                    gp << "set terminal wxt enhanced font 'Arial,10' persist\n";
 
-                gp << "set encoding utf8\n";
-                gp << "unset margins\n"; // Lascia che gnuplot calcoli i margini corretti
+                    gp << "set encoding utf8\n";
+                    gp << "unset margins\n"; // Lascia che gnuplot calcoli i margini corretti
 
-                gp << "set title 'Linear regression'\n";
+                    gp << "set title 'Logarithmic regression'\n";
 
-                // Imposta le label
-                gp << xCmd;
-                gp << yCmd;
+                    // Imposta le label
+                    gp << xCmd;
+                    gp << yCmd;
 
-                gp << "set grid\n";
-                /* ============================================================
-                  STILE DELLE CURVE (colori, linee, marker)
-             ============================================================ */
-
-                /*
-                   Definizione stile linea 1
-                   - lc rgb '#0072BD' : colore blu (palette MATLAB-like)
-                   - lw 2.5           : spessore linea
-                   - lt 1             : tipo di linea (continua)
-                   - pt 7             : tipo di marker (cerchio)
-                   - ps 1.0           : dimensione marker
-                */
-                gp << "set style line 1 lc rgb '#0072BD' lw 2.5 lt 1\n";
-
-                /*
-                   Definizione stile linea 2
-                   - lc rgb '#D95319' : colore arancio
-                   - lw 2.5           : spessore linea
-                   - lt 1             : linea continua
-                   - pt 5             : marker quadrato
-                   - ps 1.0           : dimensione marker
-                */
-                gp << "set style line 2 lc rgb '#0bec16' lw 2.5 lt 1 pt 7 ps 1.0\n";
-
-                /* ============================================================
-                Se voglio solo le linee senza marker, rimuovo pt e ps dalle definizioni di stile
+                    gp << "set grid\n";
+                    gp << "set key outside right top\n";
+                    gp << "set key box\n"; // Opzionale: aggiunge un bordo alla leggenda
+                    /* ============================================================
+                      STILE DELLE CURVE (colori, linee, marker)
                  ============================================================ */
 
-                /*
-                   gp << "plot '-' with lines ls 1 title 'CP upper', "
-                          "'-' with lines ls 2 title 'CP lower'\n";
-                */
+                    /*
+                       Definizione stile linea 1
+                       - lc rgb '#0072BD' : colore blu (palette MATLAB-like)
+                       - lw 2.5           : spessore linea
+                       - lt 1             : tipo di linea (continua)
+                       - pt 7             : tipo di marker (cerchio)
+                       - ps 1.0           : dimensione marker
+                    */
+                    gp << "set style line 1 lc rgb '#0072BD' lw 2.5 lt 1\n";
 
-                /* ============================================================
-                Se voglio linee con marker
-                 ============================================================ */
+                    /*
+                       Definizione stile linea 2
+                       - lc rgb '#D95319' : colore arancio
+                       - lw 2.5           : spessore linea
+                       - lt 1             : linea continua
+                       - pt 5             : marker quadrato
+                       - ps 1.0           : dimensione marker
+                    */
+                    gp << "set style line 2 lc rgb '#0bec16' lw 2.5 lt 1 pt 7 ps 1.0\n";
 
-                // gp << "plot '-' with lines ls 1 title 'Regression line', "
-                //       "'-' with points ls 2 title 'Data points'\n";
+                    /* ============================================================
+                    Se voglio solo le linee senza marker, rimuovo pt e ps dalle definizioni di stile
+                     ============================================================ */
 
-                gp << "plot '-' with lines ls 1 title 'Regression line', "
-                      "'-' with points ls 2 title 'Data points'\n";
+                    /*
+                       gp << "plot '-' with lines ls 1 title 'CP upper', "
+                              "'-' with lines ls 2 title 'CP lower'\n";
+                    */
 
-                // Plotto i grafici come se fosse l'hold on di MATLAB
-                gp.send1d_raw(dataForChart);
-                gp.send1d_raw(xyPoint);
+                    /* ============================================================
+                    Se voglio linee con marker
+                     ============================================================ */
 
-                // gp << "set output\n";  // Chiude il file PNG
-                // gp << "replot\n";
-                gp.flush();
-                gp << "pause -1\n";
+                    // gp << "plot '-' with lines ls 1 title 'Regression line', "
+                    //       "'-' with points ls 2 title 'Data points'\n";
+
+                    gp << "plot '-' with lines ls 1 title 'Regression line', "
+                          "'-' with points ls 2 title 'Data points'\n";
+
+                    // Plotto i grafici come se fosse l'hold on di MATLAB
+                    gp.send1d_raw(dataForChart);
+                    gp.send1d_raw(xyPoint);
+
+                    gp.flush();
+
+                    // Salva PNG
+                    std::string pngFilename = (baseDirToRegressionChartFolder / nameOfAircraft / (xLabelChart + "_" + yLabelChart + "_" + std::to_string(std::time(nullptr)) + ".png")).string();
+
+                    std::string pngCmd = "set output '" + pngFilename + "'\n";
+                    gp << "set terminal pngcairo enhanced font 'Arial,12' size 800,600\n";
+                    gp << pngCmd;
+                    gp << "replot\n";
+                    std::cout << "PNG saved in: " << pngFilename << std::endl;
+
+                    // Salva SVG
+                    std::string svgFilename = (baseDirToRegressionChartFolder / nameOfAircraft / (xLabelChart + "_" + yLabelChart + "_" + std::to_string(std::time(nullptr)) + ".svg")).string();
+                    std::string svgCmd = "set output '" + svgFilename + "'\n";
+                    gp << "set terminal svg enhanced font 'Arial,12' size 800,600\n";
+                    gp << svgCmd;
+                    gp << "replot\n";
+                    std::cout << "SVG saved in: " << svgFilename << std::endl;
+
+                    // Mostra a schermo dinuovo per riabilitare il mouse tracking
+                    gp << "set terminal wxt enhanced font 'Arial,10' persist\n";
+                    gp << "set output\n";  // Chiude il file di output
+                    gp << "replot\n";
+                    
+                }
+                catch (const std::exception &ex)
+                {
+                    std::cerr << "Error: " << ex.what() << std::endl;
+                }
+
+                break;
             }
-            catch (const std::exception &ex)
-            {
-                std::cerr << "Errore: " << ex.what() << std::endl;
-            }
-
-            break;
         }
 
         default:

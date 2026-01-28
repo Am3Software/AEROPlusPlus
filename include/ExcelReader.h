@@ -18,6 +18,8 @@
 #include "ConvForce.h"
 #include "ConvAngle.h"
 #include "ConvArea.h"
+#include "AircraftData.h"
+#include "Interpolant.h"
 
 /// @brief Constructs an ExcelReader object and opens the specified Excel file.
 /// @param folderName The name of the folder containing the Excel file.
@@ -45,6 +47,7 @@ private:
     int startColMethod;              // Colonna con il metodo di regressione.
     std::string unitToPassX = "";     // Unità di misura da convertire per X o unità di misura finale di X.
     std::string unitToPassY = "";     // Unità di misura da convertire per Y o unità di misura finale di Y.
+    std::string flagChart = "";      // Flag per abilitare il grafico della regressione.
 
     int getLengthOfRow() // Conta quante righe sono popolate a partire da startRow.
     {
@@ -462,6 +465,37 @@ private:
         return degreeOfPolynomial;
     }
 
+    std::string getFlagToEnableChart() {
+
+
+        worksheet = workbook.workbook().worksheet(sheetName);
+        flagChart = worksheet.cell(OpenXLSX::XLCellReference(6, startColMethod)).value().get<std::string>();
+
+        return flagChart;
+    }
+
+     int countVariables(const std::string& sheetName)
+    {
+        worksheet = workbook.workbook().worksheet(sheetName);
+        
+        int count = 0;
+        const int MAX_COLUMNS = 300;  // Safety: max 100 variabili (300 colonne)
+        
+        for (int col = 1; col < MAX_COLUMNS; col += 3) {
+            OpenXLSX::XLCell checkCell = worksheet.cell(
+                OpenXLSX::XLCellReference(2, col)
+            );
+            
+            // Se la cella è vuota, non ci sono più variabili
+            if (checkCell.value().type() == OpenXLSX::XLValueType::Empty) {
+                break;
+            }
+            
+            count++;
+        }
+        return count;
+    }
+
 public:
 
     
@@ -488,6 +522,9 @@ public:
         this->startColY = startColY;
         this->startColMethod = startColMethod;
 
+        xData.clear();
+        yData.clear();
+        
         int totalRows = getLengthOfRow();
         getXData();
         getYData();
@@ -496,6 +533,9 @@ public:
         getTypeOfRegression();
         getDegreeOfPolynomial();
         getUnitOfAllData();
+        getFlagToEnableChart();
+
+
 
         std::cout << "Total populated rows: " << totalRows << std::endl;
     }
@@ -549,6 +589,131 @@ public:
     {
         return {unitToPassX, unitToPassY};
     };
+
+    /// @brief Returns the flag to enable chart generation from the Excel sheet.
+    /// @return Const reference to the flag string.
+    const std::string& getFlagToEnableChartFromExcel() const
+    {
+        return flagChart;
+    };
+
+
+    // ===== NUOVI METODI PER AIRCRAFT DATA =====
+    
+    /// @brief Reads an interpolable variable from the specified Excel sheet and variable index.
+    /// @param sheetName Name of the worksheet to read data from.
+    /// @param varIndex Index of the variable to read (0-based).
+    /// @return An InterpolableVariable object populated with data from the Excel sheet.
+    AERO::InterpolableVariable readVariable(const std::string& sheetName, int varIndex)
+    {
+        AERO::InterpolableVariable var;
+        
+        // Formula colonne: VAR i → startCol = 1 + (i * 3)
+        int colX = 1 + (varIndex * 3);      // 1, 4, 7, 10, ...
+        int colY = colX + 1;                // 2, 5, 8, 11, ...
+        int colMeta = colY + 1;             // 3, 6, 9, 12, ...
+        
+        // Usa getData esistente
+        getData(sheetName, 3, colX, colY, colMeta);
+        
+        // Popola la struct
+        var.varName = "VAR " + std::to_string(varIndex + 1);
+        var.xLabel = getXLabelFromExcel();
+        var.yLabel = getYLabelFromExcel();
+        
+        std::vector<std::string> unitsVec = getUnitsOfXY();
+        var.xUnit = unitsVec[0];
+        var.yUnit = unitsVec[1];
+        
+        var.method = getMethodOfRegressionFromExcel();
+        var.polynomialDegree = getDegreeOfPolynomialFromExcel();
+        
+        var.xData = getXDataFromExcel();
+        var.yData = getYDataFromExcel();
+        
+        // Calcola coefficienti
+        if (var.method != RegressionMethod::CONSTANT && var.isValid()) {
+            Interpolant interp(var.xData, var.yData, 
+                              var.polynomialDegree, var.method);
+            var.coefficients = interp.getCoefficients();
+        }
+        
+        return var;
+    }
+    
+    /// @brief Reads a component's data from the specified Excel sheet.
+    /// @param sheetName Name of the worksheet to read data from.
+    /// @return A ComponentData object populated with data from the Excel sheet.
+    AERO::ComponentData readComponent(const std::string& sheetName,const std::string& aircraftName)
+    {
+        AERO::ComponentData component;
+        component.componentName = sheetName;
+      
+        // std::string flagChart = getFlagToEnableChart();
+        
+        // Conta prima quante variabili ci sono
+        int numVars = countVariables(sheetName);
+        
+        if (numVars == 0) {
+            std::cerr << "Warning: No variables found in " << sheetName << std::endl;
+            return component;
+        }
+        
+        std::cout << "\n============ "<< sheetName << " ============" << std::endl;
+        std::cout << "Reading " << numVars << " variable(s) from " 
+                  << sheetName << "..." << std::endl;
+        
+        // Leggi tutte le variabili trovate
+        for (int varIndex = 0; varIndex < numVars; varIndex++) {
+            try {
+                AERO::InterpolableVariable var = readVariable(sheetName, varIndex);
+                
+                if (var.isValid()) {
+
+                    // Aggiungi la variabile alla mappa del componente
+                    // In questo caso variables è una std::map<std::string, InterpolableVariable>
+                    // La chiave è var.varName (es: "VAR 1"), il valore è l'oggetto var
+                    // Quindi si usa l'operatore [] per inserire la coppia chiave-valore
+                    // Si aggiunge var alla mappa delle variabili del componente, che vien sovrascritto se già esiste
+                    component.variables[var.varName] = var;
+                    std::cout << "  [OK] " << var.varName << ": " << var.xLabel 
+                              << " [->] " << var.yLabel << " (" 
+                              << var.xData.size() << " points)" << std::endl;
+
+                // Genera il grafico della regressione se richiesto
+                component.getChartOfVariableRegression(var.varName, getFlagToEnableChartFromExcel(), aircraftName);
+
+                } else {
+                    std::cerr << "  [ERROR] VAR " << (varIndex + 1) 
+                              << " has invalid data" << std::endl;
+                }
+            } catch (const std::exception& e) {
+                std::cerr << "  [ERROR] Error reading VAR " << (varIndex + 1) 
+                          << ": " << e.what() << std::endl;
+            }
+        }
+        
+        return component;
+    }
+    
+    /// @brief Reads all aircraft data from the Excel sheets.
+    /// @param aircraftName Name of the aircraft.
+    /// @return An AircraftData object populated with data from all relevant Excel sheets.
+    AERO::AircraftData readAllAircraftData(const std::string& aircraftName)
+    {
+        AERO::AircraftData aircraft;
+        aircraft.setAircraftName(aircraftName);
+        
+        aircraft.fuselage = readComponent("FUSELAGE", aircraftName);
+        aircraft.wing = readComponent("WING", aircraftName);
+        aircraft.horizontal = readComponent("HORIZONTAL_TAIL", aircraftName);
+        aircraft.vertical = readComponent("VERTICAL_TAIL", aircraftName);
+        aircraft.undercarriage = readComponent("UNDERCARRIAGE", aircraftName);
+        aircraft.engine = readComponent("ENGINES", aircraftName);
+        
+       
+        return aircraft;
+    }
 };
 
 #endif
