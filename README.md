@@ -136,6 +136,9 @@ AEROPlusPlus/
 │   └── *.h              # AERo++ API headers
 ├── test/                # Test files
 │   └── RegressionTest.cpp
+|   └── AircraftData.cpp
+|   └── TestLaunchVSP.cpp
+|   └── TestVSPCreator.cpp
 ├── CMakeLists.txt       # CMake configuration
 ├── README.md
 └── LICENSE
@@ -145,14 +148,32 @@ AEROPlusPlus/
 
 ## Examples
 
-[Add some usage examples here]
+Import data from Excel and than plot them
 
 ```cpp
-#include "your_header.h"
-#include <Eigen/Dense>
+#include "ExcelReader.h"
+#include "PLOT.h"
 
 int main() {
-    // Your example code
+    // ============================= VARIABLES INITIALZATION ==============================
+    std::vector<double> xFromExcel;
+    std::vector<double> yFromExcel;
+   //============================= Excel Reader Test ==============================
+
+    ExcelReader excelReader("ExcelFiles", "Test.xlsx");
+    
+
+    excelReader.getData("FUSELAGE", 3, 1, 2, 3);
+
+    xFromExcel = excelReader.getXDataFromExcel();
+    yFromExcel = excelReader.getYDataFromExcel();
+
+    Plot plot(xFromExcel, yFromExcel, 
+    "X", 
+    "Y", 
+    "Data from Excel",
+    "Data",
+    "lines","1","1","","","orange");
     return 0;
 }
 ```

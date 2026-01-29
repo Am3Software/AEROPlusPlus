@@ -10,91 +10,91 @@
 
 namespace AERO {
 
-// Struttura che rappresenta una variabile interpolabile
+// Structure representing an interpolable variable
 struct InterpolableVariable {
-    std::string varName;              // Nome della variabile, es: "VAR 1"
-    std::string xLabel;               // Etichetta dell'asse X, es: "weightPayload"
-    std::string yLabel;               // Etichetta dell'asse Y, es: "bodyLengthToFuselageOverallLength"
-    std::string xUnit;                // Unità di misura X, es: "kg"
-    std::string yUnit;                // Unità di misura Y, es: "adim", "m", ecc.
-    RegressionMethod method;          // Metodo di regressione/interpolazione (POLYNOMIAL, LINEAR, ecc.)
-    int polynomialDegree;             // Grado del polinomio per la regressione
+    std::string varName;              // Variable name, e.g.: "VAR 1"
+    std::string xLabel;               // X axis label, e.g.: "weightPayload"
+    std::string yLabel;               // Y axis label, e.g.: "bodyLengthToFuselageOverallLength"
+    std::string xUnit;                // X unit, e.g.: "kg"
+    std::string yUnit;                // Y unit, e.g.: "adim", "m", etc.
+    RegressionMethod method;          // Regression/interpolation method (POLYNOMIAL, LINEAR, etc.)
+    int polynomialDegree;             // Polynomial degree for regression
     
-    std::vector<double> xData;        // Dati X già convertiti
-    std::vector<double> yData;        // Dati Y già convertiti
-    std::vector<double> coefficients; // Coefficienti dell'interpolazione
+    std::vector<double> xData;        // X data already converted
+    std::vector<double> yData;        // Y data already converted
+    std::vector<double> coefficients; // Interpolation coefficients
     
-    // Verifica se la variabile è valida (dati X e Y non vuoti e di uguale dimensione)
+    // Checks if the variable is valid (X and Y data are not empty and have the same size)
     bool isValid() const {
         return !xData.empty() && xData.size() == yData.size();
     }
     
-    // Restituisce il numero di punti dati disponibili
+    // Returns the number of available data points
     int getNumDataPoints() const {
         return xData.size();
     }
     
-    // Metodo per interpolare un nuovo valore dato xValue
+    // Method to interpolate a new value given xValue
     double interpolate(double xValue) const {
 
-        // Crea un oggetto Interpolant con i dati e le impostazioni correnti - L'header sarebbe Interpolant.h che contiene già tutto
+        // Creates an Interpolant object with the current data and settings - The header is Interpolant.h which already contains everything
         Interpolant interp(xData, yData, polynomialDegree, method);
         return interp.getYValueFromRegression(xValue);
     }
 };
 
-// Struttura che rappresenta i dati di un componente dell'aeromobile
-// Ogni oggetto ComponentData contiene:
-// - Il nome del componente (es: "FUSELAGE", "WING", ecc.)
-// - Una mappa 'variables' che associa il nome di una variabile (stringa) a un oggetto InterpolableVariable.
-//   Questo permette di gestire dinamicamente più variabili per ciascun componente e di accedervi tramite il loro nome.
-//   La mappa consente di aggiungere, cercare e interpolare variabili specifiche di ogni componente.
+// Structure representing the data of an aircraft component
+// Each ComponentData object contains:
+// - The name of the component (e.g.: "FUSELAGE", "WING", etc.)
+// - A 'variables' map that associates the name of a variable (string) to an InterpolableVariable object.
+//   This allows dynamically managing multiple variables for each component and accessing them by their name.
+//   The map allows adding, searching, and interpolating specific variables for each component.
 struct ComponentData {
-    std::string componentName;        // Nome del componente, es: "FUSELAGE", "WING", ecc.
-    // La mappa 'variables' associa il nome della variabile (stringa) a un oggetto InterpolableVariable.
-    // Per costruirla, si inseriscono coppie <nome_variabile, InterpolableVariable>:
-    // Esempio:
+    std::string componentName;        // Component name, e.g.: "FUSELAGE", "WING", etc.
+    // The 'variables' map associates the variable name (string) to an InterpolableVariable object.
+    // To build it, insert pairs <variable_name, InterpolableVariable>:
+    // Example:
     // variables["VAR 1"] = InterpolableVariable{...};
     // variables["VAR 2"] = InterpolableVariable{...};
-    std::map<std::string, InterpolableVariable> variables; // Mappa delle variabili interpolabili
+    std::map<std::string, InterpolableVariable> variables; // Map of interpolable variables
     
-    // Restituisce una variabile dato il suo nome (const)
+    // Returns a variable given its name (const)
     const InterpolableVariable& getVariable(const std::string& varName) const {
         return variables.at(varName);
     }
     
-    // Verifica se una variabile esiste
-    // Questo metodo controlla se nella mappa 'variables' è presente una variabile con nome 'varName'.
-    // Restituisce true se la variabile esiste, false altrimenti.
-    // Spiegazione: variables.find(varName) cerca la chiave nella mappa.
-    // Se la trova, restituisce un iteratore all'elemento trovato.
-    // Se NON la trova, restituisce variables.end(), cioè un iteratore che rappresenta "un elemento oltre l'ultimo".
-    // Quindi, se il risultato è diverso da end(), la variabile esiste; altrimenti non esiste.
+    // Checks if a variable exists
+    // This method checks if the 'variables' map contains a variable named 'varName'.
+    // Returns true if the variable exists, false otherwise.
+    // Explanation: variables.find(varName) searches for the key in the map.
+    // If found, returns an iterator to the found element.
+    // If NOT found, returns variables.end(), which is an iterator representing "an element past the last".
+    // So, if the result is different from end(), the variable exists; otherwise it does not.
     bool hasVariable(const std::string& varName) const {
         return variables.find(varName) != variables.end();
     }
     
-    // Restituisce la lista dei nomi delle variabili disponibili
+    // Returns the list of available variable names
     std::vector<std::string> getAvailableVariables() const {
         std::vector<std::string> varNames;
-        // 'auto' qui deduce automaticamente il tipo della variabile 'pair' come std::pair<const std::string, InterpolableVariable>
+        // 'auto' here automatically deduces the type of 'pair' as std::pair<const std::string, InterpolableVariable>
         for (const auto& pair : variables) {
             varNames.push_back(pair.first);
         }
         return varNames;
     }
     
-    // Restituisce il numero di variabili disponibili
+    // Returns the number of available variables
     int getNumVariables() const {
         return variables.size();
     }
     
-    // Interpola una variabile specifica dato il nome e il valore X
+    // Interpolates a specific variable given its name and the X value
     double interpolate(const std::string& varName, double xValue) const {
         return getVariable(varName).interpolate(xValue);
     }
 
-    // Genera e mostra il grafico della regressione per una variabile specifica
+    // Generates and displays the regression chart for a specific variable
     void getChartOfVariableRegression(const std::string& varName, std::string enableChart, std::string aircraftName) const {
         const InterpolableVariable& var = getVariable(varName);
         Interpolant interp(var.xData, var.yData, var.polynomialDegree, var.method);
@@ -102,19 +102,19 @@ struct ComponentData {
     }
 };
 
-// Struttura che rappresenta i dati di un intero aeromobile
+// Structure representing the data of an entire aircraft
 struct AircraftData {
-    ComponentData fuselage;       // Dati della fusoliera
-    ComponentData wing;           // Dati dell'ala
-    ComponentData horizontal;     // Dati dell'impennaggio orizzontale
-    ComponentData vertical;       // Dati dell'impennaggio verticale
-    ComponentData undercarriage;  // Dati del carrello
-    ComponentData engine;         // Dati del motore
+    ComponentData fuselage;       // Fuselage data
+    ComponentData wing;           // Wing data
+    ComponentData horizontal;     // Horizontal tail data
+    ComponentData vertical;       // Vertical tail data
+    ComponentData undercarriage;  // Undercarriage data
+    ComponentData engine;         // Engine data
     
-    std::string aircraftName;     // Nome dell'aeromobile
+    std::string aircraftName;     // Aircraft name
     
-    // Restituisce un riferimento al componente richiesto (non const)
-    // Permette di modificare i dati del componente - se dovesse servire
+    // Returns a reference to the requested component (non-const)
+    // Allows modifying the component data - if needed
     ComponentData& getComponent(const std::string& componentName) {
         if (componentName == "FUSELAGE") return fuselage;
         if (componentName == "WING") return wing;
@@ -125,7 +125,7 @@ struct AircraftData {
         throw std::runtime_error("Unknown component: " + componentName);
     }
     
-    // Restituisce un riferimento const al componente richiesto
+    // Returns a const reference to the requested component
     const ComponentData& getComponent(const std::string& componentName) const {
         if (componentName == "FUSELAGE") return fuselage;
         if (componentName == "WING") return wing;

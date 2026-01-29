@@ -96,6 +96,14 @@ private:
     std::vector<double> getXData()
     {
 
+        if (startColMethod == 0)
+        {
+
+            // Nessuna estrazione di dati possibile
+            std::cout << "No data extraction possible for YData." << std::endl;
+            return {};
+        }
+
         double vectorXlength = getLengthOfRow();
 
         double indexX = startRow;
@@ -247,6 +255,12 @@ private:
     std::vector<double> getYData()
     {
 
+         if (startColMethod == 0){
+
+            // Nessuna estrazione di dati possibile
+            std::cout<<"No data extraction possible for YData."<<std::endl;
+            return {};
+        }
         double vectorYlength = getLengthOfRow();
         double indexY = startRow;
 
@@ -421,6 +435,13 @@ private:
     RegressionMethod getTypeOfRegression()
     {
 
+        if (startColMethod == 0)
+        {
+
+            // Nessuna estrazione di dati possibile
+            throw std::runtime_error("No data extraction possible for Regression Method.");
+        }
+
         std::string methodLabelStr = worksheet.cell(OpenXLSX::XLCellReference(3, startColMethod)).value().get<std::string>();
 
         if (methodLabelStr == "LINEAR")
@@ -458,6 +479,14 @@ private:
     int getDegreeOfPolynomial()
     {
 
+        if (startColMethod == 0)
+        {
+
+            // Nessuna estrazione di dati possibile
+            std::cout << "No data extraction possible for YData." << std::endl;
+            return 0;
+        }
+        
         worksheet = workbook.workbook().worksheet(sheetName);
         cell = worksheet.cell(OpenXLSX::XLCellReference(4, startColMethod));
         degreeOfPolynomial = cell.value().get<double>();
@@ -467,6 +496,14 @@ private:
 
     std::string getFlagToEnableChart() {
 
+
+        if (startColMethod == 0)
+        {
+
+            // Nessuna estrazione di dati possibile
+            std::cout << "No data extraction possible for Flag to Enable Chart." << std::endl;
+            return "";
+        }
 
         worksheet = workbook.workbook().worksheet(sheetName);
         flagChart = worksheet.cell(OpenXLSX::XLCellReference(6, startColMethod)).value().get<std::string>();
@@ -495,6 +532,9 @@ private:
         }
         return count;
     }
+
+ 
+
 
 public:
 
@@ -640,62 +680,128 @@ public:
         
         return var;
     }
-    
+
     /// @brief Reads a component's data from the specified Excel sheet.
     /// @param sheetName Name of the worksheet to read data from.
     /// @return A ComponentData object populated with data from the Excel sheet.
-    AERO::ComponentData readComponent(const std::string& sheetName,const std::string& aircraftName)
+    AERO::ComponentData readComponent(const std::string &sheetName, const std::string &aircraftName)
     {
         AERO::ComponentData component;
         component.componentName = sheetName;
-      
-        // std::string flagChart = getFlagToEnableChart();
-        
+
         // Conta prima quante variabili ci sono
         int numVars = countVariables(sheetName);
-        
-        if (numVars == 0) {
+
+        if (numVars == 0)
+        {
             std::cerr << "Warning: No variables found in " << sheetName << std::endl;
             return component;
         }
-        
-        std::cout << "\n============ "<< sheetName << " ============" << std::endl;
-        std::cout << "Reading " << numVars << " variable(s) from " 
+
+        std::cout << "\n============ " << sheetName << " ============" << std::endl;
+        std::cout << "Reading " << numVars << " variable(s) from "
                   << sheetName << "..." << std::endl;
-        
+
+        std::vector<std::string> variablesNameX;
+        std::vector<std::string> variablesNameY;
+        std::vector<std::string> xDetectedUnits;
+        std::vector<std::string> yDetectedUnits;
+
         // Leggi tutte le variabili trovate
-        for (int varIndex = 0; varIndex < numVars; varIndex++) {
-            try {
+        for (int varIndex = 0; varIndex < numVars; varIndex++)
+        {
+            try
+            {
                 AERO::InterpolableVariable var = readVariable(sheetName, varIndex);
-                
-                if (var.isValid()) {
+
+                if (var.isValid())
+                {
 
                     // Aggiungi la variabile alla mappa del componente
-                    // In questo caso variables è una std::map<std::string, InterpolableVariable>
-                    // La chiave è var.varName (es: "VAR 1"), il valore è l'oggetto var
-                    // Quindi si usa l'operatore [] per inserire la coppia chiave-valore
-                    // Si aggiunge var alla mappa delle variabili del componente, che vien sovrascritto se già esiste
                     component.variables[var.varName] = var;
-                    std::cout << "  [OK] " << var.varName << ": " << var.xLabel 
-                              << " [->] " << var.yLabel << " (" 
+                    std::cout << "  [OK] " << var.varName << ": " << var.xLabel
+                              << " [->] " << var.yLabel << " ("
                               << var.xData.size() << " points)" << std::endl;
 
-                // Genera il grafico della regressione se richiesto
-                component.getChartOfVariableRegression(var.varName, getFlagToEnableChartFromExcel(), aircraftName);
+                    // Raccogli i dati per il check di consistenza
+                    variablesNameX.push_back(var.xLabel);
+                    variablesNameY.push_back(var.yLabel);
+                    xDetectedUnits.push_back(var.xUnit);
+                    yDetectedUnits.push_back(var.yUnit);
 
-                } else {
-                    std::cerr << "  [ERROR] VAR " << (varIndex + 1) 
+                    // Genera il grafico della regressione se richiesto
+                    component.getChartOfVariableRegression(var.varName, getFlagToEnableChartFromExcel(), aircraftName);
+                }
+                else
+                {
+                    std::cerr << "  [ERROR] VAR " << (varIndex + 1)
                               << " has invalid data" << std::endl;
                 }
-            } catch (const std::exception& e) {
-                std::cerr << "  [ERROR] Error reading VAR " << (varIndex + 1) 
+            }
+            catch (const std::exception &e)
+            {
+                std::cerr << "  [ERROR] Error reading VAR " << (varIndex + 1)
                           << ": " << e.what() << std::endl;
             }
         }
-        
+
+        // Check finale sulla consistenza delle unità di misura
+        // Eseguito solo dopo aver letto tutte le variabili
+        if (!variablesNameX.empty())
+        {
+            std::cout << "\n[WAIT] Checking unit consistency..." << std::endl;
+
+            // Mappa per le variabili X del tipo xlabel -> unità
+            std::map<std::string, std::string> expectedXUnits;
+
+            // Mappa per le variabili Y del tipo ylabel -> unità
+            std::map<std::string, std::string> expectedYUnits;
+
+            for (size_t j = 0; j < variablesNameX.size(); j++)
+            {
+                const std::string &xName = variablesNameX[j];
+                const std::string &xUnit = xDetectedUnits[j];
+                const std::string &yName = variablesNameY[j];
+                const std::string &yUnit = yDetectedUnits[j];
+
+                // Check per X, se la variabile è già stata vista, altrimenti rilascia expectedXUnits.end()
+                // aggiunge la variabile alla mappa se non esiste ancora
+                if (expectedXUnits.find(xName) != expectedXUnits.end())
+                {
+                    if (expectedXUnits[xName] != xUnit)
+                    {
+                        std::cerr << "  [WARNING] Mismatch in X units for: " << xName
+                                  << " (expected: " << expectedXUnits[xName]
+                                  << ", found: " << xUnit << ")" << std::endl;
+                    }
+                }
+                else
+                {
+                    expectedXUnits[xName] = xUnit;
+                }
+
+                // Check per Y, se la variabile è già stata vista, altrimenti rilascia expectedYUnits.end()
+                // aggiunge la variabile alla mappa se non esiste ancora
+                if (expectedYUnits.find(yName) != expectedYUnits.end())
+                {
+                    if (expectedYUnits[yName] != yUnit)
+                    {
+                        std::cerr << "  [WARNING] Mismatch in Y units for: " << yName
+                                  << " (expected: " << expectedYUnits[yName]
+                                  << ", found: " << yUnit << ")" << std::endl;
+                    }
+                }
+                else
+                {
+                    expectedYUnits[yName] = yUnit;
+                }
+            }
+
+            std::cout << "Unit consistency check completed." << std::endl;
+        }
+
         return component;
     }
-    
     /// @brief Reads all aircraft data from the Excel sheets.
     /// @param aircraftName Name of the aircraft.
     /// @return An AircraftData object populated with data from all relevant Excel sheets.

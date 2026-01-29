@@ -926,21 +926,22 @@ public:
                 try
                 {
                     Gnuplot gp;
-                    // Mantiene il terminale wxt persistente, così la finestra del grafico resta valida anche se ridotta a icona
                     std::string xCmd = "set xlabel '" + xLabelChart + " (" + xUnit + ")'\n";
                     std::string yCmd = "set ylabel '" + yLabelChart + " (" + yUnit + ")'\n";
 
                     gp << "set terminal wxt enhanced font 'Arial,10' persist\n";
-
                     gp << "set encoding utf8\n";
                     gp << "unset margins\n"; // Lascia che gnuplot calcoli i margini corretti
+
                     gp << "set title 'Power regression'\n";
 
-                    
+                    // Imposta le label
+                    gp << xCmd;
+                    gp << yCmd;
+
                     gp << "set grid\n";
                     gp << "set key outside right top\n";
                     gp << "set key box\n"; // Opzionale: aggiunge un bordo alla leggenda
-
                     /* ============================================================
                       STILE DELLE CURVE (colori, linee, marker)
                  ============================================================ */
@@ -978,6 +979,9 @@ public:
                     Se voglio linee con marker
                      ============================================================ */
 
+                    // gp << "plot '-' with lines ls 1 title 'Regression line', "
+                    //       "'-' with points ls 2 title 'Data points'\n";
+
                     gp << "plot '-' with lines ls 1 title 'Regression line', "
                           "'-' with points ls 2 title 'Data points'\n";
 
@@ -985,8 +989,11 @@ public:
                     gp.send1d_raw(dataForChart);
                     gp.send1d_raw(xyPoint);
 
+                    // gp << "set output\n";  // Chiude il file PNG
+                    // gp << "replot\n";
 
                     gp.flush();
+
 
                     // Salva PNG
                     std::string pngFilename = (baseDirToRegressionChartFolder / nameOfAircraft / (xLabelChart + "_" + yLabelChart + "_" + std::to_string(std::time(nullptr)) + ".png")).string();
