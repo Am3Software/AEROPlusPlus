@@ -5,14 +5,15 @@
 #include <vector>
 #include <iostream>
 
+template <typename Container = std::vector<double>>
 class ConvPower {
    
     private:
 
     Power inputPower, outputPower;
-    std::vector<double> valueToConvertPower;
+    Container valueToConvertPower;
 
-    std::vector<double> convertedValues() {
+    Container convertedValues() {
     double conversionFactor = 1.0;
 
         // Determina il fattore di conversione
@@ -41,7 +42,7 @@ class ConvPower {
 
     public:
 
-    ConvPower(Power inputPower, Power outputPower, std::vector<double> valueToConvert) {
+    ConvPower(Power inputPower, Power outputPower, Container valueToConvert) {
 
 
         this->inputPower = inputPower;
@@ -55,14 +56,17 @@ class ConvPower {
     }
 
 
-   const std::vector<double>& getConvertedValues() const{
+   const Container& getConvertedValues() const{
 
         return valueToConvertPower;
     }
 
-
-
     
 };
+
+// Guide di deduzione
+template<typename Container>
+ConvPower(Power, Power, Container) -> ConvPower<Container>;
+
 
 #endif

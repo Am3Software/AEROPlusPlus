@@ -4,82 +4,77 @@
 #include "EnumLENGTH.h"
 #include <vector>
 #include <iostream>
+#include <type_traits>
 
+template <typename T = std::vector<double>>
 class ConvLength {
    
     private:
 
     Length inputLength, outputLength;
-    std::vector<double> valueToConvertLength;
+    T valueToConvertLength;
 
-    std::vector<double> convertedValues() {
-    double conversionFactor = 1.0;
+    // Per container
+    template<typename U = T>
+    typename std::enable_if<std::is_class<U>::value>::type
+    convertedValues() {
+        double conversionFactor = getConversionFactor();
+        for (auto& value : valueToConvertLength)
+        {
+            value *= conversionFactor;
+        }
+    }
 
-        // Determina il fattore di conversione
+    // Per scalari
+    template<typename U = T>
+    typename std::enable_if<!std::is_class<U>::value>::type
+    convertedValues() {
+        double conversionFactor = getConversionFactor();
+        valueToConvertLength *= conversionFactor;
+    }
+
+    double getConversionFactor() {
+        double conversionFactor = 1.0;
+
         if (inputLength == Length::M && outputLength == Length::FT) {
             conversionFactor = 1.0/0.3048;
         }
         else if (inputLength == Length::FT && outputLength == Length::M) {
             conversionFactor = 0.3048;
         }
-
         else if (inputLength == Length::M && outputLength == Length::NMI) {
-
             conversionFactor = 1.0/1852.0;
         }
         else if (inputLength == Length::NMI && outputLength == Length::M) {
-
             conversionFactor = 1852.0;
-            
         }
-
         else if (inputLength == Length::FT && outputLength == Length::NMI) {
-
             conversionFactor = 1.0/6076.12;
         }
         else if (inputLength == Length::NMI && outputLength == Length::FT) {
-
             conversionFactor = 6076.12;
-            
         }
         else {
             std::cerr << "Conversion not implemented yet!" << std::endl;
-            return std::vector<double>();
         }
 
-        // Applica la conversione IN-PLACE senza emplace_back
-        for (size_t i = 0; i < valueToConvertLength.size(); i++)
-        {
-            valueToConvertLength[i] = valueToConvertLength[i] * conversionFactor;
-        }
-
-        return valueToConvertLength;
+        return conversionFactor;
     }
 
     public:
 
-    ConvLength(Length inputLength, Length outputLength, std::vector<double> valueToConvert) {
-
-
-        this->inputLength = inputLength;
-        this->outputLength = outputLength;
-        this->valueToConvertLength = valueToConvert;
-
-       convertedValues();
-
-
-        
+    ConvLength(Length inputLength, Length outputLength, const T& valueToConvert)
+        : inputLength(inputLength), outputLength(outputLength), valueToConvertLength(valueToConvert)
+    {
+        convertedValues();
     }
 
-
-   const std::vector<double>& getConvertedValues() const{
-
+    const T& getConvertedValues() const {
         return valueToConvertLength;
     }
-
-
-
-    
 };
+
+template<typename T>
+ConvLength(Length, Length, T) -> ConvLength<T>;
 
 #endif

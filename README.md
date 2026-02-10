@@ -1,6 +1,6 @@
 # AERO++
 
-A C++ header-only library for aeronautical engineering, statistical analysis, and data visualization
+C++ header-only API for aircraft preliminary design — aerodynamics, weight & balance, inertia, performance,  statistical analysis, and data visualization
 
 ## Features
 
@@ -130,11 +130,11 @@ target_link_libraries(your_program ${Boost_LIBRARIES})
 
 ```
 AEROPlusPlus/
-├── include/              # Header files
-│   ├── Eigen/           # Eigen library (included)
+├── include/                # Header files
+│   ├── Eigen/              # Eigen library (included)
 │   ├── gnuplot-iostream.h  # Gnuplot wrapper (included)
-│   └── *.h              # AERo++ API headers
-├── test/                # Test files
+│   └── *.h                # AERO++ API headers
+├── test/                  # Test files
 │   └── RegressionTest.cpp
 |   └── AircraftData.cpp
 |   └── TestLaunchVSP.cpp
@@ -148,37 +148,27 @@ AEROPlusPlus/
 
 ## Examples
 
-Import data from Excel and than plot them
-
+## Quick Example — Wing Definition + Weight & Balance (P2012 case study)
 ```cpp
-#include "ExcelReader.h"
-#include "PLOT.h"
+// Define wing geometry and generate OpenVSP script
+VSP::Wing wing;
+wing.id    = "wing";
+wing.span  = {2.882, 2.059, 2.059};
+wing.croot = {2.0038, 2.0038, 1.7269};
+wing.ctip  = {2.0038, 1.7269, 1.45};
+wing.xloc  = 4.568;
 
-int main() {
-    // ============================= VARIABLES INITIALZATION ==============================
-    std::vector<double> xFromExcel;
-    std::vector<double> yFromExcel;
-   //============================= Excel Reader Test ==============================
+script.makeWing(wing, 2);
 
-    ExcelReader excelReader("ExcelFiles", "Test.xlsx");
-    
+// Weight & Balance — center of gravity computation
+COG::COGCalculator cog("P2012", commonData, wingData,
+                        fuselageData, engineData, ...);
+cog.calculateCOGAircraft();
 
-    excelReader.getData("FUSELAGE", 3, 1, 2, 3);
-
-    xFromExcel = excelReader.getXDataFromExcel();
-    yFromExcel = excelReader.getYDataFromExcel();
-
-    Plot plot(xFromExcel, yFromExcel, 
-    "X", 
-    "Y", 
-    "Data from Excel",
-    "Data",
-    "lines","1","1","","","orange");
-    return 0;
-}
+std::cout << "Xcg: " << cog.getCOGData().xCG << " m\n";
 ```
 
----
+> Full workflow from geometry to W&B on a real aircraft: [`test/TestVSPCreator.cpp`](test/TestVSPCreator.cpp)
 
 ## Troubleshooting
 

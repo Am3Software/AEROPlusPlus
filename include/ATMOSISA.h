@@ -144,6 +144,13 @@ public:
     static inline double pressureRatio(double h) {
         return calculate(h).delta;
     }
+
+    /**
+     * @brief Calculate density ratio at given altitude
+     */
+    static inline double densityRatio(double h) {
+        return calculate(h).sigma;
+    }
     
 private:
     // Layer boundaries (geopotential altitude) [m]

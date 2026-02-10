@@ -4,65 +4,65 @@
 #include "EnumANGLE.h"
 #include <vector>
 #include <iostream>
+#include <type_traits>
 
+template <typename T = std::vector<double>>
 class ConvAngle {
    
     private:
 
     Angle inputAngle, outputAngle;
-    std::vector<double> valueToConvertAngle;
+    T valueToConvertAngle;
 
-    std::vector<double> convertedValues() {
-    double conversionFactor = 1.0;
+    // Per container
+    template<typename U = T>
+    typename std::enable_if<std::is_class<U>::value>::type
+    convertedValues() {
+        double conversionFactor = getConversionFactor();
+        for (auto& value : valueToConvertAngle)
+        {
+            value *= conversionFactor;
+        }
+    }
 
-        // Determina il fattore di conversione
+    // Per scalari
+    template<typename U = T>
+    typename std::enable_if<!std::is_class<U>::value>::type
+    convertedValues() {
+        double conversionFactor = getConversionFactor();
+        valueToConvertAngle *= conversionFactor;
+    }
+
+    double getConversionFactor() {
+        double conversionFactor = 1.0;
+
         if (inputAngle == Angle::DEG && outputAngle == Angle::RAD) {
-            
             conversionFactor = 1.0/57.3;
         }
         else if (inputAngle == Angle::RAD && outputAngle == Angle::DEG) {
-
             conversionFactor = 57.3;
         }
-
         else {
             std::cerr << "Conversion not implemented yet!" << std::endl;
-            return std::vector<double>();
         }
 
-        // Applica la conversione IN-PLACE senza emplace_back
-        for (size_t i = 0; i < valueToConvertAngle.size(); i++)
-        {
-            valueToConvertAngle[i] = valueToConvertAngle[i] * conversionFactor;
-        }
-
-        return valueToConvertAngle;
+        return conversionFactor;
     }
 
     public:
 
-    ConvAngle(Angle inputAngle, Angle outputAngle, std::vector<double> valueToConvert) {
-
-
-        this->inputAngle = inputAngle;
-        this->outputAngle = outputAngle;
-        this->valueToConvertAngle = valueToConvert;
-
-       convertedValues();
-
-
-        
+    ConvAngle(Angle inputAngle, Angle outputAngle, const T& valueToConvert)
+        : inputAngle(inputAngle), outputAngle(outputAngle), valueToConvertAngle(valueToConvert)
+    {
+        convertedValues();
     }
 
-
-   const std::vector<double>& getConvertedValues() const{
-
+    const T& getConvertedValues() const {
         return valueToConvertAngle;
     }
-
-
-
-    
 };
+
+template<typename T>
+ConvAngle(Angle, Angle, T) -> ConvAngle<T>;
 
 #endif

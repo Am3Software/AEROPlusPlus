@@ -8,16 +8,38 @@
 #include "ConvLength.h"
 #include "EnumLENGTH.h"
 #include "ATMOSISA.h"
-#include <iostream>
-#include <filesystem>
-#include <thread>
-#include <chrono>
 #include "CONVFILEVSP.h"
 #include "READLOADFILE.h"
 #include "READPOLARFILE.h"
 #include "PLOT.h"
+#include "SAVEFILES.h"
+#include "WEIGHTS.h"
+#include "XMLPARSER.h"
+#include "WETTEDAREA.h"
+#include "MACCALCULATOR.h"
+#include "BUILDAIRCRAFT.h"
+#include "COGCALCULATOR.h"
+#include "EnumAircraftEngineType.h"
+#include "EnumEnginePosition.h"
+#include "EnumMaterial.h"
+#include "EnumUndercarriagePosition.h"
+#include "EnumTypeOfWing.h"
+#include "COGCALCULATOR.h"
+#include "BASEWEIGHTDATA.h"
+#include "WINGWEIGHTDATA.h"
+#include "FUSELAGEWEIGHTDATA.h"
+#include "ENGINEWEIGHTDATA.h"
+#include <iostream>
+#include <filesystem>
+#include <thread>
+#include <chrono>
 #include <list>
 #include <format>
+#include <cmath>
+#include <numeric>
+#include <cctype>
+#include <string>
+#include <iostream>
 
 int main()
 {
@@ -59,7 +81,7 @@ int main()
     // ====================  SCRIPT GENERATION ====================
     std::cout << "\n1. Generating AngelScript script (.vspscript)..." << std::endl;
 
-    VSP::ScriptGenerator script("MyAircraft.vspscript");
+    VSP::ScriptGenerator script("P2012.vspscript");
 
     // --- CONTROL SURFACES ---
     VSP::Aircraft ac;
@@ -70,34 +92,10 @@ int main()
     // ac.ver.mov.defl = {5.0};
     // ac.ver.isSplittedDeflection = false;
 
-    // --- FUSELAGE ---
-    VSP::Fuselage fus;
-    fus.id = "fuselage";
-    fus.type = "TransportFuse";
-    fus.advancedFuselage = false;
-    // fus.fuselagePresetName = "AirbusGenericTransportJet";
-    fus.customFuselage = true;
-
-    // fus.length         = 37.57;
-    // fus.diameter       = 4.14;
-    // fus.width          = 3.95010;
-    fus.length = 11.7;
-    fus.diameter = 1.546;
-    fus.nosemult = 1.902;
-    fus.aftmult = 2.665;
-    fus.nosecenter = -0.217;
-    fus.aftcenter = 0.164;
-    fus.aftwidth = 0.411;
-    fus.aftheight = 0.364;
-    fus.utess = 30;
-    fus.wtess = 15;
-
-    script.makeFuselage(fus);
-    std::cout << "   - Fuselage created" << std::endl;
-
     // --- MAIN WING ---
     VSP::Wing wing;
     wing.id = "wing";
+    wing.typeOfWing = TypeOfWing::STRAIGHT_TAPERED;
     wing.useDetailedPanels = true;
     wing.airfoilType = "XS_FIVE_DIGIT";
     wing.idealcl = {0.3, 0.3, 0.3, 0.3};
@@ -139,6 +137,12 @@ int main()
     script.makeWing(wing, 2);
     std::cout << "   - Main wing created (with flap and aileron)" << std::endl;
 
+    std::cout << "     - Calculating MAC..." << std::endl;
+    std::cout << "MAC: " << wing.MAC << " m" << std::endl;
+    std::cout << "yMAC: " << wing.yMAC << " m" << std::endl;
+    std::cout << "Total span: " << wing.totalSpan << " m" << std::endl;
+    std::cout << "Mean dihedral: " << wing.averageDihedral << " deg" << std::endl;
+
     //--- HORIZONTAL TAIL ---
     VSP::Wing horizontal;
     horizontal.id = "horizontal";
@@ -177,6 +181,11 @@ int main()
 
     script.makeWing(horizontal, 2);
     std::cout << "   - Horizontal tail created (with elevator)" << std::endl;
+
+    std::cout << "     - Calculating MAC..." << std::endl;
+    std::cout << "MAC: " << horizontal.MAC << " m" << std::endl;
+    std::cout << "yMAC: " << horizontal.yMAC << " m" << std::endl;
+    std::cout << "Total span: " << horizontal.totalSpan << " m" << std::endl;
 
     // --- VERTICAL TAIL ---
     VSP::Wing vertical;
@@ -218,21 +227,74 @@ int main()
     script.makeWing(vertical, 0);
     std::cout << "   - Vertical tail created (with rudder)" << std::endl;
 
-    // // // --- NACELLE (engines) ---
-    // VSP::Nacelle nac;
-    // nac.id = "nacelle";
-    // nac.advancedNacelle = true;
-    // nac.nacellePresetName = "GeneralTurbofan";
+    // --- FUSELAGE ---
+    VSP::Fuselage fus;
+    fus.id = "fuselage";
+    fus.type = "TransportFuse";
+    fus.advancedFuselage = false;
+    // fus.fuselagePresetName = "AirbusGenericTransportJet";
+    fus.customFuselage = true;
+
+    // fus.length         = 37.57;
+    // fus.diameter       = 4.14;
+    // fus.width          = 3.95010;
+    fus.length = 11.7;
+    fus.diameter = 1.546;
+    fus.nosemult = 1.902;
+    fus.aftmult = 2.665;
+    fus.nosecenter = -0.217;
+    fus.aftcenter = 0.164;
+    fus.aftwidth = 0.411;
+    fus.aftheight = 0.364;
+    fus.utess = 30;
+    fus.wtess = 15;
+
+    script.makeFuselage(fus, wing, horizontal);
+    std::cout << "   - Fuselage created" << std::endl;
+    std::cout << "     - Calculating tail arm..." << std::endl;
+    std::cout << "Tail arm: " << fus.tailArm << " m" << std::endl;
+
+    // // --- NACELLE (engines) ---
+    VSP::Nacelle nac;
+    nac.id = "nacelle";
+    nac.advancedNacelle = true;
+    // nac.nacellePresetName = "GeneralTurboFan";
+    // nac.nacellePresetName = "GeneralTurboProp_Spec1";
+    nac.nacellePresetName = "GeneralTurboProp_Spec2";
     // nac.length = 3.458;
     // nac.diameter = 2.735;
     // nac.xloc = {13.06,13.06};
     // nac.yloc = {5.75,-5.75};
     // nac.zloc = {-1.283,-1.283};
+    nac.length = 2.72821;
+    nac.aDiameter = 0.82918;
+    nac.bDiameter = 0.80097;
+    nac.xloc = {3.443, 3.443};
+    nac.yloc = {2.295, -2.295};
+    nac.zloc = {0.820, 0.820};
+    nac.xrot = {0.0, 0.0};
+    nac.yrot = {0.0, 0.0};
+    nac.zrot = {0.0, 0.0};
 
-    // for (size_t i = 1; i <= nac.xloc.size(); i++) {
+    VSP::Disk disk;
+    disk.id = "disk";
+    disk.type = "Disk";
+    disk.diameter = {1.950, 1.950};
+    disk.xloc = {3.443, 3.443};
+    disk.yloc = {2.295, -2.295};
+    disk.zloc = {0.820, 0.820};
+    disk.xrot = {0.0, 0.0};
+    disk.yrot = {0.0, 0.0};
+    disk.zrot = {0.0, 0.0};
+    disk.utess = {8, 8};
+    disk.wtess = {9, 9};
 
-    //     script.makeNacelle(nac,i);
-    // }
+    for (size_t i = 1; i <= nac.xloc.size(); i++)
+    {
+
+        script.makeNacelle(nac, i);
+        script.MakeDisk(disk, i - 1);
+    }
 
     // nac.type = "STACK";
     // nac.width = 1.0;
@@ -284,36 +346,42 @@ int main()
     // std::cout << "   - EO/IR sensor created" << std::endl;
 
     // --- DEGEN GEOM ---
-    script.makeDegenGeom("MyAircraft", false);
+    script.makeDegenGeom("P2012", false);
     std::cout << "   - DegenGeom configured" << std::endl;
 
-    std::cout << "\n✓ AngelScript script generated: MyAircraft.vspscript" << std::endl;
+    std::cout << "\n✓ AngelScript script generated: P2012.vspscript" << std::endl;
 
     // ==================== GENERATE VSPAERO FILE ====================
     std::cout << "\n2. Generating VSPAERO file (.vspaero)..." << std::endl;
 
-    VSP::VSPAeroGenerator vspaero("MyAircraft");
+    VSP::VSPAeroGenerator vspaero("P2012");
 
     // --- AERODYNAMIC SETTINGS ---
     VSP::AeroSettings settings;
 
     double altitude = 10000.0;
 
+    ConvLength convlength(Length::FT, Length::M, altitude);
+
+    altitude = convlength.getConvertedValues(); // Convert altitude to meters for VSPAERO
+
     auto [T, a, P, rho] = Atmosphere::atmosisa(altitude); // Atmosisa like in MATLAB
 
     double speedOfSound = Atmosphere::ISA::speedOfSound(altitude); // Calculate only the speed of sound
     double mu = Atmosphere::ISA::viscosity(altitude);              // Calculate only the dynamic viscosity
 
-    std::vector<double> altitudeToVSP;
-    altitudeToVSP.push_back(altitude);
+    MACCalculator macCalc;
 
-    ConvLength convlength(Length::FT, Length::M, altitudeToVSP);
+    double span = 2 * std::accumulate(wing.span.begin(), wing.span.end(), 0.0);
 
-    settings.altitude = convlength.getConvertedValues().at(0); // Returns the first converted altitude value
-    settings.Sref = 25.0;                                      // Reference area [m²]
-    settings.Cref = 1.8592;                                    // Reference chord [m]
-    settings.Bref = 14.0;                                      // Wingspan [m]
-    settings.X_cg = wing.xloc + 0.25 * settings.Cref;          // Center of gravity
+    // .back() e .front() per prendere l'ultimo e il primo elemento di un vettore
+    double taperRatio = wing.ctip.back() / wing.croot.front();
+
+    settings.altitude = altitude;                                                                       // Returns the first converted altitude value
+    settings.Sref = 25.0;                                                                               // Reference area [m²]
+    settings.Cref = macCalc.getMAC(TypeOfWing::STRAIGHT_TAPERED, wing.croot.front(), taperRatio, span); // Reference chord [m]
+    settings.Bref = 14.0;                                                                               // Wingspan [m]
+    settings.X_cg = wing.xloc + 0.25 * settings.Cref;                                                   // Center of gravity
     settings.Y_cg = 0.0;
     settings.Z_cg = 0.25 * fus.diameter;
     settings.Mach = 0.15;                                                // Mach number
@@ -371,28 +439,27 @@ int main()
     {
         // ==================== VSPScript execution ====================
 
-        std::string exeVSPScript = "vspscript.exe -script MyAircraft.vspscript";
+        std::string exeVSPScript = "vspscript.exe -script P2012.vspscript";
         std::cout << "\nExecuting: " << exeVSPScript << std::endl;
 
         int retVSPScript = system(exeVSPScript.c_str());
 
-        if (retVSPScript != 0 && !std::filesystem::exists("MyAircraft.vsp3"))
+        if (retVSPScript != 0 && !std::filesystem::exists("P2012.vsp3"))
         {
             std::cerr << "VSPScript: execution failed" << std::endl;
             return 1;
         }
 
-        //==================== VSPAERO launch command ====================
-        std::string exeVSPAero = "vspaero.exe -omp 4 MyAircraft_DegenGeom";
-        std::cout << "\nExecuting: " << exeVSPAero << std::endl;
-
-        // Esegui direttamente, output visibile nello stesso terminale
-        int ret = system(exeVSPAero.c_str());
-        if (ret != 0)
-        {
-            std::cerr << "VSPAERO: execution failed" << std::endl;
-            return 1;
-        }
+        // ==================== OPTIONAL: RUN VSPAERO ANALYSIS ====================
+        // Uncomment the following lines to run VSPAero analysis
+        // std::string exeVSPAero = "vspaero.exe -omp 4 MyAircraft_DegenGeom";
+        // std::cout << "\nExecuting: " << exeVSPAero << std::endl;
+        // int ret = system(exeVSPAero.c_str());
+        // if (ret != 0)
+        // {
+        //     std::cerr << "VSPAERO: execution failed" << std::endl;
+        //     return 1;
+        // }
     }
 
     catch (const std::exception &e)
@@ -401,88 +468,186 @@ int main()
         return 1;
     }
 
-    // ====================  READING LOAD FILE SECTION ====================
+    // ==================== OPTIONAL: LOAD AND PLOT AERODYNAMIC DATA ====================
+    // Uncomment to load and visualize VSPAero results
 
-    VSPAero::LODLoader loader("MyAircraft_DegenGeom.lod");
-    Plot<> plotter("Y [m]", "Cl","Cl distribution along the span");
+    // VSPAero::LODLoader loader("MyAircraft_DegenGeom.lod");
+    // Plot plotter("Y [m]", "Cl", "Cl distribution along the span");
+
+    // for (size_t i = 0; i < settings.AoA.size(); i++)
+    // {
+    //     auto case0 = loader.loadCase(settings.AoA[i]);
+    //
+    //     std::cout << "\n--- WING (AoA = " << settings.AoA[i] << " deg) ---" << std::endl;
+    //     std::cout << "Sections: " << case0.wingSections.size() << std::endl;
+    //     std::cout << "  Yavg [m]   Cl      Cd      Cmz" << std::endl;
+    //     std::cout << "  ------------------------------------" << std::endl;
+    //
+    //     std::vector<double> Yavg, Cl;
+    //
+    //     for (const auto &sec : case0.wingSections)
+    //     {
+    //         std::cout << std::fixed << std::setprecision(4)
+    //                   << "  " << std::setw(8) << sec.Yavg
+    //                   << " " << std::setw(7) << sec.Cl
+    //                   << " " << std::setw(7) << sec.Cd
+    //                   << " " << std::setw(7) << sec.Cmz << std::endl;
+    //
+    //         Yavg.push_back(sec.Yavg);
+    //         Cl.push_back(sec.Cl);
+    //     }
+    //
+    //     std::vector<std::string> colors = {"red", "blue", "green"};
+    //     std::string color = colors[i % colors.size()];
+    //     std::ostringstream oss;
+    //     oss << "AoA = " << std::fixed << std::setprecision(3) << settings.AoA[i] << "°";
+    //
+    //     plotter.addData(Yavg, Cl, oss.str(), "lines", "1", "1", "", "", color);
+    // }
+    //
+    // plotter.show();
+
+    // ==================== OPTIONAL: READ POLAR DATA ====================
+    // Uncomment to read and display polar data
+
+    // VSPPolar::PolarReader reader;
+    // reader.readFile("MyAircraft_DegenGeom.polar");
+    // const auto &polarData = reader.getData();
+    // const auto &headers = reader.getHeaders();
+    //
+    // std::cout << "\n--- POLAR DATA ---" << std::endl;
+    // for (const auto &point : polarData)
+    // {
+    //     std::cout << "AoA: " << point.AoA
+    //               << " | CL: " << point.CL
+    //               << " | CDtot: " << point.CDtot << std::endl;
+    // }
+
+    // try
+    // {
+    //     // ==================== WETTED AREA CALCULATION ====================
+    //     WETTEDAREA::WettedArea wa("GetGeomOfAircraft.vspscript");
+
+    //     // Calculate wetted area for all components (fuselage, nacelles, boom if present)
+    //     wa.getAllGeoms("P2012", "GetGeomOfAircraft.vspscript");
+
+    //     // Access and display results
+    //     const auto &results = wa.getWettedAreaResults();
+
+    //     std::cout << "\n=== WETTED AREA RESULTS ===" << std::endl;
+    //     std::cout << "WET_FUSE_AREA: " << results.WET_FUSE_AREA << " m²" << std::endl;
+    //     std::cout << "WET_NAC_AREA: " << results.WET_NAC_AREA << " m²" << std::endl;
+    //     std::cout << "WET_BOOM_AREA: " << results.WET_BOOM_AREA << " m²" << std::endl;
+
+    //     // Convert wing ID to uppercase for display
+    //     std::string wingIdUpper = wing.id;
+    //     std::transform(wingIdUpper.begin(), wingIdUpper.end(), wingIdUpper.begin(),
+    //                    [](unsigned char c)
+    //                    { return std::toupper(c); });
+
+    //     std::cout << "WET_" << wingIdUpper << "_AREA: " << results.WET_AREA << " m²" << std::endl;
+
+    //     // ==================== WEIGHT ESTIMATION ====================
+    //     Weight weight;
+
+    //     // Calculate dive speed
+    //     double diveSpeed = 1.25 * settings.Mach * speedOfSound;
+
+    //     // Calculate horizontal tail MAC and position
+    //     double taperRatioHor = horizontal.ctip[0] / horizontal.croot[0];
+    //     double horMAC = 0.67 * horizontal.croot[0] * ((1 + taperRatioHor + std::pow(taperRatioHor, 2)) / (1 + taperRatioHor));
+    //     double yMACHor = 2 * horizontal.span[0] / 6 * (1 + 2 * taperRatioHor) / (1 + taperRatioHor);
+    //     double deltaXLEHor = yMACHor * tan(horizontal.sweep[0] / 57.3);
+    //     double xMACHor = horizontal.xloc + deltaXLEHor + 0.25 * horMAC;
+
+    //     // Calculate tail arm (distance between wing and tail aerodynamic centers)
+    //     double tailArm = xMACHor - (wing.xloc + 0.25 * settings.Cref);
+
+    //     // // Estimate fuselage weight using Torenbeek method
+    //     // double weightFuselage = weight.fuselgeWeightTorenbeekMaterial(
+    //     //     diveSpeed, tailArm, fus.diameter, fus.diameter, results.WET_FUSE_AREA,
+    //     //     false, EnginePosition::WING_MOUNTED, UndercarriagePosition::BODY_MOUNTED,
+    //     //     2.5, false, Material::ALLUMINIUM, Material::ALLUMINIUM, Material::ALLUMINIUM);
+
+    //     // std::cout << "\n=== FUSELAGE WEIGHT ESTIMATION ===" << std::endl;
+    //     // std::cout << "Fuselage Weight (Torenbeek method): " << weightFuselage << " kg" << std::endl;
+    // }
+    // catch (const std::exception &e)
+    // {
+    //     std::cerr << "Error: " << e.what() << std::endl;
+    //     return 1;
+    // }
+
+    // ==================== COG CALCULATION ====================
+    BuildAircraft builder("P2012", settings);
+
+    builder.buildAircraft();
+
+    AircraftBuildData data = builder.getBuildData();
+
+    COG::COGCalculator calcCenterOfGravity("P2012",
+                                           data.commonData,
+                                           data.wingData,
+                                           data.fuselageData,
+                                           data.engineData,
+                                           wing,
+                                           horizontal,
+                                           vertical,
+                                           fus,
+                                           nac);
+
+  
+   
+    calcCenterOfGravity.getWeights();
+    calcCenterOfGravity.calculateCOGAircraft();
+
+    COG::Weights weightData = calcCenterOfGravity.getWeightsData();
+    COG::COGDATA cogData = calcCenterOfGravity.getCOGData();
+
+    double OEW = weightData.totalAircraftWeight -  weightData.payloadWeight - weightData.fuelWeight;
+    double emptyWeight = OEW - 0.05*weightData.fuelWeight - weightData.crewWeight;
+    double structuralMass = weightData.wingWeight + weightData.horizontalWeight + 
+                            weightData.verticalWeight + weightData.fuselageWeight +
+                            weightData.landingGearWeight + weightData.controlSurfacesWeight;
+
+    double manifacturerEmptyWeight = structuralMass + weightData.propulsionGroupWeight + weightData.avionicGroupWeight + 
+                                     weightData.electricalGroupWeight + weightData.hydraulicAndPneumaticWeight +
+                                     weightData.furnishingsAndEquipmentWeight + weightData.airConditioningAndAntiIceWeight;
     
-    for (size_t i = 0; i < settings.AoA.size(); i++)
-    {
-        auto case0 = loader.loadCase(settings.AoA[i]); // Case 0 = Wing
 
-        // ==================== MAIN WING ====================
-        std::cout << "\n--- WING (Main Wing) ---" << std::endl;
-        std::cout << "Sections: " << case0.wingSections.size() << std::endl;
-        std::cout << "  Yavg [m]   Cl      Cd      Cmz" << std::endl;
-        std::cout << "  ------------------------------------" << std::endl;
+    std::cout << "\n=== BALANCE AND WEIGHTS DATA ===" << std::endl;
+    // std::cout << "Fuselage Weight: " << weightData.fuselageWeight << " kg" << std::endl;
+    std::cout << "Total aircraft weight: " << weightData.totalAircraftWeight << " kg" << std::endl;
+    std::cout << "Payload weight: " << weightData.payloadWeight << " kg" << std::endl;
+    std::cout << "Fuel weight: " << weightData.fuelWeight << " kg" << std::endl;
+    std::cout << "Crew weight: " << weightData.crewWeight << " kg" << std::endl;
+    std::cout << "Operating Empty Weight (OEW): " << OEW << " kg" << std::endl;
+    std::cout << "Empty Weight: " << emptyWeight << " kg" << std::endl;
+    std::cout << "Structural mass: " << structuralMass << " kg" << std::endl;
+    std::cout << "Manufacturer Empty Weight: " << manifacturerEmptyWeight << " kg" << std::endl;
+    std::cout << "Xcg: " << cogData.xCG << " m" << std::endl;
+    std::cout << "Ycg: " << cogData.yCG << " m" << std::endl;
+    std::cout << "Zcg: " << cogData.zCG << " m" << std::endl;
 
-        std::cout << "\nAngle of Attack: " << settings.AoA[i] << " degrees" << std::endl;
+    // ====================== XML PARSER TEST ====================
 
-        // Temporary vectors for plotting
-        std::vector<double> Yavg;
-        std::vector<double> Cl;
+    // XMLUtil::XMLParser parser (std::filesystem::current_path().string() + "/P2012_weightsSettings.xml");
 
-        for (const auto &sec : case0.wingSections)
-        {
-            std::cout << std::fixed << std::setprecision(4)
-                      << "  " << std::setw(8) << sec.Yavg
-                      << " " << std::setw(7) << sec.Cl
-                      << " " << std::setw(7) << sec.Cd
-                      << " " << std::setw(7) << sec.Cmz
-                      << std::endl;
+    // BaseWeightData baseData;
 
-            
-            Yavg.emplace_back(sec.Yavg);
-            Cl.emplace_back(sec.Cl);
-        }
+    // baseData.setWTO(parser.getValue<double>("myXMLDataToWeights/generalData/maximumTakeOffWeight"));
+    // // baseData.setPayloadWeight(720);
+    // // baseData.setCrewWeight(76.51);
+    // // baseData.setFuelWeight(694);
+    // // baseData.setDiveSpeed(111);
+    // // baseData.
 
-        // Aggiungi questa curva al plot con colori diversi
-        std::vector<std::string> colors = {"red", "blue", "green"};
-        std::string color = colors[i % colors.size()];
+    // ==================== SAVE OUTPUT FILES ====================
+    SaveFiles saveFiles;
 
-        std::ostringstream oss;
-        // Set the precision to 3 decimal places for AoA
-        oss << "AoA = " << std::fixed << std::setprecision(3) << settings.AoA[i] << "°";
-        std::string legend = oss.str();
-
-        plotter.addData(Yavg, Cl, legend, "lines",
-                        "1", "1.0", "", "", color);
-    }
-
-    // Show the plot with all AoA curves
-    plotter.show();
-
-    // ==================== READING POLAR FILE SECTION ====================
-
-    VSPPolar::PolarReader reader;
-
-    reader.readFile("MyAircraft_DegenGeom.polar");
-
-    // polarData è una reference costante al vettore interno dei dati letti dal PolarReader,
-    // così si evita la copia e si accede direttamente ai dati.
-    const auto &polarData = reader.getData();
-
-    const auto &headers = reader.getHeaders();
-
-    std::cout << "\n--- POLAR DATA ---" << std::endl;
-
-    for (const auto &point : polarData)
-    {
-        std::cout << "AoA: " << point.AoA
-                  << " | CL: " << point.CL
-                  << " | CDtot: " << point.CDtot
-                  << std::endl;
-    }
-
-    std::cout << "\n--- HEADERS ---" << std::endl;
-
-    for (const auto &header : headers)
-    {
-        std::cout << header << " ";
-    }
-
-
-    
+    std::cout << "\n=== SAVING FILES ===" << std::endl;
+    saveFiles.saveFiles("MyAircraft_test_folder", "P2012");
+    std::cout << "✓ Files saved successfully" << std::endl;
 
     return 0;
 }

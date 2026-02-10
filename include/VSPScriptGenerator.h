@@ -8,6 +8,11 @@
 #include <sstream>
 #include <stdexcept>
 #include <filesystem>
+#include <numeric>
+#include "MACCALCULATOR.h"
+#include "EnumWingPosition.h"
+#include "EnumTypeOfWing.h"
+#include "EQUALSIGNORECASE.h"
 
 namespace VSP
 {
@@ -18,6 +23,7 @@ namespace VSP
         {
                 std::string id;
                 std::string type = "WING";
+                TypeOfWing typeOfWing = TypeOfWing::UNKNOWN;
 
                 // Geometria base
                 std::vector<double> span;
@@ -49,6 +55,23 @@ namespace VSP
                 double xloc = 0;
                 double yloc = 0;
                 double zloc = 0;
+
+                // MAC e posizione
+                double totalSpan = 0.0;
+                double totalProjectedSpan = 0.0;
+                double MAC = 0.0;
+                double yMAC = 0.0;
+                double planformArea = 0.0;
+                double taperRatio = 0.0;
+                double aspectRatio = 0.0;
+                double kinkStation = 0.0;
+                double taperInbord = 0.0;
+                double deltaXtoLEWing = 0.0;
+                double deltaXtoHorizontal = 0.0;
+                double percentagePositionOfXCG = 0.25;
+                std::vector<double> panelsArea;
+                double averageDihedral = 0.0;
+                double averageLeadingEdgeSweep = 0.0;
 
                 // Rotazione
                 double xrot = 0;
@@ -113,8 +136,9 @@ namespace VSP
         {
                 std::string id;
                 std::string type;
-                double length;
-                double diameter;
+                double length = 0;
+                double diameter = 0;
+                double tailArm = 0;
                 int utess;
                 int wtess;
                 bool customFuselage = false;
@@ -174,7 +198,9 @@ namespace VSP
                 std::vector<double> xloc;
                 std::vector<double> yloc;
                 std::vector<double> zloc;
+                std::vector<double> xrot;
                 std::vector<double> yrot;
+                std::vector<double> zrot;
                 int utess;
                 int wtess;
 
@@ -182,6 +208,24 @@ namespace VSP
                 std::string nacellePresetName;
                 double length = 0;
                 double diameter = 0;
+                double aDiameter = 0; // Generalemnet coincide con il diametro di inlet di un TurboProp
+                double bDiameter = 0; // L'altro diamtero del TurboProp perchè modellato con ellipse
+        };
+
+        struct Disk
+        {
+                std::string id;
+                std::string type;
+                std::vector<double> diameter;
+                std::vector<double> radius;
+                std::vector<double> xloc;
+                std::vector<double> yloc;
+                std::vector<double> zloc;
+                std::vector<double> xrot;
+                std::vector<double> yrot;
+                std::vector<double> zrot;
+                std::vector<int> utess;
+                std::vector<int> wtess;
         };
 
         struct Pod
@@ -208,6 +252,8 @@ namespace VSP
                 std::vector<double> yloc;
                 std::vector<double> zloc;
                 std::vector<double> yrot;
+                double width = 0.0;
+                double height = 0.0;
                 int utess;
                 int wtess;
         };
@@ -222,6 +268,7 @@ namespace VSP
                 std::vector<double> yloc;
                 std::vector<double> zloc;
                 std::vector<double> yrot;
+                double diameter = 0.0;
                 int utess;
                 int wtess;
         };
@@ -233,6 +280,9 @@ namespace VSP
         private:
                 std::ofstream file;
                 std::string parentFolder;
+                double numeratorDihedral = 0.0;
+                double numeratorSweepLeadingEdge = 0.0;
+                double totalPanlesArea = 0.0;
 
                 inline void writeComment(const std::string &comment)
                 {
@@ -385,7 +435,7 @@ namespace VSP
                 }
 
                 // ============= SHAPE PANEL =============
-                inline void shapePanel(const Wing &wing, int panelIndex)
+                inline void shapePanel(Wing &wing, int panelIndex, TypeOfWing wingType)
                 {
                         writeComment(wing.id + " panel " + std::to_string(panelIndex));
 
@@ -412,6 +462,8 @@ namespace VSP
                         {
                                 writeCommand("SetParmVal(" + wing.id + ",\"Span\",\"" + secID + "\"," +
                                              std::to_string(wing.span[idx]) + ");");
+
+                                wing.totalSpan += wing.span[idx];
                         }
 
                         if (idx < wing.sweep.size())
@@ -444,6 +496,133 @@ namespace VSP
                         }
 
                         writeUpdate();
+
+                        if (idx == wing.span.size() - 1) // Se è l'ultimo pannello, calcolo MAC e yMAC
+                        {
+                                MACCalculator macCalc;
+
+                                wing.totalSpan *= equalsIgnoreCase(wing.id, "wing") || equalsIgnoreCase(wing.id, "horizontal") ? 2 : 1; // Perchè totalSpan è la somma delle semiali, e per il calcolo del MAC serve la span totale
+
+                              
+
+                                // Se ci fosse una winglet la penultima sezione è la transition e l'ultima è la winglet
+                                if (wing.blending)
+                                {
+                                        for (size_t i = 0; i < wing.span.size() - 2; i++)
+                                        {
+
+                                                wing.panelsArea.emplace_back(0.5 * wing.span[i] * (wing.croot[i] + wing.ctip[i])); // Calcolo area di ogni pannello con formula area trapezio, da usare poi per il calcolo del centro di pressione
+
+                                                 numeratorDihedral += wing.panelsArea[i] * wing.sweep[i];
+                                                 numeratorDihedral += wing.panelsArea[i] * wing.dihedral[i];
+                                        }
+                                }
+
+                                else
+                                {
+                                        
+                                        // Senza winglet
+                                        for (size_t i = 0; i < wing.span.size(); i++)
+                                        {
+
+                                                wing.panelsArea.emplace_back(0.5 * wing.span[i] * (wing.croot[i] + wing.ctip[i])); // Calcolo area di ogni pannello con formula area trapezio, da usare poi per il calcolo del centro di pressione
+                                                numeratorDihedral += wing.panelsArea[i] * wing.sweep[i];
+                                                numeratorDihedral += wing.panelsArea[i] * wing.dihedral[i];
+                                        }
+                                }
+
+
+                                // Calcolo sweep medio e dihedral medio pesati con l'area dei pannelli
+
+                                totalPanlesArea = std::accumulate(wing.panelsArea.begin(), wing.panelsArea.end(), 0.0);
+
+                                wing.averageLeadingEdgeSweep = numeratorSweepLeadingEdge / totalPanlesArea;
+
+                                wing.averageDihedral = numeratorDihedral / totalPanlesArea;
+
+                                // Calcolo della span proiettata sul piano orizzontale
+
+                                wing.totalProjectedSpan = wing.totalSpan * cos(wing.averageDihedral/ 57.3); // Proiezione della span totale sul piano orizzontale
+
+
+                                // Calcolo di MAC, yMAC, area e aspect ratio in base al tipo di ala
+
+                                switch (wingType)
+                                {
+                                case TypeOfWing::STRAIGHT_TAPERED:
+
+                                {
+                                        if (wing.blending)
+                                        {
+                                                wing.taperRatio = (*(wing.ctip.end() - 3)) / wing.croot.front();
+                                                // *(wing.ctip.end() - 3) ---> accedo col puntatore al valore dll'iteratore, per prendere la corda tip del terzultimo pannello, dato che è equivalente wing.ctip[wing.ctip.size()-3]
+                                                // Se adesemipi wing.ctip.size() ==3 , dato che indici sono 0-based, per ottenere il penultimo elemento si fa wing.ctip[0] == wing.ctip[wing.ctip.size()-3]
+                                                wing.MAC = macCalc.getMAC(wingType, wing.croot[0], wing.taperRatio, wing.totalProjectedSpan);
+                                                wing.yMAC = macCalc.getYMAC(wingType, wing.span[0], wing.taperRatio);
+
+                                                wing.planformArea = 0.5 * wing.totalProjectedSpan * wing.croot.front() * (1 + wing.taperRatio);
+                                                wing.aspectRatio = std::pow(wing.totalProjectedSpan, 2) / wing.planformArea;
+                                        }
+                                        else
+                                        {
+                                                wing.taperRatio = wing.ctip.back() / wing.croot.front();
+
+                                                wing.MAC = macCalc.getMAC(wingType, wing.croot[0], wing.taperRatio, wing.totalProjectedSpan);
+                                                wing.yMAC = macCalc.getYMAC(wingType, wing.totalProjectedSpan, wing.taperRatio);
+
+                                                wing.planformArea = 0.5 * wing.totalProjectedSpan * wing.croot.front() * (1 + wing.taperRatio);
+                                                wing.aspectRatio = std::pow(wing.totalProjectedSpan, 2) / wing.planformArea;
+                                        }
+                                }
+
+                                break;
+
+                                case TypeOfWing::CRANKED:
+
+                                {
+
+                                        if (wing.blending)
+                                        {
+
+                                                wing.taperRatio = (*(wing.ctip.end() - 3)) / wing.croot.front();
+
+                                                wing.MAC = macCalc.getMAC(wingType, wing.croot.front(), wing.taperRatio, wing.totalProjectedSpan,
+                                                                          wing.kinkStation, wing.taperInbord);
+                                                wing.yMAC = macCalc.getYMAC(wingType, wing.totalProjectedSpan, wing.taperRatio,
+                                                                            wing.kinkStation, wing.taperInbord);
+
+                                                wing.planformArea = 0.5 * wing.totalProjectedSpan * wing.croot.front() * (1 - wing.taperInbord) *
+                                                                        2 * wing.kinkStation / wing.totalProjectedSpan +
+                                                                    (wing.taperRatio) + wing.taperInbord;
+
+                                                wing.aspectRatio = std::pow(wing.totalProjectedSpan, 2) / wing.planformArea;
+                                        }
+
+                                        else
+                                        {
+
+                                                wing.taperRatio = wing.ctip.back() / wing.croot.front();
+
+                                                wing.MAC = macCalc.getMAC(wingType, wing.croot.front(), wing.taperRatio, wing.totalProjectedSpan,
+                                                                          wing.kinkStation, wing.taperInbord);
+                                                wing.yMAC = macCalc.getYMAC(wingType, wing.totalProjectedSpan, wing.taperRatio,
+                                                                            wing.kinkStation, wing.taperInbord);
+
+                                                wing.planformArea = 0.5 * wing.totalProjectedSpan * wing.croot.front() * (1 - wing.taperInbord) *
+                                                                        2 * wing.kinkStation / wing.totalProjectedSpan +
+                                                                    (wing.taperRatio) + wing.taperInbord;
+
+                                                wing.aspectRatio = std::pow(wing.totalProjectedSpan, 2) / wing.planformArea;
+                                        }
+
+                                        break;
+                                }
+                                }
+
+                               
+
+                                
+                        }
                 }
 
         public:
@@ -485,8 +664,8 @@ namespace VSP
                         if (fuselage.fuselagePresetName == "UAVDomeFuselagePreset")
                         {
                                 // LOADING FUSELAGE PRESET
-                                writeCommand("string fnamePreset = \"" + cwdEscaped + "\\\\" + 
-                                           fuselage.fuselagePresetName + ".vsp3\";");
+                                writeCommand("string fnamePreset = \"" + cwdEscaped + "\\\\" +
+                                             fuselage.fuselagePresetName + ".vsp3\";");
                                 file << "\r\n";
 
                                 writeCommand("ReadVSPFile( fnamePreset );");
@@ -580,8 +759,8 @@ namespace VSP
                                 writeUpdate();
 
                                 // XSec_0
-                                writeCommand("SetParmVal(fuselage,\"ZLocPercent\",\"XSec_0\", " + 
-                                           std::to_string(fuselage.nose.zLocPercent) + ");");
+                                writeCommand("SetParmVal(fuselage,\"ZLocPercent\",\"XSec_0\", " +
+                                             std::to_string(fuselage.nose.zLocPercent) + ");");
                                 file << "\r\n";
 
                                 // XSec_1
@@ -612,14 +791,14 @@ namespace VSP
 
                                 writeUpdate();
 
-                                writeCommand("SetParmVal(fuselage,\"Height\",\"XSecCurve_3\"," + 
-                                           std::to_string(fuselage.attachDomeBody.diameter) + ");");
+                                writeCommand("SetParmVal(fuselage,\"Height\",\"XSecCurve_3\"," +
+                                             std::to_string(fuselage.attachDomeBody.diameter) + ");");
                                 file << "\r\n";
 
                                 writeUpdate();
 
-                                writeCommand("SetParmVal(fuselage,\"XLocPercent\",\"XSec_3\", " + 
-                                           std::to_string(fuselage.attachDomeBody.xLocPercent) + ");");
+                                writeCommand("SetParmVal(fuselage,\"XLocPercent\",\"XSec_3\", " +
+                                             std::to_string(fuselage.attachDomeBody.xLocPercent) + ");");
                                 file << "\r\n";
 
                                 // XSec_4
@@ -655,8 +834,8 @@ namespace VSP
                         }
                         else if (fuselage.fuselagePresetName == "P2006T_Fuselage_Skin")
                         {
-                                writeCommand("string fnamePreset = \"" + cwdEscaped + "\\\\" + 
-                                           fuselage.fuselagePresetName + ".vsp3\";");
+                                writeCommand("string fnamePreset = \"" + cwdEscaped + "\\\\" +
+                                             fuselage.fuselagePresetName + ".vsp3\";");
                                 file << "\r\n";
 
                                 writeCommand("ReadVSPFile( fnamePreset );");
@@ -673,8 +852,8 @@ namespace VSP
                         }
                         else if (fuselage.fuselagePresetName == "AirbusGenericTransportJet")
                         {
-                                writeCommand("string fnamePreset = \"" + cwdEscaped + "\\\\" + 
-                                           fuselage.fuselagePresetName + ".vsp3\";");
+                                writeCommand("string fnamePreset = \"" + cwdEscaped + "\\\\" +
+                                             fuselage.fuselagePresetName + ".vsp3\";");
                                 file << "\r\n";
 
                                 writeCommand("InsertVSPFile(fnamePreset , \"\");");
@@ -814,8 +993,8 @@ namespace VSP
                         }
                         else if (fuselage.fuselagePresetName == "BoeingGenericTransportJet")
                         {
-                                writeCommand("string fnamePreset = \"" + cwdEscaped + "\\\\" + 
-                                           fuselage.fuselagePresetName + ".vsp3\";");
+                                writeCommand("string fnamePreset = \"" + cwdEscaped + "\\\\" +
+                                             fuselage.fuselagePresetName + ".vsp3\";");
                                 file << "\r\n";
 
                                 writeCommand("InsertVSPFile(fnamePreset , \"\");");
@@ -939,8 +1118,8 @@ namespace VSP
                         }
                         else if (fuselage.fuselagePresetName == "MQ_20_FuselageBlendedEngineSkin")
                         {
-                                writeCommand("string fnamePreset = \"" + cwdEscaped + "\\\\" + 
-                                           fuselage.fuselagePresetName + ".vsp3\";");
+                                writeCommand("string fnamePreset = \"" + cwdEscaped + "\\\\" +
+                                             fuselage.fuselagePresetName + ".vsp3\";");
                                 file << "\r\n";
 
                                 writeCommand("InsertVSPFile(fnamePreset , \"\");");
@@ -957,23 +1136,23 @@ namespace VSP
 
                                 for (int i = 1; i <= fuselage.counterBlendedEngine; i++)
                                 {
-                                        writeCommand("string blendedEngineName_" + std::to_string(i) + 
-                                                   " = \"engine" + std::to_string(i) + "\";");
+                                        writeCommand("string blendedEngineName_" + std::to_string(i) +
+                                                     " = \"engine" + std::to_string(i) + "\";");
                                         file << "\r\n";
 
-                                        writeCommand("array< string > @geom_ids_engine_" + std::to_string(i) + 
-                                                   " = FindGeomsWithName( blendedEngineName_" + std::to_string(i) + " );");
+                                        writeCommand("array< string > @geom_ids_engine_" + std::to_string(i) +
+                                                     " = FindGeomsWithName( blendedEngineName_" + std::to_string(i) + " );");
                                         file << "\r\n";
 
-                                        writeCommand("string blendedEngine_" + std::to_string(i) + 
-                                                   " = geom_ids_engine_" + std::to_string(i) + "[0];");
+                                        writeCommand("string blendedEngine_" + std::to_string(i) +
+                                                     " = geom_ids_engine_" + std::to_string(i) + "[0];");
                                         file << "\r\n";
                                 }
                         }
                         else if (fuselage.fuselagePresetName == "MQ_20_FuselageSkin")
                         {
-                                writeCommand("string fnamePreset = \"" + cwdEscaped + "\\\\" + 
-                                           fuselage.fuselagePresetName + ".vsp3\";");
+                                writeCommand("string fnamePreset = \"" + cwdEscaped + "\\\\" +
+                                             fuselage.fuselagePresetName + ".vsp3\";");
                                 file << "\r\n";
 
                                 writeCommand("InsertVSPFile(fnamePreset , \"\");");
@@ -990,8 +1169,8 @@ namespace VSP
                         }
                         else if (fuselage.fuselagePresetName == "McDonnel_Duglas_FuselageSkin_Concept")
                         {
-                                writeCommand("string fnamePreset = \"" + cwdEscaped + "\\\\" + 
-                                           fuselage.fuselagePresetName + ".vsp3\";");
+                                writeCommand("string fnamePreset = \"" + cwdEscaped + "\\\\" +
+                                             fuselage.fuselagePresetName + ".vsp3\";");
                                 file << "\r\n";
 
                                 writeCommand("InsertVSPFile(fnamePreset , \"\");");
@@ -1008,23 +1187,23 @@ namespace VSP
 
                                 for (int i = 1; i <= fuselage.counterBlendedEngine; i++)
                                 {
-                                        writeCommand("string blendedEngineName_" + std::to_string(i) + 
-                                                   " = \"engine" + std::to_string(i) + "\";");
+                                        writeCommand("string blendedEngineName_" + std::to_string(i) +
+                                                     " = \"engine" + std::to_string(i) + "\";");
                                         file << "\r\n";
 
-                                        writeCommand("array< string > @geom_ids_engine_" + std::to_string(i) + 
-                                                   " = FindGeomsWithName( blendedEngineName_" + std::to_string(i) + " );");
+                                        writeCommand("array< string > @geom_ids_engine_" + std::to_string(i) +
+                                                     " = FindGeomsWithName( blendedEngineName_" + std::to_string(i) + " );");
                                         file << "\r\n";
 
-                                        writeCommand("string blendedEngine_" + std::to_string(i) + 
-                                                   " = geom_ids_engine_" + std::to_string(i) + "[0];");
+                                        writeCommand("string blendedEngine_" + std::to_string(i) +
+                                                     " = geom_ids_engine_" + std::to_string(i) + "[0];");
                                         file << "\r\n";
                                 }
                         }
                         else if (fuselage.fuselagePresetName == "J36_FuselageSkin_HQ")
                         {
-                                writeCommand("string fnamePreset = \"" + cwdEscaped + "\\\\" + 
-                                           fuselage.fuselagePresetName + ".vsp3\";");
+                                writeCommand("string fnamePreset = \"" + cwdEscaped + "\\\\" +
+                                             fuselage.fuselagePresetName + ".vsp3\";");
                                 file << "\r\n";
 
                                 writeCommand("InsertVSPFile(fnamePreset , \"\");");
@@ -1041,23 +1220,29 @@ namespace VSP
 
                                 for (int i = 1; i <= fuselage.counterBlendedEngine; i++)
                                 {
-                                        writeCommand("string blendedEngineName_" + std::to_string(i) + 
-                                                   " = \"engine" + std::to_string(i) + "\";");
+                                        writeCommand("string blendedEngineName_" + std::to_string(i) +
+                                                     " = \"engine" + std::to_string(i) + "\";");
                                         file << "\r\n";
 
-                                        writeCommand("array< string > @geom_ids_engine_" + std::to_string(i) + 
-                                                   " = FindGeomsWithName( blendedEngineName_" + std::to_string(i) + " );");
+                                        writeCommand("array< string > @geom_ids_engine_" + std::to_string(i) +
+                                                     " = FindGeomsWithName( blendedEngineName_" + std::to_string(i) + " );");
                                         file << "\r\n";
 
-                                        writeCommand("string blendedEngine_" + std::to_string(i) + 
-                                                   " = geom_ids_engine_" + std::to_string(i) + "[0];");
+                                        writeCommand("string blendedEngine_" + std::to_string(i) +
+                                                     " = geom_ids_engine_" + std::to_string(i) + "[0];");
                                         file << "\r\n";
                                 }
                         }
                 }
 
                 // ============= FUSELAGE =============
-                inline void makeFuselage(const Fuselage &fuselage)
+
+                /// @brief Makes a fuselage in the VSP script.
+                /// @param fuselage The fuselage object containing its properties.
+                /// @param mainWing The main wing object for reference.
+                /// @param horizontal The horizontal wing object for reference.
+                /// @note This function handles both advanced and standard fuselage creation.
+                inline void makeFuselage(Fuselage &fuselage, Wing &mainWing, Wing &horizontal)
                 {
                         if (fuselage.advancedFuselage)
                         {
@@ -1098,6 +1283,8 @@ namespace VSP
                                 writeCommand("SetParmVal(" + fuselage.id + ",\"AftHeight\",\"Design\"," +
                                              std::to_string(fuselage.aftheight) + ");");
                                 file << "\r\n";
+
+                                fuselage.width = fuselage.diameter;
                         }
 
                         writeUpdate();
@@ -1106,6 +1293,14 @@ namespace VSP
                                      std::to_string(fuselage.utess) + ");");
                         writeCommand("SetParmVal(" + fuselage.id + ",\"Tess_W\",\"Shape\"," +
                                      std::to_string(fuselage.wtess) + ");");
+
+                        mainWing.deltaXtoLEWing = mainWing.yMAC * tan(mainWing.averageLeadingEdgeSweep / 57.3);
+                        horizontal.deltaXtoHorizontal = horizontal.yMAC * tan(horizontal.averageLeadingEdgeSweep / 57.3);
+
+                        fuselage.tailArm = (horizontal.xloc + horizontal.deltaXtoHorizontal + horizontal.percentagePositionOfXCG * horizontal.MAC) -
+                                           (mainWing.xloc + mainWing.deltaXtoLEWing + mainWing.percentagePositionOfXCG * mainWing.MAC);
+
+        
                         file << "\r\n";
 
                         writeUpdate();
@@ -1113,7 +1308,13 @@ namespace VSP
 
         public:
                 // ============= WING (COMPLETA) =============
-                inline void makeWing(const Wing &wing, int sym)
+
+                /// @brief Creates an object wing in the VSP script.
+                /// @param wing The wing object containing its properties.
+                /// @param sym The symmetry flag for the wing.
+                /// @param typeOfWing The type of the wing, default is STRAIGHT_TAPERED.
+                /// @note This function handles both detailed panel and standard wing creation.
+                inline void makeWing(Wing &wing, int sym, TypeOfWing typeOfWing = TypeOfWing::STRAIGHT_TAPERED)
                 {
                         writeComment(wing.id);
                         std::string wingID = wing.id;
@@ -1157,12 +1358,12 @@ namespace VSP
                                 {
                                         if (i == 1 && numSections > 1)
                                         {
-                                                for (int j = i; j <= numSections-1; j++)
+                                                for (int j = i; j <= numSections - 1; j++)
                                                 {
                                                         writeCommand("InsertXSec(" + wingID + ",1," + wing.airfoilType + ");");
                                                 }
                                         }
-                                        shapePanel(wing, i);
+                                        shapePanel(wing, i, typeOfWing);
                                 }
                         }
                         else
@@ -1398,7 +1599,7 @@ namespace VSP
                         }
                 }
 
-                inline void makeEOIR(const EOIR &eoir, int i)
+                inline void makeEOIR(EOIR &eoir, int i)
                 {
                         writeComment(eoir.id + " " + std::to_string(i));
 
@@ -1410,10 +1611,11 @@ namespace VSP
                                      ", \"" + eoir.id + "\");");
                         file << "\r\n";
 
-                        int idx = static_cast<int>(std::round((i - 1) / 2.0));
+                        // int idx = static_cast<int>(std::round((i - 1) / 2.0));
 
-                        if (idx >= eoir.length.size())
-                                idx = eoir.length.size() - 1;
+                        // if (idx >= eoir.length.size())
+                        //         idx = eoir.length.size() - 1;
+                        int idx = i - 1;
 
                         writeCommand("SetParmVal(" + eoir.id + "_" + std::to_string(i) +
                                      ",\"Length\",\"Design\"," + std::to_string(eoir.length[idx]) + ");");
@@ -1443,8 +1645,18 @@ namespace VSP
                         file << "\r\n";
 
                         writeUpdate();
+
+                        if (idx == eoir.length.size() - 1)
+                        {
+
+                                eoir.diameter = eoir.length.front() / eoir.fineratio.front();
+                        }
                 }
 
+                /// @brief Creates a pod in the VSP script.
+                /// @param pod The pod object containing its properties.
+                /// @param i The iteration index for multiple pods.
+                /// @note This function sets up the pod geometry and parameters.
                 inline void makePod(const Pod &pod, int i)
                 {
                         writeComment(pod.id + " " + std::to_string(i));
@@ -1491,7 +1703,11 @@ namespace VSP
                         writeUpdate();
                 }
 
-                inline void makeBoom(const Boom &boom, int i)
+                /// @brief Creates a Tail boom in the VSP script.
+                /// @param boom The boom object containing its properties.
+                /// @param i The iteration index for multiple booms.
+                /// @note This function sets up the boom geometry and parameters.
+                inline void makeBoom(Boom &boom, int i)
                 {
                         writeComment(boom.id + " " + std::to_string(i));
 
@@ -1503,9 +1719,10 @@ namespace VSP
                                      ", \"" + boom.id + "_" + std::to_string(i) + "\");");
                         file << "\r\n";
 
-                        int idx = static_cast<int>(std::round((i - 1) / 2.0));
-                        if (idx >= boom.length.size())
-                                idx = boom.length.size() - 1;
+                        // int idx = static_cast<int>(std::round((i - 1) / 2.0));
+                        // if (idx >= boom.length.size())
+                        //         idx = boom.length.size() - 1;
+                        int idx = i - 1;
 
                         writeCommand("SetParmVal(" + boom.id + "_" + std::to_string(i) +
                                      ",\"Length\",\"Design\"," + std::to_string(boom.length[idx]) + ");");
@@ -1535,9 +1752,21 @@ namespace VSP
                         file << "\r\n";
 
                         writeUpdate();
+
+                        if (idx == boom.length.size() - 1)
+                        {
+
+                                boom.width = boom.length.front() / boom.fineratio.front();
+                                boom.height = boom.width;
+                        }
                 }
 
-              // ============= MAKE ADVANCED NACELLE =============
+                // ============= MAKE ADVANCED NACELLE =============
+
+                /// @brief Creates an advanced nacelle in the VSP script.
+                /// @param nacelle The nacelle object containing its properties.
+                /// @param i The iteration index for multiple nacelles.
+                /// @note This function sets up the advanced nacelle geometry and parameters.
                 inline void makeAdvancedNacelle(const Nacelle &nacelle, int i)
                 {
                         if (!nacelle.advancedNacelle)
@@ -1551,27 +1780,24 @@ namespace VSP
                         if (idx < 0 || idx >= nacelle.xloc.size())
                         {
                                 throw std::runtime_error(
-                                    "Nacelle index " + std::to_string(i) + 
-                                    " is out of bounds. xloc array has " + 
+                                    "Nacelle index " + std::to_string(i) +
+                                    " is out of bounds. xloc array has " +
                                     std::to_string(nacelle.xloc.size()) + " elements. " +
-                                    "Valid range: 1 to " + std::to_string(nacelle.xloc.size())
-                                );
+                                    "Valid range: 1 to " + std::to_string(nacelle.xloc.size()));
                         }
 
                         if (idx >= nacelle.yloc.size())
                         {
                                 throw std::runtime_error(
-                                    "Nacelle index " + std::to_string(i) + 
-                                    " exceeds yloc array size (" + std::to_string(nacelle.yloc.size()) + ")"
-                                );
+                                    "Nacelle index " + std::to_string(i) +
+                                    " exceeds yloc array size (" + std::to_string(nacelle.yloc.size()) + ")");
                         }
 
                         if (idx >= nacelle.zloc.size())
                         {
                                 throw std::runtime_error(
-                                    "Nacelle index " + std::to_string(i) + 
-                                    " exceeds zloc array size (" + std::to_string(nacelle.zloc.size()) + ")"
-                                );
+                                    "Nacelle index " + std::to_string(i) +
+                                    " exceeds zloc array size (" + std::to_string(nacelle.zloc.size()) + ")");
                         }
 
                         std::string folderName = "NacellePreset";
@@ -1581,8 +1807,8 @@ namespace VSP
                         if (nacelle.nacellePresetName == "GeneralTurbofan")
                         {
                                 // LOADING NACELLE PRESET
-                                writeCommand("string fnamePresetNacelle_" + std::to_string(i) + 
-                                           " = \"" + cwdEscaped + "\\\\" + nacelle.nacellePresetName + ".vsp3\";");
+                                writeCommand("string fnamePresetNacelle_" + std::to_string(i) +
+                                             " = \"" + cwdEscaped + "\\\\" + nacelle.nacellePresetName + ".vsp3\";");
                                 file << "\r\n";
 
                                 writeCommand("InsertVSPFile(fnamePresetNacelle_" + std::to_string(i) + " , \"\");");
@@ -1591,8 +1817,8 @@ namespace VSP
                                 writeCommand("string nacelleName_" + std::to_string(i) + " = \"Nacelle 1\";");
                                 file << "\r\n";
 
-                                writeCommand("array< string > @geom_ids_" + std::to_string(i) + 
-                                           " = FindGeomsWithName( nacelleName_" + std::to_string(i) + " );");
+                                writeCommand("array< string > @geom_ids_" + std::to_string(i) +
+                                             " = FindGeomsWithName( nacelleName_" + std::to_string(i) + " );");
                                 file << "\r\n";
 
                                 // REFERENCE GEOMETRY VALUES
@@ -1603,60 +1829,60 @@ namespace VSP
                                 file << "\r\n";
 
                                 // NACELLE TO CUSTOMIZE
-                                writeCommand("double nacelleLength_" + std::to_string(i) + " = " + 
-                                           std::to_string(nacelle.length) + ";");
+                                writeCommand("double nacelleLength_" + std::to_string(i) + " = " +
+                                             std::to_string(nacelle.length) + ";");
                                 file << "\r\n";
 
-                                writeCommand("double maxDiameter_" + std::to_string(i) + "   = " + 
-                                           std::to_string(nacelle.diameter) + ";");
+                                writeCommand("double maxDiameter_" + std::to_string(i) + "   = " +
+                                             std::to_string(nacelle.diameter) + ";");
                                 file << "\r\n";
 
                                 // SCALING FACTORS
-                                writeCommand("double  diamterScalingFactor_" + std::to_string(i) + 
-                                           " = maxDiameter_" + std::to_string(i) + "/refMaxDiameter_" + 
-                                           std::to_string(i) + ";");
+                                writeCommand("double  diamterScalingFactor_" + std::to_string(i) +
+                                             " = maxDiameter_" + std::to_string(i) + "/refMaxDiameter_" +
+                                             std::to_string(i) + ";");
                                 file << "\r\n";
 
-                                writeCommand("double  newFineRatio_" + std::to_string(i) + "= nacelleLength_" + 
-                                           std::to_string(i) + "/maxDiameter_" + std::to_string(i) + " ;");
+                                writeCommand("double  newFineRatio_" + std::to_string(i) + "= nacelleLength_" +
+                                             std::to_string(i) + "/maxDiameter_" + std::to_string(i) + " ;");
                                 file << "\r\n";
 
-                                writeCommand("double  refNacelleFineRatio_" + std::to_string(i) + 
-                                           "= refNacelleLength_" + std::to_string(i) + "/refMaxDiameter_" + 
-                                           std::to_string(i) + " ;");
+                                writeCommand("double  refNacelleFineRatio_" + std::to_string(i) +
+                                             "= refNacelleLength_" + std::to_string(i) + "/refMaxDiameter_" +
+                                             std::to_string(i) + " ;");
                                 file << "\r\n";
 
-                                writeCommand("string nacelle_" + std::to_string(i) + " = geom_ids_" + 
-                                           std::to_string(i) + "[0];");
+                                writeCommand("string nacelle_" + std::to_string(i) + " = geom_ids_" +
+                                             std::to_string(i) + "[0];");
                                 file << "\r\n";
 
-                                writeCommand("SetGeomName(nacelle_" + std::to_string(i) + ",\"nacelle_" + 
-                                           std::to_string(i) + "\");");
+                                writeCommand("SetGeomName(nacelle_" + std::to_string(i) + ",\"nacelle_" +
+                                             std::to_string(i) + "\");");
                                 file << "\r\n";
 
                                 writeUpdate();
 
                                 // NACELLE RECONSTRUCTION
-                                
+
                                 // For command to manage the deltaXs
                                 writeCommand("for (int i = 1; i<=23; i++ ) {");
                                 file << "\r\n";
 
-                                writeCommand("double deltaX_" + std::to_string(i) + 
-                                           "  = GetParmVal(nacelle_" + std::to_string(i) + 
-                                           ", \"XDelta\",\"XSec_\" + (i));");
+                                writeCommand("double deltaX_" + std::to_string(i) +
+                                             "  = GetParmVal(nacelle_" + std::to_string(i) +
+                                             ", \"XDelta\",\"XSec_\" + (i));");
                                 file << "\r\n";
 
                                 writeCommand("double newDeltaX_" + std::to_string(i) + "  = 0; ");
                                 file << "\r\n";
 
-                                writeCommand(" newDeltaX_" + std::to_string(i) + " = deltaX_" + std::to_string(i) + 
-                                           "*newFineRatio_" + std::to_string(i) + "/refNacelleFineRatio_" + 
-                                           std::to_string(i) + ";");
+                                writeCommand(" newDeltaX_" + std::to_string(i) + " = deltaX_" + std::to_string(i) +
+                                             "*newFineRatio_" + std::to_string(i) + "/refNacelleFineRatio_" +
+                                             std::to_string(i) + ";");
                                 file << "\r\n";
 
-                                writeCommand("SetParmVal(nacelle_" + std::to_string(i) + 
-                                           ",\"XDelta\",\"XSec_\" + (i),newDeltaX_" + std::to_string(i) + " );");
+                                writeCommand("SetParmVal(nacelle_" + std::to_string(i) +
+                                             ",\"XDelta\",\"XSec_\" + (i),newDeltaX_" + std::to_string(i) + " );");
                                 file << "\r\n";
 
                                 writeCommand("Update();}");
@@ -1666,20 +1892,20 @@ namespace VSP
                                 writeCommand("for (int i = 0; i<=23; i++ ) {");
                                 file << "\r\n";
 
-                                writeCommand("double val_" + std::to_string(i) + " = GetParmVal(nacelle_" + 
-                                           std::to_string(i) + ", \"Circle_Diameter\", \"XSecCurve_\" + i);");
+                                writeCommand("double val_" + std::to_string(i) + " = GetParmVal(nacelle_" +
+                                             std::to_string(i) + ", \"Circle_Diameter\", \"XSecCurve_\" + i);");
                                 file << "\r\n";
 
                                 writeCommand("double newDiamVal_" + std::to_string(i) + " = 0;");
                                 file << "\r\n";
 
-                                writeCommand(" newDiamVal_" + std::to_string(i) + " = diamterScalingFactor_" + 
-                                           std::to_string(i) + "* val_" + std::to_string(i) + ";");
+                                writeCommand(" newDiamVal_" + std::to_string(i) + " = diamterScalingFactor_" +
+                                             std::to_string(i) + "* val_" + std::to_string(i) + ";");
                                 file << "\r\n";
 
-                                writeCommand("SetParmVal(nacelle_" + std::to_string(i) + 
-                                           ",\"Circle_Diameter\", \"XSecCurve_\" + i,newDiamVal_" + 
-                                           std::to_string(i) + " );");
+                                writeCommand("SetParmVal(nacelle_" + std::to_string(i) +
+                                             ",\"Circle_Diameter\", \"XSecCurve_\" + i,newDiamVal_" +
+                                             std::to_string(i) + " );");
                                 file << "\r\n";
 
                                 writeCommand("Update();}");
@@ -1687,27 +1913,461 @@ namespace VSP
 
                                 // X,Y,Z position of the nacelle
                                 // Usa direttamente idx (già validato) - MATLAB usa nacelle.xloc(i), quindi C++ usa xloc[i-1]
-                                writeCommand("SetParmVal(nacelle_" + std::to_string(i) + 
-                                           ",\"X_Rel_Location\", \"XForm\" , " + 
-                                           std::to_string(nacelle.xloc[idx]) + " );");
+                                writeCommand("SetParmVal(nacelle_" + std::to_string(i) +
+                                             ",\"X_Rel_Location\", \"XForm\" , " +
+                                             std::to_string(nacelle.xloc[idx]) + " );");
                                 file << "\r\n";
 
-                                writeCommand("SetParmVal(nacelle_" + std::to_string(i) + 
-                                           ",\"Y_Rel_Location\", \"XForm\" , " + 
-                                           std::to_string(nacelle.yloc[idx]) + " );");
+                                writeCommand("SetParmVal(nacelle_" + std::to_string(i) +
+                                             ",\"Y_Rel_Location\", \"XForm\" , " +
+                                             std::to_string(nacelle.yloc[idx]) + " );");
                                 file << "\r\n";
 
-                                writeCommand("SetParmVal(nacelle_" + std::to_string(i) + 
-                                           ",\"Z_Rel_Location\", \"XForm\" , " + 
-                                           std::to_string(nacelle.zloc[idx]) + " );");
+                                writeCommand("SetParmVal(nacelle_" + std::to_string(i) +
+                                             ",\"Z_Rel_Location\", \"XForm\" , " +
+                                             std::to_string(nacelle.zloc[idx]) + " );");
                                 file << "\r\n";
                         }
+                        else if (nacelle.nacellePresetName == "GeneralTurboProp_Spec1")
+                        {
+                                writeComment("### Advanced Nacelle with TurboProp Preset " + nacelle.nacellePresetName + " ###");
+                                // LOADING NACELLE PRESET
+                                writeCommand("string fnamePresetNacelle_" + std::to_string(i) +
+                                             " = \"" + cwdEscaped + "\\\\" + nacelle.nacellePresetName + ".vsp3\";");
+                                file << "\r\n";
+
+                                writeCommand("InsertVSPFile(fnamePresetNacelle_" + std::to_string(i) + " , \"\");");
+                                file << "\r\n";
+
+                                writeCommand("string nacelleName_" + std::to_string(i) + " = \"Nacelle_1\";");
+                                file << "\r\n";
+
+                                writeCommand("array< string > @geom_ids_" + std::to_string(i) +
+                                             " = FindGeomsWithName( nacelleName_" + std::to_string(i) + " );");
+                                file << "\r\n";
+
+                                writeComment("REFERENCE GEOMETRY VALUES");
+                                // REFERENCE GEOMETRY VALUES
+                                writeCommand("double refNacelleLength_" + std::to_string(i) + " = 2.55263;");
+                                file << "\r\n";
+
+                                writeCommand("double refAMaxDiameter_" + std::to_string(i) + " = 0.57164;");
+                                file << "\r\n";
+
+                                writeCommand("double refBMaxDiameter_" + std::to_string(i) + " = 0.80998;");
+                                file << "\r\n";
+
+                                writeComment("NACELLE TO CUSTOMIZE");
+                                // NACELLE TO CUSTOMIZE
+                                writeCommand("double nacelleLength_" + std::to_string(i) + " = " +
+                                             std::to_string(nacelle.length) + ";");
+                                file << "\r\n";
+
+                                writeCommand("double maxADiameter_" + std::to_string(i) + "   = " +
+                                             std::to_string(nacelle.aDiameter) + ";");
+                                file << "\r\n";
+
+                                writeCommand("double maxBDiameter_" + std::to_string(i) + "   = " +
+                                             std::to_string(nacelle.bDiameter) + ";");
+                                file << "\r\n";
+
+                                writeComment("SCALING FACTORS");
+                                // SCALING FACTORS
+                                writeCommand("double  diamterAScalingFactor_" + std::to_string(i) +
+                                             " = maxADiameter_" + std::to_string(i) + "/refAMaxDiameter_" +
+                                             std::to_string(i) + ";");
+                                file << "\r\n";
+
+                                writeCommand("double  diamterBScalingFactor_" + std::to_string(i) +
+                                             " = maxBDiameter_" + std::to_string(i) + "/refBMaxDiameter_" +
+                                             std::to_string(i) + ";");
+                                file << "\r\n";
+
+                                writeCommand("double  newAFineRatio_" + std::to_string(i) + "= nacelleLength_" +
+                                             std::to_string(i) + "/maxADiameter_" + std::to_string(i) + " ;");
+                                file << "\r\n";
+
+                                writeCommand("double  newBFineRatio_" + std::to_string(i) + "= nacelleLength_" +
+                                             std::to_string(i) + "/maxBDiameter_" + std::to_string(i) + " ;");
+                                file << "\r\n";
+
+                                writeCommand("double  refANacelleFineRatio_" + std::to_string(i) +
+                                             "= refNacelleLength_" + std::to_string(i) + "/refAMaxDiameter_" +
+                                             std::to_string(i) + " ;");
+                                file << "\r\n";
+
+                                writeCommand("double  refBNacelleFineRatio_" + std::to_string(i) +
+                                             "= refNacelleLength_" + std::to_string(i) + "/refBMaxDiameter_" +
+                                             std::to_string(i) + " ;");
+                                file << "\r\n";
+
+                                writeCommand("string nacelle_" + std::to_string(i) + " = geom_ids_" +
+                                             std::to_string(i) + "[0];");
+                                file << "\r\n";
+
+                                writeCommand("SetGeomName(nacelle_" + std::to_string(i) + ",\"nacelle_" +
+                                             std::to_string(i) + "\");");
+                                file << "\r\n";
+
+                                writeUpdate();
+
+                                writeComment("### NACELLE RECONSTRUCTION ###");
+                                // NACELLE RECONSTRUCTION
+                                // For command to manage the deltaXs
+                                writeCommand("for (int i = 1; i<=5; i++ ) {");
+                                file << "\r\n";
+
+                                writeCommand("double deltaX_" + std::to_string(i) +
+                                             "  = GetParmVal(nacelle_" + std::to_string(i) +
+                                             ", \"XDelta\",\"XSec_\" + (i));");
+                                file << "\r\n";
+
+                                writeCommand("double newDeltaX_" + std::to_string(i) + "  = 0; ");
+                                file << "\r\n";
+
+                                writeCommand(" newDeltaX_" + std::to_string(i) + " = deltaX_" + std::to_string(i) +
+                                             "*newAFineRatio_" + std::to_string(i) + "/refANacelleFineRatio_" +
+                                             std::to_string(i) + ";");
+                                file << "\r\n";
+
+                                writeCommand("SetParmVal(nacelle_" + std::to_string(i) +
+                                             ",\"XDelta\",\"XSec_\" + (i),newDeltaX_" + std::to_string(i) + " );");
+                                file << "\r\n";
+
+                                writeCommand("Update();}");
+                                file << "\r\n";
+
+                                // For command to manage the A diameters
+                                writeCommand("for (int i = 1; i<=4; i++ ) {");
+                                file << "\r\n";
+
+                                writeCommand("double Aval_" + std::to_string(i) + " = GetParmVal(nacelle_" +
+                                             std::to_string(i) + ", \"Ellipse_Height\", \"XSecCurve_\" + i);");
+                                file << "\r\n";
+
+                                writeCommand("double newADiamVal_" + std::to_string(i) + " = 0;");
+                                file << "\r\n";
+
+                                writeCommand(" newADiamVal_" + std::to_string(i) + " = diamterAScalingFactor_" +
+                                             std::to_string(i) + "* Aval_" + std::to_string(i) + ";");
+                                file << "\r\n";
+
+                                writeCommand("SetParmVal(nacelle_" + std::to_string(i) +
+                                             ",\"Ellipse_Height\", \"XSecCurve_\" + i,newADiamVal_" +
+                                             std::to_string(i) + " );");
+                                file << "\r\n";
+
+                                writeCommand("Update();}");
+                                file << "\r\n";
+
+                                // For command to manage the B diameters
+                                writeCommand("for (int i = 1; i<=4; i++ ) {");
+                                file << "\r\n";
+
+                                writeCommand("double Bval_" + std::to_string(i) + " = GetParmVal(nacelle_" +
+                                             std::to_string(i) + ", \"Ellipse_Width\", \"XSecCurve_\" + i);");
+                                file << "\r\n";
+
+                                writeCommand("double newBDiamVal_" + std::to_string(i) + " = 0;");
+                                file << "\r\n";
+
+                                writeCommand(" newBDiamVal_" + std::to_string(i) + " = diamterBScalingFactor_" +
+                                             std::to_string(i) + "* Bval_" + std::to_string(i) + ";");
+                                file << "\r\n";
+
+                                writeCommand("SetParmVal(nacelle_" + std::to_string(i) +
+                                             ",\"Ellipse_Width\", \"XSecCurve_\" + i,newBDiamVal_" +
+                                             std::to_string(i) + " );");
+                                file << "\r\n";
+
+                                writeCommand("Update();}");
+                                file << "\r\n";
+
+                                writeComment("POSITIONING NACELLE");
+                                // X,Y,Z position of the nacelle
+                                // Usa direttamente idx (già validato) - MATLAB usa nacelle.xloc(i), quindi C++ usa xloc[i-1]
+                                writeCommand("SetParmVal(nacelle_" + std::to_string(i) +
+                                             ",\"X_Rel_Location\", \"XForm\" , " +
+                                             std::to_string(nacelle.xloc[idx]) + " );");
+                                file << "\r\n";
+
+                                writeCommand("SetParmVal(nacelle_" + std::to_string(i) +
+                                             ",\"Y_Rel_Location\", \"XForm\" , " +
+                                             std::to_string(nacelle.yloc[idx]) + " );");
+                                file << "\r\n";
+
+                                writeCommand("SetParmVal(nacelle_" + std::to_string(i) +
+                                             ",\"Z_Rel_Location\", \"XForm\" , " +
+                                             std::to_string(nacelle.zloc[idx]) + " );");
+                                file << "\r\n";
+
+                                writeComment("APPLAYING ROTATIONS");
+
+                                writeCommand("SetParmVal(nacelle_" + std::to_string(i) +
+                                             ",\"X_Rel_Rotation\", \"XForm\" , " +
+                                             std::to_string(nacelle.xrot[idx]) + " );");
+                                file << "\r\n";
+
+                                writeCommand("SetParmVal(nacelle_" + std::to_string(i) +
+                                             ",\"Y_Rel_Rotation\", \"XForm\" , " +
+                                             std::to_string(nacelle.yrot[idx]) + " );");
+                                file << "\r\n";
+
+                                writeCommand("SetParmVal(nacelle_" + std::to_string(i) +
+                                             ",\"Z_Rel_Rotation\", \"XForm\" , " +
+                                             std::to_string(nacelle.zrot[idx]) + " );");
+                                file << "\r\n";
+                        }
+
+                        else if (nacelle.nacellePresetName == "GeneralTurboProp_Spec2")
+                        {
+                                writeComment("### Advanced Nacelle with TurboProp Preset " + nacelle.nacellePresetName + " ###");
+
+                                // LOADING NACELLE PRESET
+                                writeCommand("string fnamePresetNacelle_" + std::to_string(i) +
+                                             " = \"" + cwdEscaped + "\\\\" + nacelle.nacellePresetName + ".vsp3\";");
+                                file << "\r\n";
+
+                                writeCommand("InsertVSPFile(fnamePresetNacelle_" + std::to_string(i) + " , \"\");");
+                                file << "\r\n";
+
+                                writeCommand("string nacelleName_" + std::to_string(i) + " = \"Nacelle_1\";");
+                                file << "\r\n";
+
+                                writeCommand("array< string > @geom_ids_" + std::to_string(i) +
+                                             " = FindGeomsWithName( nacelleName_" + std::to_string(i) + " );");
+                                file << "\r\n";
+
+                                writeComment("REFERENCE GEOMETRY VALUES");
+
+                                // REFERENCE GEOMETRY VALUES
+                                writeCommand("double refNacelleLength_" + std::to_string(i) + " = 2.72821;");
+                                file << "\r\n";
+
+                                writeCommand("double refAMaxDiameter_" + std::to_string(i) + " = 0.82918;");
+                                file << "\r\n";
+
+                                writeCommand("double refBMaxDiameter_" + std::to_string(i) + " = 0.80097;");
+                                file << "\r\n";
+
+                                writeComment("NACELLE TO CUSTOMIZE");
+                                // NACELLE TO CUSTOMIZE
+                                writeCommand("double nacelleLength_" + std::to_string(i) + " = " +
+                                             std::to_string(nacelle.length) + ";");
+                                file << "\r\n";
+
+                                writeCommand("double maxADiameter_" + std::to_string(i) + "   = " +
+                                             std::to_string(nacelle.aDiameter) + ";");
+                                file << "\r\n";
+
+                                writeCommand("double maxBDiameter_" + std::to_string(i) + "   = " +
+                                             std::to_string(nacelle.bDiameter) + ";");
+                                file << "\r\n";
+
+                                writeComment("SCALING FACTORS");
+                                // SCALING FACTORS
+                                writeCommand("double  diamterAScalingFactor_" + std::to_string(i) +
+                                             " = maxADiameter_" + std::to_string(i) + "/refAMaxDiameter_" +
+                                             std::to_string(i) + ";");
+                                file << "\r\n";
+
+                                writeCommand("double  diamterBScalingFactor_" + std::to_string(i) +
+                                             " = maxBDiameter_" + std::to_string(i) + "/refBMaxDiameter_" +
+                                             std::to_string(i) + ";");
+                                file << "\r\n";
+
+                                writeCommand("double  newAFineRatio_" + std::to_string(i) + "= nacelleLength_" +
+                                             std::to_string(i) + "/maxADiameter_" + std::to_string(i) + " ;");
+                                file << "\r\n";
+
+                                writeCommand("double  newBFineRatio_" + std::to_string(i) + "= nacelleLength_" +
+                                             std::to_string(i) + "/maxBDiameter_" + std::to_string(i) + " ;");
+                                file << "\r\n";
+
+                                writeCommand("double  refANacelleFineRatio_" + std::to_string(i) +
+                                             "= refNacelleLength_" + std::to_string(i) + "/refAMaxDiameter_" +
+                                             std::to_string(i) + " ;");
+                                file << "\r\n";
+
+                                writeCommand("double  refBNacelleFineRatio_" + std::to_string(i) +
+                                             "= refNacelleLength_" + std::to_string(i) + "/refBMaxDiameter_" +
+                                             std::to_string(i) + " ;");
+                                file << "\r\n";
+
+                                writeCommand("string nacelle_" + std::to_string(i) + " = geom_ids_" +
+                                             std::to_string(i) + "[0];");
+                                file << "\r\n";
+
+                                writeCommand("SetGeomName(nacelle_" + std::to_string(i) + ",\"nacelle_" +
+                                             std::to_string(i) + "\");");
+                                file << "\r\n";
+
+                                writeUpdate();
+
+                                writeComment("NACELLE RECONSTRUCTION");
+                                // NACELLE RECONSTRUCTION
+
+                                // For command to manage the deltaXs
+                                writeCommand("for (int i = 1; i<=6; i++ ) {");
+                                file << "\r\n";
+
+                                writeCommand("double deltaX_" + std::to_string(i) +
+                                             "  = GetParmVal(nacelle_" + std::to_string(i) +
+                                             ", \"XDelta\",\"XSec_\" + (i));");
+                                file << "\r\n";
+
+                                writeCommand("double newDeltaX_" + std::to_string(i) + "  = 0; ");
+                                file << "\r\n";
+
+                                writeCommand(" newDeltaX_" + std::to_string(i) + " = deltaX_" + std::to_string(i) +
+                                             "*newAFineRatio_" + std::to_string(i) + "/refANacelleFineRatio_" +
+                                             std::to_string(i) + ";");
+                                file << "\r\n";
+
+                                writeCommand("SetParmVal(nacelle_" + std::to_string(i) +
+                                             ",\"XDelta\",\"XSec_\" + (i),newDeltaX_" + std::to_string(i) + " );");
+                                file << "\r\n";
+
+                                writeCommand("Update();}");
+                                file << "\r\n";
+
+                                // For command to manage the A diameters
+                                writeCommand("for (int i = 1; i<=6; i++ ) {");
+                                file << "\r\n";
+
+                                writeCommand("if (i==6) {");
+
+                                writeCommand("double Aval_" + std::to_string(i) + " = GetParmVal(nacelle_" +
+                                             std::to_string(i) + ", \"Height\", \"XSecCurve_\" + i);");
+                                file << "\r\n";
+
+                                writeCommand("double newADiamVal_" + std::to_string(i) + " = 0;");
+                                file << "\r\n";
+
+                                writeCommand(" newADiamVal_" + std::to_string(i) + " = diamterAScalingFactor_" +
+                                             std::to_string(i) + "* Aval_" + std::to_string(i) + ";");
+                                file << "\r\n";
+
+                                writeCommand("SetParmVal(nacelle_" + std::to_string(i) +
+                                             ",\"Height\", \"XSecCurve_\" + i,newADiamVal_" +
+                                             std::to_string(i) + " );");
+                                file << "\r\n";
+
+                                writeCommand("} else {");
+
+                                writeCommand("double Aval_" + std::to_string(i) + " = GetParmVal(nacelle_" +
+                                             std::to_string(i) + ", \"Ellipse_Height\", \"XSecCurve_\" + i);");
+                                file << "\r\n";
+
+                                writeCommand("double newADiamVal_" + std::to_string(i) + " = 0;");
+                                file << "\r\n";
+
+                                writeCommand(" newADiamVal_" + std::to_string(i) + " = diamterAScalingFactor_" +
+                                             std::to_string(i) + "* Aval_" + std::to_string(i) + ";");
+                                file << "\r\n";
+
+                                writeCommand("SetParmVal(nacelle_" + std::to_string(i) +
+                                             ",\"Ellipse_Height\", \"XSecCurve_\" + i,newADiamVal_" +
+                                             std::to_string(i) + " );");
+                                file << "\r\n";
+
+                                writeCommand("}");
+
+                                writeCommand("Update();}");
+                                file << "\r\n";
+
+                                // For command to manage the B diameters
+                                writeCommand("for (int i = 1; i<=6; i++ ) {");
+                                file << "\r\n";
+
+                                writeCommand("if (i==6) {");
+
+                                writeCommand("double Bval_" + std::to_string(i) + " = GetParmVal(nacelle_" +
+                                             std::to_string(i) + ", \"Width\", \"XSecCurve_\" + i);");
+                                file << "\r\n";
+
+                                writeCommand("double newBDiamVal_" + std::to_string(i) + " = 0;");
+                                file << "\r\n";
+
+                                writeCommand(" newBDiamVal_" + std::to_string(i) + " = diamterBScalingFactor_" +
+                                             std::to_string(i) + "* Bval_" + std::to_string(i) + ";");
+                                file << "\r\n";
+
+                                writeCommand("SetParmVal(nacelle_" + std::to_string(i) +
+                                             ",\"Width\", \"XSecCurve_\" + i,newBDiamVal_" +
+                                             std::to_string(i) + " );");
+
+                                file << "\r\n";
+
+                                writeCommand("} else {");
+
+                                writeCommand("double Bval_" + std::to_string(i) + " = GetParmVal(nacelle_" +
+                                             std::to_string(i) + ", \"Ellipse_Width\", \"XSecCurve_\" + i);");
+                                file << "\r\n";
+
+                                writeCommand("double newBDiamVal_" + std::to_string(i) + " = 0;");
+                                file << "\r\n";
+
+                                writeCommand(" newBDiamVal_" + std::to_string(i) + " = diamterBScalingFactor_" +
+                                             std::to_string(i) + "* Bval_" + std::to_string(i) + ";");
+                                file << "\r\n";
+
+                                writeCommand("SetParmVal(nacelle_" + std::to_string(i) +
+                                             ",\"Ellipse_Width\", \"XSecCurve_\" + i,newBDiamVal_" +
+                                             std::to_string(i) + " );");
+                                file << "\r\n";
+
+                                writeCommand("}");
+
+                                writeCommand("Update();}");
+                                file << "\r\n";
+
+                                writeComment("POSITIONING NACELLE");
+                                // X,Y,Z position of the nacelle and rotations
+                                // Usa direttamente idx (già validato) - MATLAB usa nacelle.xloc(i), quindi C++ usa xloc[i-1]
+                                writeCommand("SetParmVal(nacelle_" + std::to_string(i) +
+                                             ",\"X_Rel_Location\", \"XForm\" , " +
+                                             std::to_string(nacelle.xloc[idx]) + " );");
+                                file << "\r\n";
+
+                                writeCommand("SetParmVal(nacelle_" + std::to_string(i) +
+                                             ",\"Y_Rel_Location\", \"XForm\" , " +
+                                             std::to_string(nacelle.yloc[idx]) + " );");
+                                file << "\r\n";
+
+                                writeCommand("SetParmVal(nacelle_" + std::to_string(i) +
+                                             ",\"Z_Rel_Location\", \"XForm\" , " +
+                                             std::to_string(nacelle.zloc[idx]) + " );");
+                                file << "\r\n";
+
+                                writeComment("APPLAYING ROTATIONS");
+
+                                writeCommand("SetParmVal(nacelle_" + std::to_string(i) +
+                                             ",\"X_Rel_Rotation\", \"XForm\" , " +
+                                             std::to_string(nacelle.xrot[idx]) + " );");
+                                file << "\r\n";
+
+                                writeCommand("SetParmVal(nacelle_" + std::to_string(i) +
+                                             ",\"Y_Rel_Rotation\", \"XForm\" , " +
+                                             std::to_string(nacelle.yrot[idx]) + " );");
+                                file << "\r\n";
+
+                                writeCommand("SetParmVal(nacelle_" + std::to_string(i) +
+                                             ",\"Z_Rel_Rotation\", \"XForm\" , " +
+                                             std::to_string(nacelle.zrot[idx]) + " );");
+                                file << "\r\n";
+                        }
+
                         else
                         {
                                 writeComment("Nacelle preset not recognized: " + nacelle.nacellePresetName);
                         }
                 }
 
+                /// @brief Create a standard nacelle in the script
+                /// @param nacelle The nacelle object containing its properties.
+                /// @param i The index of the nacelle.
+                /// @note This function generates script commands to create a standard nacelle or advancedNacelle usinge the specified prest name
                 inline void makeNacelle(const Nacelle &nacelle, int i)
                 {
                         // Check if advanced nacelle is requested
@@ -1766,6 +2426,69 @@ namespace VSP
                         writeUpdate();
                 }
 
+                /// @brief Creates a disk in the script
+                /// @param disk The disk object containing its properties.
+                /// @param i The index of the disk.
+                /// @note This function generates script commands to create a disk using the specified properties.
+                inline void MakeDisk(const Disk &disk, int i)
+                {
+
+                        writeComment("Adding " + disk.id + " " + std::to_string(i));
+
+                        writeCommand("string " + disk.id + "_" + std::to_string(i) +
+                                     " = AddGeom(\"" + disk.type + "\");");
+                        writeUpdate();
+
+                        writeCommand("SetGeomName(" + disk.id + "_" + std::to_string(i) +
+                                     ", \"" + disk.id + "_" + std::to_string(i) + "\");");
+
+                        file << "\r\n";
+                        writeUpdate();
+
+                        writeComment("Disk Parameters Setting");
+
+                        writeCommand("SetParmVal(" + disk.id + "_" + std::to_string(i) +
+                                     ",\"Tess_U\",\"Shape\"," + std::to_string(disk.utess[i]) + ");");
+
+                        writeCommand("SetParmVal(" + disk.id + "_" + std::to_string(i) +
+                                     ",\"Tess_W\",\"Shape\"," + std::to_string(disk.wtess[i]) + ");");
+
+                        writeCommand("SetParmVal(" + disk.id + "_" + std::to_string(i) +
+                                     ",\"Diameter\",\"Design\"," + std::to_string(disk.diameter[i]) + ");");
+
+                        file << "\r\n";
+
+                        writeUpdate();
+
+                        writeComment("Disk Positioning");
+
+                        writeCommand("SetParmVal(" + disk.id + "_" + std::to_string(i) +
+                                     ",\"X_Rel_Location\",\"XForm\"," + std::to_string(disk.xloc[i]) + ");");
+                        writeCommand("SetParmVal(" + disk.id + "_" + std::to_string(i) +
+                                     ",\"Y_Rel_Location\",\"XForm\"," + std::to_string(disk.yloc[i]) + ");");
+                        writeCommand("SetParmVal(" + disk.id + "_" + std::to_string(i) +
+                                     ",\"Z_Rel_Location\",\"XForm\"," + std::to_string(disk.zloc[i]) + ");");
+
+                        writeUpdate();
+
+                        file << "\r\n";
+                        writeComment("Disk Rotations");
+
+                        writeCommand("SetParmVal(" + disk.id + "_" + std::to_string(i) +
+                                     ",\"X_Rel_Rotation\",\"XForm\"," + std::to_string(disk.xrot[i]) + ");");
+                        writeCommand("SetParmVal(" + disk.id + "_" + std::to_string(i) +
+                                     ",\"Y_Rel_Rotation\",\"XForm\"," + std::to_string(disk.yrot[i]) + ");");
+                        writeCommand("SetParmVal(" + disk.id + "_" + std::to_string(i) +
+                                     ",\"Z_Rel_Rotation\",\"XForm\"," + std::to_string(disk.zrot[i]) + ");");
+
+                        writeUpdate();
+
+                        file << "\r\n";
+                }
+
+                /// @brief Creates movable surfaces for a wing in the script
+                /// @param wing The object containing the wing properties and movable surfaces.
+                /// @note This function generates script commands to create movable surfaces such as flaps, ailerons, slats, elevators, rudders, and canards based on the wing's properties.
                 inline void makeMovables(const Wing &wing)
                 {
                         int numDetectedSlats = 0;
@@ -1779,25 +2502,25 @@ namespace VSP
                                 case 'f':
                                         if (wing.mov.type[0] == 's')
                                         {
-                                                subID = "flap_" + std::to_string((w+1) - numDetectedSlats);
+                                                subID = "flap_" + std::to_string((w + 1) - numDetectedSlats);
                                         }
                                         else
                                         {
-                                                subID = "flap_" + std::to_string(w+1);
+                                                subID = "flap_" + std::to_string(w + 1);
                                         }
                                         break;
                                 case 'a':
                                         subID = "aileron";
                                         break;
                                 case 's':
-                                        subID = "slat_" + std::to_string(w+1);
+                                        subID = "slat_" + std::to_string(w + 1);
                                         numDetectedSlats++;
                                         break;
                                 case 'e':
                                         subID = "elevator";
                                         break;
                                 case 'r':
-                                        subID = "rudder_" + std::to_string(w+1);
+                                        subID = "rudder_" + std::to_string(w + 1);
                                         break;
                                 case 'c':
                                         subID = "flapCanard";
@@ -1857,25 +2580,29 @@ namespace VSP
                                 if (subID.find("slat") == 0)
                                 {
                                         writeCommand("SetParmVal(" + wing.id + ",\"LE_Flag\",\"SS_Control_" +
-                                                     std::to_string(w+1) + "\"," + std::to_string(1) + ");");
+                                                     std::to_string(w + 1) + "\"," + std::to_string(1) + ");");
                                         file << "\r\n";
                                 }
 
                                 writeCommand("SetParmVal(" + wing.id + ", \"UStart\", \"SS_Control_" +
-                                             std::to_string(w+1) + "\", " + std::to_string(eta_vsp_inner) + ");");
+                                             std::to_string(w + 1) + "\", " + std::to_string(eta_vsp_inner) + ");");
                                 writeCommand("SetParmVal(" + wing.id + ", \"UEnd\", \"SS_Control_" +
-                                             std::to_string(w+1) + "\", " + std::to_string(eta_vsp_outer) + ");");
+                                             std::to_string(w + 1) + "\", " + std::to_string(eta_vsp_outer) + ");");
 
                                 writeCommand("SetParmVal(" + wing.id + ", \"Length_C_Start\", \"SS_Control_" +
-                                             std::to_string(w+1) + "\", " + std::to_string(cf_c_inner) + ");");
+                                             std::to_string(w + 1) + "\", " + std::to_string(cf_c_inner) + ");");
 
                                 writeCommand("SetParmVal(" + wing.id + ", \"Tess_Num\", \"SS_Control_" +
-                                             std::to_string(w+1) + "\", " + std::to_string(tessellation) + ");");
+                                             std::to_string(w + 1) + "\", " + std::to_string(tessellation) + ");");
 
                                 writeUpdate();
                         }
                 }
 
+                /// @brief Generates commands to compute and save degenerate geometry files.
+                /// @param name Name of the vehicle to be used for file naming.
+                /// @param loadAircraft Whether to load the aircraft already built.
+                /// @param closeScript Whether to close the script file after writing commands.
                 inline void makeDegenGeom(const std::string &name, bool loadAircraft = false, bool closeScript = true)
                 {
                         if (!loadAircraft)
@@ -1899,10 +2626,10 @@ namespace VSP
                                 file << "\r\n";
                         }
 
-                         // Salvataggio del file .vsp3
-                         writeComment("//==== Save Vehicle to File ====//");
-                         writeCommand("string fname = \"" + name + ".vsp3\";");
-                         writeCommand("WriteVSPFile( fname, SET_ALL );");
+                        // Salvataggio del file .vsp3
+                        writeComment("==== Save Vehicle to File ====");
+                        writeCommand("string fname = \"" + name + ".vsp3\";");
+                        writeCommand("WriteVSPFile( fname, SET_ALL );");
 
                         if (closeScript && file.is_open())
                         {

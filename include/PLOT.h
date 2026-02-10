@@ -92,6 +92,7 @@ private:
         std::string typeOfPlot;
     };
     
+    // Vettore di dataset (x,y), contiene una coppia di vettori per ogni dataset
     std::vector<std::pair<Container, Container>> datasets;
     std::vector<PlotStyle> styles;
     
@@ -166,12 +167,14 @@ private:
             // Invia tutti i dataset
             for (const auto& dataset : datasets) {
                 std::vector<std::pair<double, double>> data;
-                
-                auto it_x = dataset.first.begin();
-                auto it_y = dataset.second.begin();
+                // dataset.first è il vettore x
+                // dataset.second è il vettore y
+                // Perchè dataset è un alias di datasets che è un vettore di coppie di container
+                auto it_x = dataset.first.begin(); // Iteratore per x contiene il riferimento al primo elemento di x
+                auto it_y = dataset.second.begin(); // Iteratore per y contiene il riferimento al primo elemento di y
                 
                 while (it_x != dataset.first.end() && it_y != dataset.second.end()) {
-                    data.emplace_back(*it_x, *it_y);
+                    data.emplace_back(*it_x, *it_y); // Aggiunge la coppia (x,y) al vettore data
                     ++it_x;
                     ++it_y;
                 }
@@ -190,7 +193,7 @@ private:
 
 public:
     // ════════════════════════════════════════════════════════════════
-    // COSTRUTTORE 1: Per SINGOLO PLOT (modo veloce, come prima)
+    // COSTRUTTORE 1: Per SINGOLO PLOT 
     // ════════════════════════════════════════════════════════════════
     Plot(Container x, Container y, 
          std::string labelX, std::string labelY, std::string title,
@@ -216,7 +219,7 @@ public:
     }
     
     // ════════════════════════════════════════════════════════════════
-    // COSTRUTTORE 2: Per MULTI-PLOT (modo avanzato, hold on)
+    // COSTRUTTORE 2: Per MULTI-PLOT (hold on)
     // ════════════════════════════════════════════════════════════════
     Plot(std::string labelX, std::string labelY, std::string title)
         : labelX(labelX), labelY(labelY), title(title), autoShow(false)

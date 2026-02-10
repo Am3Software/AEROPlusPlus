@@ -4,65 +4,67 @@
 #include "EnumFORCE.h"
 #include <vector>
 #include <iostream>
+#include <type_traits>
 
+template <typename T = std::vector<double>>
 class ConvForce {
    
     private:
 
     Force inputForce, outputForce;
-    std::vector<double> valueToConvertForce;
+    T valueToConvertForce;
 
-    std::vector<double> convertedValues() {
-    double conversionFactor = 1.0;
+    // Converti per container (vector, array, etc.)
+    template<typename U = T>
+    typename std::enable_if<std::is_class<U>::value>::type
+    convertedValues() {
+        double conversionFactor = getConversionFactor();
 
-        // Determina il fattore di conversione
+        for (auto& value : valueToConvertForce)
+        {
+            value *= conversionFactor;
+        }
+    }
+
+    // Converti per tipi scalari (double, float, int, etc.)
+    template<typename U = T>
+    typename std::enable_if<!std::is_class<U>::value>::type
+    convertedValues() {
+        double conversionFactor = getConversionFactor();
+        valueToConvertForce *= conversionFactor;
+    }
+
+    double getConversionFactor() {
+        double conversionFactor = 1.0;
+
         if (inputForce == Force::NEWTON && outputForce == Force::POUND_FORCE) {
-
             conversionFactor = 1.0/4.44822;
         }
         else if (inputForce == Force::POUND_FORCE && outputForce == Force::NEWTON) {
-
             conversionFactor = 4.44822;
         }
-
         else {
             std::cerr << "Conversion not implemented yet!" << std::endl;
-            return std::vector<double>();
         }
 
-        // Applica la conversione IN-PLACE senza emplace_back
-        for (size_t i = 0; i < valueToConvertForce.size(); i++)
-        {
-            valueToConvertForce[i] = valueToConvertForce[i] * conversionFactor;
-        }
-
-        return valueToConvertForce;
+        return conversionFactor;
     }
 
     public:
 
-    ConvForce(Force inputForce, Force outputForce, std::vector<double> valueToConvert) {
-
-
-        this->inputForce = inputForce;
-        this->outputForce = outputForce;
-        this->valueToConvertForce = valueToConvert;
-
-       convertedValues();
-
-
-        
+    ConvForce(Force inputForce, Force outputForce, const T& valueToConvert)
+        : inputForce(inputForce), outputForce(outputForce), valueToConvertForce(valueToConvert)
+    {
+        convertedValues();
     }
 
-
-   const std::vector<double>& getConvertedValues() const{
-
+    const T& getConvertedValues() const {
         return valueToConvertForce;
     }
-
-
-
-    
 };
+
+// Guide di deduzione
+template<typename T>
+ConvForce(Force, Force, T) -> ConvForce<T>;
 
 #endif

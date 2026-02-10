@@ -53,7 +53,7 @@ int main()
 
     //============================= Excel Reader Test ==============================
 
-    ExcelReader excelReader("ExcelFiles", "UNINA_UAV_Statistics_Input.xlsx");
+    ExcelReader excelReader("ExcelFiles", "Test.xlsx");
     
 
     excelReader.getData("FUSELAGE", 3, 1, 2, 3);
@@ -104,28 +104,28 @@ int main()
     // Opzioni: [] = nulla, [=] = tutto per valore, [&] = tutto per riferimento,
     // [var] = specifica variabile per valore, [&var] = per riferimento.
 
-    double VA = 10.0; // Constraint shear force in kN
-    double q = 10.0; // Distributed load in kN/m
-    double x0 = 0.0; // Initial length
-    double xf = 1.0; // Final length
-    double y0 = -5.0; // Bending moment at root
-    double dx = 1.0 / 99.0; // Step size
+    // double VA = 10.0; // Constraint shear force in kN
+    // double q = 10.0; // Distributed load in kN/m
+    // double x0 = 0.0; // Initial length
+    // double xf = 1.0; // Final length
+    // double y0 = -5.0; // Bending moment at root
+    // double dx = 1.0 / 99.0; // Step size
     
     
-    ODE45 odeSolver45([VA,q](double x, double y){return VA-q*x;},
-    x0, 
-    xf, 
-    y0, 
-    dx);
+    // ODE45 odeSolver45([VA,q](double x, double y){return VA-q*x;},
+    // x0, 
+    // xf, 
+    // y0, 
+    // dx);
 
-    odeSolver45.getT();
-    odeSolver45.getY();
+    // odeSolver45.getT();
+    // odeSolver45.getY();
 
-    Plot plot(odeSolver45.getT(), odeSolver45.getY(), "Length(m)", 
-    "Bending Moment(KNm)", 
-    "ODE45 - Solver",
-    "Bending Moment",
-    "lines","1","1","","","#FF5733");
+    // Plot plot(odeSolver45.getT(), odeSolver45.getY(), "Length(m)", 
+    // "Bending Moment(KNm)", 
+    // "ODE45 - Solver",
+    // "Bending Moment",
+    // "lines","1","1","","","#FF5733");
 
 
       //============================= NEW AIRCRAFT DATA TEST ============================
@@ -136,7 +136,7 @@ int main()
     AERO::AircraftData aircraft = reader.readAllAircraftData("DroneTest");
     
     // Test FUSELAGE
-    cout << "=== FUSELAGE ===" << endl;
+    cout << "\n=== FUSELAGE ===\n" << endl;
     const AERO::ComponentData& fus = aircraft.fuselage;
     cout << "Number of variables: " << fus.getNumVariables() << endl;
     

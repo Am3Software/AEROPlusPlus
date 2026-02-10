@@ -4,18 +4,39 @@
 #include "EnumMASS.h"
 #include <vector>
 #include <iostream>
+#include <type_traits>
 
+template <typename T = std::vector<double>>
 class ConvMass {
    
     private:
 
     Mass inputMass, outputMass;
-    std::vector<double> valueToConvertMass;
+    T valueToConvertMass;
 
-    std::vector<double> convertedValues() {
-    double conversionFactor = 1.0;
+    // Converti per container (vector, array, etc.)
+    template<typename U = T>
+    typename std::enable_if<std::is_class<U>::value>::type
+    convertedValues() {
+        double conversionFactor = getConversionFactor();
 
-        // Determina il fattore di conversione
+        for (auto& value : valueToConvertMass)
+        {
+            value *= conversionFactor;
+        }
+    }
+
+    // Converti per tipi scalari (double, float, int, etc.)
+    template<typename U = T>
+    typename std::enable_if<!std::is_class<U>::value>::type
+    convertedValues() {
+        double conversionFactor = getConversionFactor();
+        valueToConvertMass *= conversionFactor;
+    }
+
+    double getConversionFactor() {
+        double conversionFactor = 1.0;
+
         if (inputMass == Mass::KG && outputMass == Mass::LB) {
             conversionFactor = 2.20462;
         }
@@ -39,43 +60,26 @@ class ConvMass {
         }
         else {
             std::cerr << "Conversion not implemented yet!" << std::endl;
-            return std::vector<double>();
         }
 
-        // Applica la conversione IN-PLACE senza emplace_back
-        for (size_t i = 0; i < valueToConvertMass.size(); i++)
-        {
-            valueToConvertMass[i] = valueToConvertMass[i] * conversionFactor;
-        }
-
-        return valueToConvertMass;
+        return conversionFactor;
     }
 
     public:
 
-    ConvMass(Mass inputMass, Mass outputMass, std::vector<double> valueToConvert) {
-
-
-        this->inputMass = inputMass;
-        this->outputMass = outputMass;
-        this->valueToConvertMass = valueToConvert;
-
-       convertedValues();
-
-
-        
+    ConvMass(Mass inputMass, Mass outputMass, const T& valueToConvert)
+        : inputMass(inputMass), outputMass(outputMass), valueToConvertMass(valueToConvert)
+    {
+        convertedValues();
     }
 
-
-   const std::vector<double>& getConvertedValues() const{
-
-
+    const T& getConvertedValues() const {
         return valueToConvertMass;
     }
-
-
-
-    
 };
+
+// Guide di deduzione
+template<typename T>
+ConvMass(Mass, Mass, T) -> ConvMass<T>;
 
 #endif
