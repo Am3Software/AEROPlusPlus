@@ -12,11 +12,11 @@
 #include "VSPScriptGenerator.h"
 #include "WETTEDAREA.h"
 #include "WEIGHTS.h"
-#include "BASEWEIGHTDATA.h"
+#include "BASEAIRCRAFTDATA.h"
 #include "BUILDAIRCRAFT.h"
-#include "WingWeightData.h"
-#include "FUSELAGEWEIGHTDATA.h"
-#include "ENGINEWEIGHTDATA.h"
+#include "WINGBASEDATA.h"
+#include "FUSELAGEBASEDATA.h"
+#include "ENGINEBASEDATA.h"
 #include "SforzaSweepConversion.h"
 #include "EnumAircraftCategory.h"
 #include "EnumAircraftEngineType.h"
@@ -44,6 +44,117 @@ namespace COG
         double kXCG = 1.0;
         double kYCG = 1.0;
         double kZCG = 1.0;
+
+         // Wing variables related to COG calculation
+        double xCGWing = 0.0;
+        double yCGWing = 0.0;
+        double zCGWing = 0.0;
+
+        // Canard variables related to COG calculation
+        double xCGCanard = 0.0;
+        double yCGCanard = 0.0;
+        double zCGCanard = 0.0;
+
+        // Horizontal tail variables related to COG calculation
+        double xCGHorizontal = 0.0;
+        double yCGHorizontal = 0.0;
+        double zCGHorizontal = 0.0;
+
+        // Vertical tail variables related to COG calculation
+        double xCGVertical = 0.0;
+        double yCGVertical = 0.0;
+        double zCGVertical = 0.0;
+
+        // Fuselage variables related to COG calculation
+        double xCGFuselage = 0.0;
+        double yCGFuselage = 0.0;
+        double zCGFuselage = 0.0;
+
+        // Nacelle variables related to COG calculation
+        double xCGNacelle = 0.0;
+        double yCGNacelle = 0.0;
+        double zCGNacelle = 0.0;
+
+        // Boom variables related to COG calculation
+        double xCGBoom = 0.0;
+        double yCGBoom = 0.0;
+        double zCGBoom = 0.0;
+
+        // EOIR variables related to COG calculation
+        double xCGEOIR = 0.0;
+        double yCGEOIR = 0.0;
+        double zCGEOIR = 0.0;
+
+        // Landing gear variables related to COG calculation
+        double xCGLandingGear = 0.0;
+        double yCGLandingGear = 0.0;
+        double zCGLandingGear = 0.0;
+
+        // Control surfaces variables related to COG calculation
+        double xCGControlSurfaces = 0.0;
+        double yCGControlSurfaces = 0.0;
+        double zCGControlSurfaces = 0.0;
+
+        // Propulsion group variables related to COG calculation
+        double xCGPropulsionGroup = 0.0;
+        double yCGPropulsionGroup = 0.0;
+        double zCGPropulsionGroup = 0.0;
+
+        // APU variables related to COG calculation
+        double xCGAPU = 0.0;
+        double yCGAPU = 0.0;
+        double zCGAPU = 0.0;
+
+        // Instruments variables related to COG calculation
+        double xCGInstruments = 0.0;
+        double yCGInstruments = 0.0;
+        double zCGInstruments = 0.0;
+
+        // Hydraulic and pneumatic systems variables related to COG calculation
+        double xCGHydraulicAndPneumatic = 0.0;
+        double yCGHydraulicAndPneumatic = 0.0;
+        double zCGHydraulicAndPneumatic = 0.0;
+
+        // Electrical group variables related to COG calculation
+        double xCGElectricalGroup = 0.0;
+        double yCGElectricalGroup = 0.0;
+        double zCGElectricalGroup = 0.0;
+
+        // Avionic group variables related to COG calculation
+        double xCGAvionicGroup = 0.0;
+        double yCGAvionicGroup = 0.0;
+        double zCGAvionicGroup = 0.0;
+
+        // Furnishings and equipment variables related to COG calculation
+        double xCGFurnishingsAndEquipment = 0.0;
+        double yCGFurnishingsAndEquipment = 0.0;
+        double zCGFurnishingsAndEquipment = 0.0;
+
+        // Air conditioning and anti-ice variables related to COG calculation
+        double xCGAirConditioningAndAntiIce = 0.0;
+        double yCGAirConditioningAndAntiIce = 0.0;
+        double zCGAirConditioningAndAntiIce = 0.0;
+
+        // Operating items variables related to COG calculation
+        double xCGOperatingItems = 0.0;
+        double yCGOperatingItems = 0.0;
+        double zCGOperatingItems = 0.0;
+
+        // Payload variables related to COG calculation
+        double xCGPayload = 0.0;
+        double yCGPayload = 0.0;
+        double zCGPayload = 0.0;
+
+        // Crew variables related to COG calculation
+        double xCGCrew = 0.0;
+        double yCGCrew = 0.0;
+        double zCGCrew = 0.0;
+
+        // Fuel variables related to COG calculation
+        double xCGFuel = 0.0;
+        double yCGFuel = 0.0;
+        double zCGFuel = 0.0;
+
     };
 
     struct Weights
@@ -80,13 +191,14 @@ namespace COG
 
     private:
         Weight weight;
-        BaseWeightData builderData;
-        WingWeightData wingData;
-        FuselageWeightData fuselageData;
-        EngineWeightData engineData;
+        BaseAircraftData builderData;
+        WingBaseData wingData;
+        FuselageBaseData fuselageData;
+        EngineBaseData engineData;
         WETTEDAREA::WettedArea wettedAreaCalculator;
         COG::Weights weights;
         COG::COGDATA centerOfGravityData;
+        COG::COGDATA centerOfGravityComponents;
 
         std::string nameOfAircraft = "";
 
@@ -232,10 +344,6 @@ namespace COG
         double yCGTotalAircraft = 0.0;
         double zCGTotalAircraft = 0.0;
 
-        // Sweep angle
-        double sweepC2 = 0.0;
-        double sweepC4 = 0.0;
-
         // Roskam range xCG wing parcent of the chord
         double minmumXCGWingChord = 0.38;
         double maximumXCGWingChord = 0.42;
@@ -297,10 +405,10 @@ namespace COG
 
     public:
         COGCalculator(std::string nameOfAircraft,
-                      BaseWeightData builderData,
-                      WingWeightData wingData,
-                      FuselageWeightData fuselageData,
-                      EngineWeightData engineData,
+                      BaseAircraftData builderData,
+                      WingBaseData wingData,
+                      FuselageBaseData fuselageData,
+                      EngineBaseData engineData,
                       VSP::Wing wing,
                       VSP::Wing horizontalTail,
                       VSP::Wing verticalTail,
@@ -337,7 +445,7 @@ namespace COG
         std::tuple<double, double, double> inline calculateCOGWing()
         {
 
-            if (builderData.getIsSweptWing())
+            if (!builderData.getIsSweptWing())
             {
                 xCGWing = (wing.xloc + 0.5 * (minmumXCGWingChord + maximumXCGWingChord) * wing.croot.front()) / fuselage.length;
                 yCGWing = 0.0;
@@ -715,12 +823,9 @@ namespace COG
 
             {
 
-                ConvSweep SforzaConverterWing(wing.averageLeadingEdgeSweep, wing.taperRatio, wing.aspectRatio, 0.0, 0.5);
-                sweepC2 = SforzaConverterWing.getSweepAngle();
-
                 wingWeight = weight.wingWeightTorenbeek(wingData,
                                                         wing.totalProjectedSpan,
-                                                        sweepC2,
+                                                        wing.sweepC2,
                                                         wing.croot.front(),
                                                         wing.planformArea);
             }
@@ -730,29 +835,26 @@ namespace COG
 
             {
 
-                ConvSweep SforzaConverterWing(wing.averageLeadingEdgeSweep, wing.taperRatio, wing.aspectRatio, 0.0, 0.25);
-                sweepC4 = SforzaConverterWing.getSweepAngle();
-
+                
                 wingWeight = weight.wingWeightSadraey(wingData,
                                                       wing.planformArea,
                                                       wing.MAC,
                                                       wing.aspectRatio,
                                                       wing.taperRatio,
-                                                      sweepC4);
+                                                      wing.sweepC4);
             }
             break;
 
             case WeightMethod::WING_CHIOZZOTTO:
 
             {
-                ConvSweep SforzaConverterWing(wing.averageLeadingEdgeSweep, wing.taperRatio, wing.aspectRatio, 0.0, 0.5);
-                sweepC2 = SforzaConverterWing.getSweepAngle();
+                
 
                 wingWeight = weight.wingWeightChiozzotto(wingData,
                                                          wing.planformArea,
                                                          wing.aspectRatio,
                                                          wing.taperRatio,
-                                                         sweepC2);
+                                                         wing.sweepC2);
             }
 
             break;
@@ -762,31 +864,26 @@ namespace COG
 
             if (builderData.getHasCanard())
             {
-                ConvSweep SforzaConverterCanard(canard.averageLeadingEdgeSweep, canard.taperRatio, canard.aspectRatio, 0.0, 0.5);
-                sweepC2 = SforzaConverterCanard.getSweepAngle();
 
                 canardWeight = weight.canardWeightTorenbeek(builderData,
                                                             canard.totalProjectedSpan,
                                                             canard.planformArea,
-                                                            sweepC2);
+                                                            canard.sweepC2);
             }
 
             // =========== HORIZONTAL TAIL WEIGHT ===========
 
-            ConvSweep SforzaConverterHorizontal(horizontalTail.averageLeadingEdgeSweep, horizontalTail.taperRatio, horizontalTail.aspectRatio, 0.0, 0.5);
-            sweepC2 = SforzaConverterHorizontal.getSweepAngle();
+
             horizontalWeight = weight.horizontalTailWeightTorenbeek(wingData,
                                                                     horizontalTail.planformArea,
-                                                                    sweepC2);
+                                                                    horizontalTail.sweepC2);
 
             // =========== VERTICAL TAIL WEIGHT ===========
 
-            ConvSweep SforzaConverterVertical(verticalTail.averageLeadingEdgeSweep, verticalTail.taperRatio, verticalTail.aspectRatio, 0.0, 0.5);
-            sweepC2 = SforzaConverterVertical.getSweepAngle();
             verticalWeight = weight.verticalTailWeightTorenbeek(wingData,
                                                                 verticalTail.totalProjectedSpan,
                                                                 verticalTail.planformArea,
-                                                                sweepC2,
+                                                                verticalTail.sweepC2,
                                                                 horizontalTail.zloc,
                                                                 horizontalTail.planformArea);
 
@@ -1003,6 +1100,71 @@ namespace COG
 
             auto [xCGFuel, yCGFuel, zCGFuel] = calculateCOGFuel();
 
+
+            centerOfGravityComponents = {.xCGWing = xCGWing,
+                                        .yCGWing = yCGWing,
+                                        .zCGWing = zCGWing,
+                                        .xCGCanard = xCGCanard,
+                                        .yCGCanard = yCGCanard,
+                                        .zCGCanard = zCGCanard,
+                                        .xCGHorizontal = xCGHorizontal,
+                                        .yCGHorizontal = yCGHorizontal,
+                                        .zCGHorizontal = zCGHorizontal,
+                                        .xCGVertical = xCGVertical,
+                                        .yCGVertical = yCGVertical,
+                                        .zCGVertical = zCGVertical,
+                                        .xCGFuselage = xCGFuselage,
+                                        .yCGFuselage = yCGFuselage,
+                                        .zCGFuselage = zCGFuselage,
+                                        .xCGBoom = xCGBoom,
+                                        .yCGBoom = yCGBoom,
+                                        .zCGBoom = zCGBoom,
+                                        .xCGEOIR = xCGEOIR,
+                                        .yCGEOIR = yCGEOIR,
+                                        .zCGEOIR = zCGEOIR,
+                                        .xCGLandingGear = xCGLandingGear,
+                                        .yCGLandingGear = yCGLandingGear,
+                                        .zCGLandingGear = zCGLandingGear,
+                                        .xCGControlSurfaces = xCGControlSurfaces,
+                                        .yCGControlSurfaces = yCGControlSurfaces,
+                                        .zCGControlSurfaces = zCGControlSurfaces,
+                                        .xCGPropulsionGroup = xCGPropulsionGroup,
+                                        .yCGPropulsionGroup = yCGPropulsionGroup,
+                                        .zCGPropulsionGroup = zCGPropulsionGroup,
+                                        .xCGAPU = xCGAPU,
+                                        .yCGAPU = yCGAPU,
+                                        .zCGAPU = zCGAPU,
+                                        .xCGInstruments = xCGInstruments,
+                                        .yCGInstruments = yCGInstruments,
+                                        .zCGInstruments = zCGInstruments,
+                                        .xCGHydraulicAndPneumatic = xCGHydraulicAndPneumatic,
+                                        .yCGHydraulicAndPneumatic = yCGHydraulicAndPneumatic,
+                                        .zCGHydraulicAndPneumatic = zCGHydraulicAndPneumatic,
+                                        .xCGElectricalGroup = xCGElectricalGroup,
+                                        .yCGElectricalGroup = yCGElectricalGroup,
+                                        .zCGElectricalGroup = zCGElectricalGroup,
+                                        .xCGAvionicGroup = xCGAvionicGroup,
+                                        .yCGAvionicGroup = yCGAvionicGroup,
+                                        .zCGAvionicGroup = zCGAvionicGroup,
+                                        .xCGFurnishingsAndEquipment = xCGFurnishingsAndEquipment,
+                                        .yCGFurnishingsAndEquipment = yCGFurnishingsAndEquipment,
+                                        .zCGFurnishingsAndEquipment = zCGFurnishingsAndEquipment,
+                                        .xCGAirConditioningAndAntiIce = xCGAirConditioningAndAntiIce,
+                                        .yCGAirConditioningAndAntiIce = yCGAirConditioningAndAntiIce,
+                                        .zCGAirConditioningAndAntiIce = zCGAirConditioningAndAntiIce,
+                                        .xCGOperatingItems = xCGOperatingItems,
+                                        .yCGOperatingItems = yCGOperatingItems,
+                                        .zCGOperatingItems = zCGOperatingItems,
+                                        .xCGPayload = xCGPayload,
+                                        .yCGPayload = yCGPayload,
+                                        .zCGPayload = zCGPayload,
+                                        .xCGCrew = xCGCrew,
+                                        .yCGCrew = yCGCrew,
+                                        .zCGCrew = zCGCrew,
+                                        .xCGFuel = xCGFuel,
+                                        .yCGFuel = yCGFuel,
+                                        .zCGFuel = zCGFuel};
+
             xCGTotalAircraft = fuselage.length * (wingWeight * xCGWing + canardWeight * xCGCanard + horizontalWeight * xCGHorizontal + verticalWeight * xCGVertical + fuselageWeight * xCGFuselage + boomWeight * xCGBoom + eoirWeight * xCGEOIR + landingGearWeight * xCGLandingGear + controlSurfacesWeight * xCGControlSurfaces + (propulsionGroupWeight + nacelleWeight) * xCGPropulsionGroup + apuWeight * xCGAPU + instrumentsWeight * xCGInstruments + hydraulicAndPneumaticWeight * xCGHydraulicAndPneumatic + electricalGroupWeight * xCGElectricalGroup + avionicGroupWeight * xCGAvionicGroup + furnishingsAndEquipmentWeight * xCGFurnishingsAndEquipment + airConditioningAndAntiIceWeight * xCGAirConditioningAndAntiIce + operatingItemsWeight * xCGOperatingItems + payloadWeight * xCGPayload + crewWeight * xCGCrew + fuelWeight * xCGFuel) / totalAircraftWeight;
 
             yCGTotalAircraft = 0.0;
@@ -1019,5 +1181,6 @@ namespace COG
         // In COGCalculator, sezione public:
         COG::Weights getWeightsData() const { return weights; }
         COG::COGDATA getCOGData() const { return centerOfGravityData; }
+        COG::COGDATA getCOGComponentsData() const { return centerOfGravityComponents; }
     };
 }

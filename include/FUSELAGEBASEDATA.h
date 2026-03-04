@@ -2,10 +2,10 @@
 
 #include <string>
 #include <cmath>
-#include "BASEWEIGHTDATA.h"
+#include "BASEAIRCRAFTDATA.h"
 
 
-// Fuselage weight data class, inheriting from BaseWeightData (concetto di estensione)
+// Fuselage weight data class, inheriting from BaseAircraftData (concetto di estensione)
 class FuselageBaseData : public BaseAircraftData
 {
 

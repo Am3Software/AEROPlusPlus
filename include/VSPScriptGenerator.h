@@ -13,6 +13,7 @@
 #include "EnumWingPosition.h"
 #include "EnumTypeOfWing.h"
 #include "EQUALSIGNORECASE.h"
+#include "SforzaSweepConversion.h"
 
 namespace VSP
 {
@@ -56,7 +57,7 @@ namespace VSP
                 double yloc = 0;
                 double zloc = 0;
 
-                // MAC e posizione
+                // Altri dati utili
                 double totalSpan = 0.0;
                 double totalProjectedSpan = 0.0;
                 double MAC = 0.0;
@@ -66,12 +67,15 @@ namespace VSP
                 double aspectRatio = 0.0;
                 double kinkStation = 0.0;
                 double taperInbord = 0.0;
-                double deltaXtoLEWing = 0.0;
+                double deltaXtoLEMAC = 0.0;
                 double deltaXtoHorizontal = 0.0;
                 double percentagePositionOfXCG = 0.25;
                 std::vector<double> panelsArea;
                 double averageDihedral = 0.0;
                 double averageLeadingEdgeSweep = 0.0;
+                double sweepC2 = 0.0;
+                double sweepC4 = 0.0;
+                double finiteSlope = 0.0;
 
                 // Rotazione
                 double xrot = 0;
@@ -141,6 +145,7 @@ namespace VSP
                 double tailArm = 0;
                 int utess;
                 int wtess;
+                double fuselageSideArea = 0.0;
                 bool customFuselage = false;
                 bool advancedFuselage = false;
 
@@ -186,6 +191,8 @@ namespace VSP
                         double xLocPercent = 0;
                 } attachDomeBody;
         };
+
+
 
         struct Nacelle
         {
@@ -503,8 +510,6 @@ namespace VSP
 
                                 wing.totalSpan *= equalsIgnoreCase(wing.id, "wing") || equalsIgnoreCase(wing.id, "horizontal") ? 2 : 1; // Perchè totalSpan è la somma delle semiali, e per il calcolo del MAC serve la span totale
 
-                              
-
                                 // Se ci fosse una winglet la penultima sezione è la transition e l'ultima è la winglet
                                 if (wing.blending)
                                 {
@@ -513,25 +518,25 @@ namespace VSP
 
                                                 wing.panelsArea.emplace_back(0.5 * wing.span[i] * (wing.croot[i] + wing.ctip[i])); // Calcolo area di ogni pannello con formula area trapezio, da usare poi per il calcolo del centro di pressione
 
-                                                 numeratorDihedral += wing.panelsArea[i] * wing.sweep[i];
-                                                 numeratorDihedral += wing.panelsArea[i] * wing.dihedral[i];
+                                                numeratorSweepLeadingEdge += wing.panelsArea[i] * wing.sweep[i];
+                                                numeratorDihedral += wing.panelsArea[i] * wing.dihedral[i];
                                         }
                                 }
 
                                 else
                                 {
-                                        
+
                                         // Senza winglet
                                         for (size_t i = 0; i < wing.span.size(); i++)
                                         {
 
                                                 wing.panelsArea.emplace_back(0.5 * wing.span[i] * (wing.croot[i] + wing.ctip[i])); // Calcolo area di ogni pannello con formula area trapezio, da usare poi per il calcolo del centro di pressione
-                                                numeratorDihedral += wing.panelsArea[i] * wing.sweep[i];
+                                                numeratorSweepLeadingEdge += wing.panelsArea[i] * wing.sweep[i];
                                                 numeratorDihedral += wing.panelsArea[i] * wing.dihedral[i];
                                         }
                                 }
 
-
+                                
                                 // Calcolo sweep medio e dihedral medio pesati con l'area dei pannelli
 
                                 totalPanlesArea = std::accumulate(wing.panelsArea.begin(), wing.panelsArea.end(), 0.0);
@@ -542,9 +547,9 @@ namespace VSP
 
                                 // Calcolo della span proiettata sul piano orizzontale
 
-                                wing.totalProjectedSpan = wing.totalSpan * cos(wing.averageDihedral/ 57.3); // Proiezione della span totale sul piano orizzontale
+                                wing.totalProjectedSpan = wing.totalSpan * cos(wing.averageDihedral / 57.3); // Proiezione della span totale sul piano orizzontale
 
-
+                                
                                 // Calcolo di MAC, yMAC, area e aspect ratio in base al tipo di ala
 
                                 switch (wingType)
@@ -619,9 +624,19 @@ namespace VSP
                                 }
                                 }
 
-                               
+                                // Calcolo della freccia al 25% della corda
+                                ConvSweep SforzaConverterWingC4(wing.averageLeadingEdgeSweep, wing.taperRatio, wing.aspectRatio, 0.0, 0.25);
 
-                                
+                                wing.sweepC4 = SforzaConverterWingC4.getSweepAngle();
+
+                                // Calcolo della freccia al 50% della corda
+                                ConvSweep SforzaConverterWingC2(wing.averageLeadingEdgeSweep, wing.taperRatio, wing.aspectRatio, 0.0, 0.5);
+
+                                wing.sweepC2 = SforzaConverterWingC2.getSweepAngle();
+
+                                // Clear variables
+                                numeratorSweepLeadingEdge = 0.0;
+                                numeratorDihedral = 0.0;
                         }
                 }
 
@@ -671,6 +686,7 @@ namespace VSP
                                 writeCommand("ReadVSPFile( fnamePreset );");
                                 file << "\r\n";
 
+
                                 writeCommand("string fuselageName = \"fuselage\";");
                                 file << "\r\n";
 
@@ -678,6 +694,9 @@ namespace VSP
                                 file << "\r\n";
 
                                 writeCommand("string fuselage = geom_ids[0];");
+                                file << "\r\n";
+
+                                writeCommand("SetGeomName(fuselage , \"" + fuselage.id + "\");");
                                 file << "\r\n";
 
                                 writeUpdate();
@@ -849,6 +868,11 @@ namespace VSP
 
                                 writeCommand("string fuselage = geom_ids[0];");
                                 file << "\r\n";
+
+                                writeCommand("SetGeomName(fuselage , \"" + fuselage.id + "\");");
+                                file << "\r\n";
+
+                                writeUpdate();
                         }
                         else if (fuselage.fuselagePresetName == "AirbusGenericTransportJet")
                         {
@@ -867,6 +891,11 @@ namespace VSP
 
                                 writeCommand("string fuselage = geom_ids[0];");
                                 file << "\r\n";
+
+                                writeCommand("SetGeomName(fuselage , \"" + fuselage.id + "\");");
+                                file << "\r\n";
+
+                                writeUpdate();
 
                                 // REFERENCE GEOMETRY VALUES
                                 writeCommand("double refFuselageLength  = 37.57;");
@@ -1009,6 +1038,11 @@ namespace VSP
                                 writeCommand("string fuselage = geom_ids[0];");
                                 file << "\r\n";
 
+                                writeCommand("SetGeomName(fuselage , \"" + fuselage.id + "\");");
+                                file << "\r\n";
+
+                                writeUpdate();
+
                                 // REFERENCE GEOMETRY VALUES
                                 writeCommand("double refFuselageLength  = 63.73;");
                                 file << "\r\n";
@@ -1134,6 +1168,11 @@ namespace VSP
                                 writeCommand("string fuselage = geom_ids[0];");
                                 file << "\r\n";
 
+                                writeCommand("SetGeomName(fuselage , \"" + fuselage.id + "\");");
+                                file << "\r\n";
+
+                                writeUpdate();
+
                                 for (int i = 1; i <= fuselage.counterBlendedEngine; i++)
                                 {
                                         writeCommand("string blendedEngineName_" + std::to_string(i) +
@@ -1166,6 +1205,11 @@ namespace VSP
 
                                 writeCommand("string fuselage = geom_ids[0];");
                                 file << "\r\n";
+
+                                writeCommand("SetGeomName(fuselage , \"" + fuselage.id + "\");");
+                                file << "\r\n";
+
+                                writeUpdate();
                         }
                         else if (fuselage.fuselagePresetName == "McDonnel_Duglas_FuselageSkin_Concept")
                         {
@@ -1218,6 +1262,11 @@ namespace VSP
                                 writeCommand("string fuselage = geom_ids[0];");
                                 file << "\r\n";
 
+                                writeCommand("SetGeomName(fuselage , \"" + fuselage.id + "\");");
+                                file << "\r\n";
+
+                                writeUpdate();
+
                                 for (int i = 1; i <= fuselage.counterBlendedEngine; i++)
                                 {
                                         writeCommand("string blendedEngineName_" + std::to_string(i) +
@@ -1252,6 +1301,9 @@ namespace VSP
 
                         writeComment("fuselage");
                         writeCommand("string " + fuselage.id + " = AddGeom(\"" + fuselage.type + "\");");
+                        file << "\r\n";
+
+                        writeCommand("SetGeomName(" + fuselage.id + ", \"" + fuselage.id + "\");");
                         file << "\r\n";
 
                         writeCommand("SetGeomDrawType(" + fuselage.id + ", GEOM_DRAW_SHADE);");
@@ -1294,13 +1346,12 @@ namespace VSP
                         writeCommand("SetParmVal(" + fuselage.id + ",\"Tess_W\",\"Shape\"," +
                                      std::to_string(fuselage.wtess) + ");");
 
-                        mainWing.deltaXtoLEWing = mainWing.yMAC * tan(mainWing.averageLeadingEdgeSweep / 57.3);
+                        mainWing.deltaXtoLEMAC = mainWing.yMAC * tan(mainWing.averageLeadingEdgeSweep / 57.3);
                         horizontal.deltaXtoHorizontal = horizontal.yMAC * tan(horizontal.averageLeadingEdgeSweep / 57.3);
 
                         fuselage.tailArm = (horizontal.xloc + horizontal.deltaXtoHorizontal + horizontal.percentagePositionOfXCG * horizontal.MAC) -
-                                           (mainWing.xloc + mainWing.deltaXtoLEWing + mainWing.percentagePositionOfXCG * mainWing.MAC);
+                                           (mainWing.xloc + mainWing.deltaXtoLEMAC + mainWing.percentagePositionOfXCG * mainWing.MAC);
 
-        
                         file << "\r\n";
 
                         writeUpdate();
@@ -1311,7 +1362,7 @@ namespace VSP
 
                 /// @brief Creates an object wing in the VSP script.
                 /// @param wing The wing object containing its properties.
-                /// @param sym The symmetry flag for the wing.
+                /// @param sym The symmetry flag for the wing ( sym = 1 enable symmetry in the XY plane, sym = 2 enable symmetry in the XZ plane, sym = 3 enable symmetry in the YZ plane )
                 /// @param typeOfWing The type of the wing, default is STRAIGHT_TAPERED.
                 /// @note This function handles both detailed panel and standard wing creation.
                 inline void makeWing(Wing &wing, int sym, TypeOfWing typeOfWing = TypeOfWing::STRAIGHT_TAPERED)
@@ -2026,7 +2077,7 @@ namespace VSP
                                 file << "\r\n";
 
                                 writeCommand(" newDeltaX_" + std::to_string(i) + " = deltaX_" + std::to_string(i) +
-                                             "*newAFineRatio_" + std::to_string(i) + "/refANacelleFineRatio_" +
+                                             "*nacelleLength_" + std::to_string(i) + "/refNacelleLength_" +
                                              std::to_string(i) + ";");
                                 file << "\r\n";
 
@@ -2220,7 +2271,7 @@ namespace VSP
                                 file << "\r\n";
 
                                 writeCommand(" newDeltaX_" + std::to_string(i) + " = deltaX_" + std::to_string(i) +
-                                             "*newAFineRatio_" + std::to_string(i) + "/refANacelleFineRatio_" +
+                                             "*nacelleLength_" + std::to_string(i) + "/refNacelleLength_" +
                                              std::to_string(i) + ";");
                                 file << "\r\n";
 
@@ -2598,6 +2649,8 @@ namespace VSP
                                 writeUpdate();
                         }
                 }
+
+              
 
                 /// @brief Generates commands to compute and save degenerate geometry files.
                 /// @param name Name of the vehicle to be used for file naming.

@@ -2,7 +2,7 @@
 
 #include <string>
 #include <cmath>
-#include "BASEWEIGHTDATA.h"
+#include "BASEAIRCRAFTDATA.h"
 #include "EnumAircraftCategory.h"
 #include "EnumAircraftEngineType.h"
 #include "EnumEnginePosition.h"
@@ -15,7 +15,7 @@
 #include "EnumWeightMethod.h"
 #include "EnumWingPosition.h"
 
-// Wing weight data class, inheriting from BaseWeightData (concetto di estensione)
+// Wing weight data class, inheriting from BaseAircraftData (concetto di estensione)
 class WingBaseData : public BaseAircraftData
 {
 

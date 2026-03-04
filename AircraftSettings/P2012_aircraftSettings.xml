@@ -52,6 +52,10 @@
 		<DeltaCDOEIClimb>0.0034</DeltaCDOEIClimb>
 		<CLgroundLnd>0.35977</CLgroundLnd>
 		<DeltaCD0Lnd>0.034</DeltaCD0Lnd>
+		<meanAirfoilWingSlope>0.11</meanAirfoilWingSlope> <!-- Default value 0.11 deg^(-1) -->
+		<meanAirfoilHorizontalSlope>0.11</meanAirfoilHorizontalSlope> <!-- Default value 0.11 deg^(-1) -->
+		<meanAirfoilCanardSlope>0.0</meanAirfoilCanardSlope> <!-- Default value 0.11 deg^(-1) -->
+		<meanAirfoilVerticalSlope>0.11</meanAirfoilVerticalSlope> <!-- Default value 0.11 deg^(-1) -->
 	</aerodynamicData>
 	<wingData>
 	    <wingMethodWeight>Wing_Torenbeek</wingMethodWeight>
@@ -64,6 +68,7 @@
 		<cRoot>2.0038</cRoot>
 		<taperRatio>0</taperRatio>
 		<thicknessToRootChordRatio>0.15</thicknessToRootChordRatio>
+		<adimAerodynamicCenter>0.25</adimAerodynamicCenter> <!-- Aerodynamic Center Position in percentage of the MAC (Mean Aerodynamic Chord) -->
 		<underCarriagePosition>Body_Mounted</underCarriagePosition>
 		<isSweptWing>false</isSweptWing>
 		<spoilerFlag>false</spoilerFlag>
@@ -133,6 +138,7 @@
 	</eoirData>
 	<engineData>
 		<numberOfEngines>2</numberOfEngines>
+		<numberOfBlades>4</numberOfBlades>
 		<engineConfiguration>Wing_Mounted</engineConfiguration>
 		<hasWaterInjectionSystem>false</hasWaterInjectionSystem>
 		<kPGFactor>1.35</kPGFactor> <!-- kPG = 1.16 single tractor-propeller - kPG = 1.35 for multiengine propellers airplanes - kPG = 1.15 for jet aricrfat, podded engines - kPG = 1.40 for light jet aircraft, buried engines -->

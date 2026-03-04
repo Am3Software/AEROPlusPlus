@@ -306,7 +306,7 @@ public:
 
         case RegressionMethod::LINEAR:
 
-            std::cout << "The calculated value from linear regression is: " << ALinear * valueOfX + BLinear << std::endl;
+            // std::cout << "The calculated value from linear regression is: " << ALinear * valueOfX + BLinear << std::endl;
 
             return ALinear * valueOfX + BLinear;
 
@@ -319,38 +319,38 @@ public:
             {
                 yValue += polyCoeff[i] * std::pow(valueOfX, Degree - i);
             }
-            std::cout << "The calculated value from polynomial regression is: " << yValue << std::endl;
+            // std::cout << "The calculated value from polynomial regression is: " << yValue << std::endl;
             return yValue;
 
         } // Fine nuovo scope
 
         case RegressionMethod::EXPONENTIAL:
 
-            std::cout << "The calculated value from exponential regression is: " << AExp * std::exp(BExp * valueOfX) << std::endl;
+            // std::cout << "The calculated value from exponential regression is: " << AExp * std::exp(BExp * valueOfX) << std::endl;
 
             return AExp * std::exp(BExp * valueOfX);
 
         case RegressionMethod::POWER:
 
-            std::cout << "The calculated value from power regression is: " << APower * std::pow(valueOfX, BPower) << std::endl;
+            // std::cout << "The calculated value from power regression is: " << APower * std::pow(valueOfX, BPower) << std::endl;
 
             return APower * std::pow(valueOfX, BPower);
 
         case RegressionMethod::LOGARITHMIC:
 
-            std::cout << "The calculated value from logarithmic regression is: " << ALog * std::log(valueOfX) + BLog << std::endl;
+            // std::cout << "The calculated value from logarithmic regression is: " << ALog * std::log(valueOfX) + BLog << std::endl;
 
             return ALog * std::log(valueOfX) + BLog;
 
         case RegressionMethod::CONSTANT:
 
-            std::cout << "The calculated value from constant regression is: " << valueOfX << std::endl;
+            // std::cout << "The calculated value from constant regression is: " << valueOfX << std::endl;
 
             return valueOfX;
 
         default:
 
-            std::cout << "Regression method not implemented." << std::endl;
+            // std::cout << "Regression method not implemented." << std::endl;
 
             return 0.0;
         }

@@ -1,9 +1,9 @@
 #pragma once
 
-#include "BASEWEIGHTDATA.h"
-#include "WINGWEIGHTDATA.h"
-#include "FUSELAGEWEIGHTDATA.h"
-#include "ENGINEWEIGHTDATA.h"
+#include "BASEAIRCRAFTDATA.h"
+#include "WINGBASEDATA.h"
+#include "FUSELAGEBASEDATA.h"
+#include "ENGINEBASEDATA.h"
 #include "WEIGHTS.h"
 #include "XMLPARSER.h"
 #include "VSPAeroGenerator.h"
@@ -38,20 +38,20 @@
 // ============================================================
 struct AircraftBuildData
 {
-    BaseWeightData    commonData;
-    WingWeightData    wingData;
-    FuselageWeightData fuselageData;
-    EngineWeightData  engineData;
+    BaseAircraftData commonData;
+    WingBaseData wingData;
+    FuselageBaseData fuselageData;
+    EngineBaseData engineData;
 };
 
 class BuildAircraft
 {
 
 protected:
-    BaseWeightData     commonData;
-    WingWeightData     wingData;
-    FuselageWeightData fuselageData;
-    EngineWeightData   engineData;
+    BaseAircraftData commonData;
+    WingBaseData wingData;
+    FuselageBaseData fuselageData;
+    EngineBaseData engineData;
     XMLUtil::XMLParser parser;
     VSP::AeroSettings settings;
 
@@ -60,9 +60,9 @@ private:
     std::string currentWorkDirectory = "";
     // Essendo static constexpr, esiste a compile-time e non dipende dall'ordine di inizializzazione, quindi sarà sempre disponibile nel costruttore.
     // Dato che std::string non è un tipo literal, cioè alloca memoria dinamicamente (sull'heap tramite new), si deve usare const char* per garantire che sia un'espressione costante a compile-time.
-    static constexpr const char* folderNameWeightsSettings = "WeightsSettings"; 
+    static constexpr const char *folderNameWeightsSettings = "AircraftSettings";
     double seaLevelDensity = 0.0;
-    double densityRatio    = 0.0;
+    double densityRatio = 0.0;
     double maxOperatingEAS = 0.0;
 
 public:
@@ -70,39 +70,39 @@ public:
         : nameOfAircraft(nameOfAircraft),
           settings(settings),
           currentWorkDirectory(std::filesystem::current_path().string()),
-          parser(std::filesystem::current_path().string() + "/" + folderNameWeightsSettings + "/" + nameOfAircraft + "_weightsSettings.xml")
+          parser(std::filesystem::current_path().string() + "/" + folderNameWeightsSettings + "/" + nameOfAircraft + "_aircraftSettings.xml")
     {
     }
 
     // ============================================================
     // Getters to access individual data blocks after buildAircraft()
     // ============================================================
-    BaseWeightData     getCommonData()    const { return commonData;    }
-    WingWeightData     getWingData()      const { return wingData;      }
-    FuselageWeightData getFuselageData()  const { return fuselageData;  }
-    EngineWeightData   getEngineData()    const { return engineData;    }
+    BaseAircraftData getCommonData() const { return commonData; }
+    WingBaseData getWingData() const { return wingData; }
+    FuselageBaseData getFuselageData() const { return fuselageData; }
+    EngineBaseData getEngineData() const { return engineData; }
 
     // ============================================================
     // Returns all data in a single aggregated object
     // ============================================================
     AircraftBuildData getBuildData() const
     {
-        return { commonData, wingData, fuselageData, engineData };
+        return {commonData, wingData, fuselageData, engineData};
     }
 
     // ============================================================
     // Builds the aircraft by reading from XML
     // Returns *this for chaining or use getBuildData() afterwards
     // ============================================================
-    BuildAircraft& buildAircraft()
+    BuildAircraft &buildAircraft()
     {
         seaLevelDensity = Atmosphere::ISA::density(0.0);
 
-        
         densityRatio = Atmosphere::ISA::densityRatio(settings.altitude);
 
         // --- COMMON DATA ---
         commonData
+            .setNameOfAircraft(parser.getValue<std::string>("myXMLDataToWeights/generalData/nameOfAircraft"))
             .setWTO(parser.getValue<double>("myXMLDataToWeights/generalData/maximumTakeOffWeight"))
             .setNumberOfPax(parser.getValue<int>("myXMLDataToWeights/generalData/numberOfPax"))
             .setPayloadWeight(parser.getValue<double>("myXMLDataToWeights/generalData/payload"))
@@ -112,10 +112,14 @@ public:
             .setTypeOfWing(stringToTypeOfWing(parser.getValue<std::string>("myXMLDataToWeights/wingData/typeOfWing")))
             .setWeightMethodWing(stringToWeightMethod(parser.getValue<std::string>("myXMLDataToWeights/wingData/wingMethodWeight")))
             .setNUltimateLoad(parser.getValue<double>("myXMLDataToWeights/generalData/nUlt"))
+            .setAdimAerodynamicCenter(parser.getValue<double>("myXMLDataToWeights/wingData/adimAerodynamicCenter"))
             .setIsSweptWing(parser.getValue<bool>("myXMLDataToWeights/wingData/isSweptWing"))
             .setWingPosition(stringToWingPosition(parser.getValue<std::string>("myXMLDataToWeights/generalData/wingPosition")))
             .setKMainSparPosition(parser.getValue<double>("myXMLDataToWeights/wingData/mainSparPositionWing"))
             .setKSecondarySparPosition(parser.getValue<double>("myXMLDataToWeights/wingData/secondSparPositionWing"))
+            .setMeanAirfoilSlopeWing(parser.getValue<double>("myXMLDataToWeights/aerodynamicData/meanAirfoilWingSlope"))
+            .setMeanAirfoilSlopeHorizontalTail(parser.getValue<double>("myXMLDataToWeights/aerodynamicData/meanAirfoilHorizontalSlope"))
+            .setMeanAirfoilVerticalSlope(parser.getValue<double>("myXMLDataToWeights/aerodynamicData/meanAirfoilVerticalSlope"))
             .setWeightMethodFuselage(stringToWeightMethod(parser.getValue<std::string>("myXMLDataToWeights/fuselageData/fuselageWeightMethod")))
             .setFrameMaterial(stringToMaterial(parser.getValue<std::string>("myXMLDataToWeights/fuselageData/framesMaterial")))
             .setStringersMaterial(stringToMaterial(parser.getValue<std::string>("myXMLDataToWeights/fuselageData/stringersMaterial")))
@@ -127,6 +131,7 @@ public:
             .setLandingGearProperties(parser.getValue<bool>("myXMLDataToWeights/generalData/isRetractableGear"))
             .setStrutLength(parser.getValue<double>("myXMLDataToWeights/generalData/strutLength"))
             .setHasCanard(parser.getValue<bool>("myXMLDataToWeights/canardData/hasCanard"))
+            .setMeanAirfoilSlopeCanard(parser.getValue<double>("myXMLDataToWeights/aerodynamicData/meanAirfoilCanardSlope"))
             .setHasEOIR(parser.getValue<bool>("myXMLDataToWeights/eoirData/hasEoir"))
             .setHasBoom(parser.getValue<bool>("myXMLDataToWeights/boomData/hasBoom"))
             .setNumbersOfBoom(parser.getValue<int>("myXMLDataToWeights/boomData/boomNumbers"))
@@ -135,9 +140,11 @@ public:
             .setAircraftCategory(stringToAircraftCategory(parser.getValue<std::string>("myXMLDataToWeights/generalData/aircraftCategory")))
             .setAircraftEngineType(stringToAircraftEngineType(parser.getValue<std::string>("myXMLDataToWeights/generalData/aircraftEngineType")))
             .setEnginePosition(stringToEnginePosition(parser.getValue<std::string>("myXMLDataToWeights/engineData/engineConfiguration")))
+            .setNumberOfBlades(parser.getValue<int>("myXMLDataToWeights/engineData/numberOfBlades"))
             .setHasFurnishinghAndEquipment(parser.getValue<bool>("myXMLDataToWeights/generalData/enableFeQ"))
             .setHasAirConditioningAndAntiIce(parser.getValue<bool>("myXMLDataToWeights/generalData/enableACI"))
             .setHasAPU(parser.getValue<bool>("myXMLDataToWeights/generalData/enableAPU"));
+
 
         // --- WING DATA ---
         wingData
@@ -170,18 +177,21 @@ public:
             .setKMainSparPosition(commonData.getKMainSparPosition())
             .setKSecondarySparPosition(commonData.getKSecondarySparPosition())
             .setHasCanard(commonData.getHasCanard())
+            .setMeanAirfoilSlopeCanard(commonData.getMeanAirfoilSlopeCanard())
             .setHasBoom(commonData.getHasBoom())
             .setHasEOIR(commonData.getHasEOIR())
             .setLandingGearProperties(commonData.getIsRetractableLandingGear())
             .setStrutLength(commonData.getStrutLength())
-            .setControlSurfacesProperties(commonData.getFactorToControlSurface());
+            .setControlSurfacesProperties(commonData.getFactorToControlSurface())
+            .setNameOfAircraft(commonData.getNameOfAircraft());
 
-            // --- FUSELAGE DATA ---
-            fuselageData
+        // --- FUSELAGE DATA ---
+        fuselageData
             .setIsPressurized(parser.getValue<bool>("myXMLDataToWeights/fuselageData/isPressurized"))
             .setIsCargo(parser.getValue<bool>("myXMLDataToWeights/fuselageData/cargoFlag"))
             .setWTO(commonData.getWTO())
             .setNUltimateLoad(commonData.getNUltimateLoad())
+            .setAdimAerodynamicCenter(commonData.getAdimAerodynamicCenter())
             .setDiveSpeed(commonData.getDiveSpeed())
             .setAircraftCategory(commonData.getAircraftCategory())
             .setAircraftEngineType(commonData.getAircraftEngineType())
@@ -202,8 +212,8 @@ public:
             .setControlSurfacesProperties(commonData.getFactorToControlSurface())
             .setFrameMaterial(commonData.getFrameMaterial())
             .setStringersMaterial(commonData.getStringersMaterial())
-            .setSkinMaterial(commonData.getSkinMaterial());
-
+            .setSkinMaterial(commonData.getSkinMaterial())
+            .setNameOfAircraft(commonData.getNameOfAircraft());
 
         // --- ENGINE DATA ---
         engineData
@@ -215,7 +225,9 @@ public:
             .setKTHR(parser.getValue<double>("myXMLDataToWeights/engineData/kTHRFactor"))
             .setHasWaterInjectionSystem(parser.getValue<bool>("myXMLDataToWeights/engineData/hasWaterInjectionSystem"))
             .setAircraftCategory(commonData.getAircraftCategory())
-            .setAircraftEngineType(commonData.getAircraftEngineType());
+            .setAircraftEngineType(commonData.getAircraftEngineType())
+            .setNameOfAircraft(commonData.getNameOfAircraft())
+            .setNumberOfBlades(commonData.getNumberOfBlades());
 
         return *this;
     }

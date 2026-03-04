@@ -44,8 +44,6 @@ private:
     static inline void addFlaps(std::vector<ControlSurface>& controls, 
                                 const Aircraft& ac, 
                                 const std::string& symmetry) {
-        ControlSurface flap;
-        flap.name = "FLAP";
         
         int numFlaps = 0;
         int numSlats = 0;
@@ -53,27 +51,66 @@ private:
             if (type == 'f') numFlaps++;
             if (type == 's') numSlats++;
         }
-        
-        if (numFlaps == 0) return;
-        
-        if (symmetry == "NO") {
-            for (int j = 1; j <= numFlaps; j++) {
-                int actualIndex = (numSlats > 0) ? j : j;
-                flap.surfaces.push_back(ac.wing.id + "_Surf0_flap_" + std::to_string(actualIndex));
-                flap.surfaces.push_back(ac.wing.id + "_Surf1_flap_" + std::to_string(actualIndex));
-                flap.gains.push_back(1);
-                flap.gains.push_back(-1);
+
+        // FLAP
+        if (numFlaps > 0)
+        {
+            ControlSurface flap;
+            flap.name = "FLAP";
+
+            if (symmetry == "NO") {
+                for (int j = 1; j <= numFlaps; j++) {
+                    flap.surfaces.push_back(ac.wing.id + "_Surf0_flap_" + std::to_string(j));
+                    flap.surfaces.push_back(ac.wing.id + "_Surf1_flap_" + std::to_string(j));
+                    flap.gains.push_back(1);
+                    flap.gains.push_back(-1);
+                }
+            } else {
+                for (int j = 1; j <= numFlaps; j++) {
+                    flap.surfaces.push_back(ac.wing.id + "_Surf0_flap_" + std::to_string(j));
+                    flap.gains.push_back(1);
+                }
             }
-        } else {
-            for (int j = 1; j <= numFlaps; j++) {
-                int actualIndex = (numSlats > 0) ? j : j;
-                flap.surfaces.push_back(ac.wing.id + "_Surf0_flap_" + std::to_string(actualIndex));
-                flap.gains.push_back(1);
+
+            for (size_t i = 0; i < ac.wing.mov.type.size(); i++) {
+                if (ac.wing.mov.type[i] == 'f') {
+                    flap.deflection = (i < ac.wing.mov.defl.size()) ? ac.wing.mov.defl[i] : 0.0;
+                    break;
+                }
             }
+
+            controls.push_back(flap);
         }
-        
-        flap.deflection = ac.wing.mov.defl.empty() ? 0.0 : ac.wing.mov.defl[0];
-        controls.push_back(flap);
+
+        // SLAT
+        if (numSlats > 0)
+        {
+            ControlSurface slat;
+            slat.name = "SLAT";
+
+            if (symmetry == "NO") {
+                for (int j = 1; j <= numSlats; j++) {
+                    slat.surfaces.push_back(ac.wing.id + "_Surf0_slat_" + std::to_string(j));
+                    slat.surfaces.push_back(ac.wing.id + "_Surf1_slat_" + std::to_string(j));
+                    slat.gains.push_back(1);
+                    slat.gains.push_back(-1);
+                }
+            } else {
+                for (int j = 1; j <= numSlats; j++) {
+                    slat.surfaces.push_back(ac.wing.id + "_Surf0_slat_" + std::to_string(j));
+                    slat.gains.push_back(1);
+                }
+            }
+
+            for (size_t i = 0; i < ac.wing.mov.type.size(); i++) {
+                if (ac.wing.mov.type[i] == 's') {
+                    slat.deflection = (i < ac.wing.mov.defl.size()) ? ac.wing.mov.defl[i] : 0.0;
+                    break;
+                }
+            }
+
+            controls.push_back(slat);
+        }
     }
     
     static inline void addAilerons(std::vector<ControlSurface>& controls, 
@@ -189,13 +226,14 @@ public:
             return controls;
         }
         
-        bool hasFlap = (ac.movables.find('f') != std::string::npos);
+        bool hasFlap    = (ac.movables.find('f') != std::string::npos);
+        bool hasSlat    = (ac.movables.find('s') != std::string::npos);
         bool hasAileron = (ac.movables.find('a') != std::string::npos);
         bool hasElevator = (ac.movables.find('e') != std::string::npos);
-        bool hasRudder = (ac.movables.find('r') != std::string::npos);
-        bool hasCanard = (ac.movables.find('c') != std::string::npos);
+        bool hasRudder  = (ac.movables.find('r') != std::string::npos);
+        bool hasCanard  = (ac.movables.find('c') != std::string::npos);
         
-        if (hasFlap) {
+        if (hasFlap || hasSlat) {
             addFlaps(controls, ac, symmetry);
         }
         

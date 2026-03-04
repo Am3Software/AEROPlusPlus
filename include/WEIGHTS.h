@@ -6,9 +6,9 @@
 #include <cmath>
 #include "Interpolant.h"
 #include "RegressionMethod.h"
-#include "WINGWEIGHTDATA.h"
-#include "FUSELAGEWEIGHTDATA.h"
-#include "ENGINEWEIGHTDATA.h"
+#include "WINGBASEDATA.h"
+#include "FUSELAGEBASEDATA.h"
+#include "ENGINEBASEDATA.h"
 #include "EnumAircraftCategory.h"
 #include "EnumTypeOfComposite.h"
 #include "EnumAircraftEngineType.h"
@@ -145,7 +145,7 @@ public:
     /// @param isBracedWing Indicates if the wing is braced
     /// @param hasFowlerFlap Indicates if the wing has Fowler flaps
     /// @return The calculated wing weight
-    double wingWeightTorenbeek(WingWeightData wingData, double span, double sweepC2,
+    double wingWeightTorenbeek(WingBaseData wingData, double span, double sweepC2,
                                double cRoot, double planformArea)
 
     {
@@ -199,7 +199,7 @@ public:
         return wingWeight;
     }
 
-    double canardWeightTorenbeek(BaseWeightData canardData, double span, double planformArea,double sweepC2)
+    double canardWeightTorenbeek(BaseAircraftData canardData, double span, double planformArea,double sweepC2)
     {
 
         if (canardData.getHasCanard())
@@ -244,7 +244,7 @@ public:
     /// @param isEngineInstallatedOnWing Indicates if the engine is installed on the wing
     /// @param isFueklTankInstallatedOnWing Indicates if the fuel tank is installed on the wing
     /// @return The calculated wing weight
-    double wingWeightSadraey(WingWeightData wingData, double planformArea, double MAC,
+    double wingWeightSadraey(WingBaseData wingData, double planformArea, double MAC,
                              double aspectRatio, double taperRatio, double sweepC4)
     {
 
@@ -339,7 +339,7 @@ public:
     /// @param wingHalfBoxSweepAngle Area-averaged wing sweep angle at half wing box (degrees)
     /// @return The calculated wing weight (kg)
     double wingWeightChiozzotto(
-        WingWeightData wingData,
+        WingBaseData wingData,
         double wingPlanformArea,
         double wingAspectRatio,
         double wingTaperRatio,
@@ -1034,7 +1034,7 @@ public:
     /// @param sweepC2 The sweep angle at the 50% chord line (in degrees)
     /// @param typeStabilizer The type of stabilizer (fixed or unfixed)
     /// @return The estimated weight of the horizontal tail (in kg)
-    double horizontalTailWeightTorenbeek(WingWeightData horizontalData, double planformArea, double sweepC2)
+    double horizontalTailWeightTorenbeek(WingBaseData horizontalData, double planformArea, double sweepC2)
     {
 
         switch (horizontalData.getAircraftEngineType())
@@ -1100,7 +1100,7 @@ public:
     /// @param zHorPosition The vertical position of the horizontal tail relative to the fuselage centerline (in m)
     /// @param horSurface The area of the horizontal tail (in m²)
     /// @return The estimated weight of the vertical tail (in kg)
-    double verticalTailWeightTorenbeek(WingWeightData verticalData, double span, double planformArea,
+    double verticalTailWeightTorenbeek(WingBaseData verticalData, double span, double planformArea,
                                        double sweepC2, double zHorPosition, double horSurface)
     {
 
@@ -1164,7 +1164,7 @@ public:
     /// @param enginePosition Engine position configuration
     /// @param undercarriagePosition Undercarriage position configuration
     /// @return The estimated fuselage weight (in kg)
-    double fuselageWeightTorenbeek(FuselageWeightData fuselageData, double tailArm, double maxFuseWidth, double maxFuseDia,
+    double fuselageWeightTorenbeek(FuselageBaseData fuselageData, double tailArm, double maxFuseWidth, double maxFuseDia,
                                    double fuseWettedArea)
     {
 
@@ -1212,7 +1212,7 @@ public:
     /// @param stringersMaterial Material of the fuselage stringers
     /// @param skinMaterial Material of the fuselage skin
     /// @return The estimated fuselage weight (in kg)
-    double fuselgeWeightTorenbeekMaterial(FuselageWeightData fuselageData, double tailArm, double maxFuseWidth, double maxFuseDia,
+    double fuselgeWeightTorenbeekMaterial(FuselageBaseData fuselageData, double tailArm, double maxFuseWidth, double maxFuseDia,
                                           double fuseWettedArea)
 
     {
@@ -1362,7 +1362,7 @@ public:
 
     // ================= TAIL BOOM WEIGHT METHODS =================
 
-    double tailBoomWeightRoskam(BaseWeightData boomData, double boomWidth, double boomHeight, double boomWettedArea, double tailArm)
+    double tailBoomWeightRoskam(BaseAircraftData boomData, double boomWidth, double boomHeight, double boomWettedArea, double tailArm)
     {
 
         if (boomData.getHasBoom())
@@ -1397,7 +1397,7 @@ public:
 
     // ================= EO/IR WEIGHT METHODS =================
 
-    double eoirWeightGundlach(BaseWeightData eoirData, double eoirDiameter, double eoirFinenessRatio)
+    double eoirWeightGundlach(BaseAircraftData eoirData, double eoirDiameter, double eoirFinenessRatio)
     {
 
         if (eoirData.getHasEOIR())
@@ -1420,7 +1420,7 @@ public:
     /// @param wingPosition Z-Position of the wing (LOW_WING, MID_WING, HIGH_WING)
     /// @param isRetractableGerar Whether the landing gear is retractable
     /// @return The estimated landing gear weight (in kg)
-    double landingGearWeightTorenbeek(BaseWeightData landingGearData)
+    double landingGearWeightTorenbeek(BaseAircraftData landingGearData)
     {
 
         if (landingGearData.getAircraftCategory() != AircraftCategory::UAV)
@@ -1525,7 +1525,7 @@ public:
     /// @brief Calculates the control surface weight using Torenbeek method (in kg)
     /// @param WTO Maximum take-off weight (in kg)
     /// @param kSC Control surface factor (Ksc = 0.23 to flight airplanes without duplicated system controls - Ksc = 0.44 to transport airplanes, manually controlled - Ksc = 0.64 to transport airplanes, with powered controls and TED high-lift devices)
-    double contrsolSurfaceWeightTorenbeek(BaseWeightData controlSurfaceData)
+    double contrsolSurfaceWeightTorenbeek(BaseAircraftData controlSurfaceData)
     {
 
         controlSurfaceWeight = controlSurfaceData.getFactorToControlSurface() * 0.768 * std::pow(controlSurfaceData.getWTO(), 0.67);
@@ -1542,7 +1542,7 @@ public:
     /// @param thrustLbf The thrust in pounds-force
     /// @param BSHP Brake shaft horsepower (Hp)
     /// @return The estimated propulsion group weight (in kg)
-    double propulsionGroupWeight(EngineWeightData engineData)
+    double propulsionGroupWeight(EngineBaseData engineData)
     {
 
         if (engineData.getAircraftEngineType() == AircraftEngineType::JET)
@@ -1595,7 +1595,7 @@ public:
     /// @param nacWettedSurface The nacelle wetted surface area (in square meters)
     /// @param thrustLbf The thrust in pounds-force
     /// @return Calculated nacelle weight (in kg)
-    double nacelleWeight(EngineWeightData engineData, double nacWettedSurface)
+    double nacelleWeight(EngineBaseData engineData, double nacWettedSurface)
     {
 
 
@@ -1636,7 +1636,7 @@ public:
     /// @brief Claculates the APU weight using Torenbeek method (in kg)
     /// @param WTO Maximum take-off weight (in kg)
     /// @return Calculated APU weight (in kg)
-    double apuWeight(BaseWeightData apuData)
+    double apuWeight(BaseAircraftData apuData)
     {
 
         if (apuData.getHasAPU())
@@ -1658,7 +1658,7 @@ public:
     /// @brief Calculates the instrumentation weight(in kg)
     /// @param WTO The maximum take-off weight (in kg)
     /// @return The estimated instrumentation weight (in kg)
-    double instrumentWeight(BaseWeightData instrumentData)
+    double instrumentWeight(BaseAircraftData instrumentData)
     {
 
         ConvMass massConverter(Mass::KG, Mass::LB, instrumentData.getWTO());
@@ -1677,7 +1677,7 @@ public:
     /// @brief Calculates the hydraulic system weight (in kg)
     /// @param WTO The maximum take-off weight (in kg)
     /// @return The estimated hydraulic system weight (in kg)
-    double hydraulicSystemWeight(BaseWeightData hydraulicData)
+    double hydraulicSystemWeight(BaseAircraftData hydraulicData)
     {
 
         ConvMass massConverter(Mass::KG, Mass::LB, hydraulicData.getWTO());
@@ -1696,7 +1696,7 @@ public:
     /// @brief Calculates the electrical group weight (in kg)
     /// @param WTO The maximum take-off weight (in kg)
     /// @return The estimated electrical group weight (in kg)
-    double electricalGroupWeight(BaseWeightData electricalData)
+    double electricalGroupWeight(BaseAircraftData electricalData)
     {
 
         ConvMass massConverter(Mass::KG, Mass::LB, electricalData.getWTO());
@@ -1715,7 +1715,7 @@ public:
     /// @brief Calculates the avionics group weight (in kg)
     /// @param WTO The maximum take-off weight (in kg)
     /// @return The estimated avionics group weight (in kg)
-    double avionicsWeight(BaseWeightData avionicsData)
+    double avionicsWeight(BaseAircraftData avionicsData)
     {
 
         ConvMass massConverter(Mass::KG, Mass::LB, avionicsData.getWTO());
@@ -1734,7 +1734,7 @@ public:
     /// @brief Calculates the furnishings and equipment weight (in kg)
     /// @param WTO The maximum take-off weight (in kg)
     /// @return The estimated furnishings and equipment weight (in kg)
-    double furnishingsAndEquipmentWeight(BaseWeightData furnishingsData)
+    double furnishingsAndEquipmentWeight(BaseAircraftData furnishingsData)
     {
 
         if (furnishingsData.getHasFurnishinghAndEquipment())
@@ -1756,7 +1756,7 @@ public:
     /// @brief Calculates the air conditioning and anti-ice weight (in kg)
     /// @param WTO The maximum take-off weight (in kg)
     /// @return The estimated air conditioning and anti-ice weight (in kg)
-    double airConditioningAndAntiIceWeight(BaseWeightData airConditioningData)
+    double airConditioningAndAntiIceWeight(BaseAircraftData airConditioningData)
     {
 
         if (airConditioningData.getHasAirConditioningAndAntiIce())
@@ -1781,7 +1781,7 @@ public:
     /// @param rangeCovered The range covered by the aircraft (in nm - nautical miles)
     /// @param numberOfPax The number of passengers
     /// @return The estimated operating items weight (in kg)
-    double operatingItemsWeight(BaseWeightData operatingItemsData)
+    double operatingItemsWeight(BaseAircraftData operatingItemsData)
     {
 
         if (operatingItemsData.getAircraftCategory() != AircraftCategory::UAV)
