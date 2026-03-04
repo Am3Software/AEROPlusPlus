@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<myXMLDataToWeights>
+<myXMLDataToAircraft>
 	<generalData>
 		<nameOfAircraft>P2012</nameOfAircraft>
 		<aircraftCategory>GA</aircraftCategory>
@@ -219,4 +219,4 @@
 		<keDesc>1</keDesc>
 		<keLan>0.95</keLan>
 	</oswaldCoeffCalibrationFactor>
-</myXMLDataToWeights>
+</myXMLDataToAircraft>
