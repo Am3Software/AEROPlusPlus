@@ -1630,7 +1630,7 @@ namespace LONGITUDINAL_STABILITY
 
                 if (wing.mov.defl[n] != 0.0)
                 {
-                    std::cout << "Warning: Wing control surface deflection detected. Lateral stability derivatives will be calculated for the undeflected configuration only." << std::endl;
+                    std::cout << "Warning: Wing control surface deflection detected. Longitudinal stability derivatives will be calculated for the undeflected configuration only." << std::endl;
 
                     wing.mov.defl[n] = 0.0;
 
@@ -1645,7 +1645,7 @@ namespace LONGITUDINAL_STABILITY
 
                     if (canard->mov.defl[n] != 0.0)
                     {
-                        std::cout << "Warning: Canard control surface deflection detected. Lateral stability derivatives will be calculated for the undeflected configuration only." << std::endl;
+                        std::cout << "Warning: Canard control surface deflection detected. Longitudinal stability derivatives will be calculated for the undeflected configuration only." << std::endl;
 
                         canard->mov.defl[n] = 0.0;
 
@@ -1659,7 +1659,7 @@ namespace LONGITUDINAL_STABILITY
 
                 if (horizontalTail.mov.defl[n] != 0.0)
                 {
-                    std::cout << "Warning: Horizontal Tail control surface deflection detected. Lateral stability derivatives will be calculated for the undeflected configuration only." << std::endl;
+                    std::cout << "Warning: Horizontal Tail control surface deflection detected. Longitudinal stability derivatives will be calculated for the undeflected configuration only." << std::endl;
 
                     horizontalTail.mov.defl[n] = 0.0;
 
@@ -1674,7 +1674,7 @@ namespace LONGITUDINAL_STABILITY
 
                     if (verticalTail->mov.defl[n] != 0.0)
                     {
-                        std::cout << "Warning: Vertical Tail control surface deflection detected. Lateral stability derivatives will be calculated for the undeflected configuration only." << std::endl;
+                        std::cout << "Warning: Vertical Tail control surface deflection detected. Longitudinal stability derivatives will be calculated for the undeflected configuration only." << std::endl;
 
                         verticalTail->mov.defl[n] = 0.0;
 
