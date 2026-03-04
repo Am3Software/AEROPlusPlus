@@ -60,7 +60,7 @@ private:
     std::string currentWorkDirectory = "";
     // Essendo static constexpr, esiste a compile-time e non dipende dall'ordine di inizializzazione, quindi sarà sempre disponibile nel costruttore.
     // Dato che std::string non è un tipo literal, cioè alloca memoria dinamicamente (sull'heap tramite new), si deve usare const char* per garantire che sia un'espressione costante a compile-time.
-    static constexpr const char *folderNameWeightsSettings = "AircraftSettings";
+    static constexpr const char *folderNameAircraftSettings = "AircraftSettings";
     double seaLevelDensity = 0.0;
     double densityRatio = 0.0;
     double maxOperatingEAS = 0.0;
@@ -70,7 +70,7 @@ public:
         : nameOfAircraft(nameOfAircraft),
           settings(settings),
           currentWorkDirectory(std::filesystem::current_path().string()),
-          parser(std::filesystem::current_path().string() + "/" + folderNameWeightsSettings + "/" + nameOfAircraft + "_aircraftSettings.xml")
+          parser(std::filesystem::current_path().string() + "/" + folderNameAircraftSettings + "/" + nameOfAircraft + "_aircraftSettings.xml")
     {
     }
 
