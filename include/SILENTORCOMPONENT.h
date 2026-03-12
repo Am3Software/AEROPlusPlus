@@ -85,42 +85,70 @@ namespace SILENTORCOMPONENT
             return result;
         }
 
-        inline int executeCommand(const std::string &command, int chooseLauncher, std::string vspExecutable = "")
+        // inline int executeCommand(const std::string &command, int chooseLauncher, std::string vspExecutable = "")
+        // {
+        //     if (chooseLauncher == 1)
+        //     {
+        //         int retVSPScript = system(command.c_str());
+        //         if (retVSPScript != 0)
+        //         {
+        //             std::cerr << "VSPScript: execution failed" << std::endl;
+        //             return 1;
+        //         }
+        //         return 0;
+        //     }
+        //     else if (chooseLauncher == 2)
+        //     {
+        //         int retVSPAero = system(command.c_str());
+        //         if (retVSPAero != 0)
+        //         {
+        //             std::cerr << "VSPAERO: execution failed" << std::endl;
+        //             return 1;
+        //         }
+        //         return 0;
+        //     }
+        //     else
+        //     {
+        //         std::cerr << "executeCommand: invalid chooseLauncher value" << std::endl;
+        //         return -1;
+        //     }
+        // }
+
+        int executeCommand(const std::string &command, int chooseLauncher, std::string vspExecutable = "")
         {
+            // Salva e forza il working directory corretto
+            std::filesystem::path originalPath = std::filesystem::current_path();
+            std::filesystem::current_path(parentFolder); // <- forza CWD alla cartella del progetto
+
+            int ret = -1;
             if (chooseLauncher == 1)
             {
-                int retVSPScript = system(command.c_str());
-                if (retVSPScript != 0)
-                {
-                    std::cerr << "VSPScript: execution failed" << std::endl;
-                    return 1;
-                }
-                return 0;
+                ret = system(command.c_str());
+                if (ret != 0)
+                    std::cerr << "[ERROR] VSPScript failed (ret=" << ret << "): " << command << std::endl;
             }
             else if (chooseLauncher == 2)
             {
-                int retVSPAero = system(command.c_str());
-                if (retVSPAero != 0)
-                {
-                    std::cerr << "VSPAERO: execution failed" << std::endl;
-                    return 1;
-                }
-                return 0;
+                ret = system(command.c_str());
+                if (ret != 0)
+                    std::cerr << "[ERROR] VSPAERO failed (ret=" << ret << "): " << command << std::endl;
             }
             else
             {
-                std::cerr << "executeCommand: invalid chooseLauncher value" << std::endl;
-                return -1;
+                std::cerr << "[ERROR] executeCommand: invalid chooseLauncher" << std::endl;
             }
+
+            std::filesystem::current_path(originalPath); // ripristina
+            return (ret == 0) ? 0 : 1;
         }
 
     public:
         /// @brief Constructor for SilentorComponent class.
         /// @param nameOfAircraft The name of the aircrfat
         /// @param parentFolderPath The path to the parent folder (optional).
-        inline SilentorComponent(const std::string &nameOfAircraft,
-                                 const std::string &filename, 
-                                 const std::string &parentFolderPath = "")
+        SilentorComponent(const std::string &nameOfAircraft,
+                          const std::string &filename,
+                          const std::string &parentFolderPath = "")
         {
 
             this->nameOfAircrfat = nameOfAircraft;
@@ -159,11 +187,45 @@ namespace SILENTORCOMPONENT
             }
         }
 
-        inline ~SilentorComponent()
+        ~SilentorComponent()
         {
+
+            // Remove the genreted files
+            // Remove Copy Aircrfat
+
             if (file.is_open())
             {
+                file.flush();
                 file.close();
+            }
+
+            try {
+
+            // if (std::filesystem::exists(copyAircraftFilePath))
+            // {
+            //     std::filesystem::remove(copyAircraftFilePath);
+            // }
+            // std::filesystem::remove(std::filesystem::path(parentFolder) / (nameOfAircrfat + "_copy.vsp3"));
+
+            // // Remove VSP Script
+            // std::filesystem::remove(std::filesystem::path(parentFolder) / filenameVspScript);
+
+            for (const auto &entry : std::filesystem::directory_iterator(parentFolder))
+            {
+                const std::string filename = entry.path().filename().string();
+                const std::string prefix = nameOfAircrfat + "_copy";
+
+                if (filename.rfind(prefix, 0) == 0) // starts_with prefix
+                {
+                    std::filesystem::remove(entry.path());
+                }
+            }
+           
+            }
+            catch (const std::exception &e)
+            {
+                // Mai rilanciare dal distruttore — solo log
+                std::cerr << "[WARNING] ~SilentorComponent: cleanup failed: " << e.what() << std::endl;
             }
         }
 
@@ -171,8 +233,8 @@ namespace SILENTORCOMPONENT
         /// @param aircrfatName The name of the aircraft.
         /// @param filename The name of the file with the exstension .vspscript.
         /// @param parentFolderPath The path to the parent folder (optional).
-        inline void GetGeometryWithThisComponent(VSP::Aircraft ac, VSPGEOMTRYEXTRACTOR::AircraftGeometryData geometryData,
-                                                   const std::vector<std::string> &nameOfComponent = {}, const std::string &parentFolderPath = "")
+        void GetGeometryWithThisComponent(VSP::Aircraft ac, VSPGEOMTRYEXTRACTOR::AircraftGeometryData geometryData,
+                                          const std::vector<std::string> &nameOfComponent = {}, const std::string &parentFolderPath = "")
         {
 
             if (file.is_open())
@@ -212,8 +274,8 @@ namespace SILENTORCOMPONENT
             // Case for the input of a specific component name
 
             std::map<std::string, bool> componentVisibility;
-          
-            this->silentorAC = VSP::Aircraft{};  // reset prima di popolarlo
+
+            this->silentorAC = VSP::Aircraft{}; // reset prima di popolarlo
             // Loop esterno su tutte le geometrie
             for (const auto &geom : geometryData.allGeoms)
             {
@@ -283,13 +345,12 @@ namespace SILENTORCOMPONENT
 
             file << "}\r\n";
 
+            file.flush();
             file.close();
+            
+
 
             executeCommand("vspscript.exe -script " + filenameVspScript, 1);
-
-
-             
-
         }
 
         // Esegue lo script di wetted area e cattura i risultati
@@ -297,8 +358,8 @@ namespace SILENTORCOMPONENT
         /// @brief Executes the wetted area script and captures the results from the terminal output.
         /// @param nameOfTheFileToWetArea Name of the script file that calculates the analysis - no one extension
         /// @param vspExecutable The VSP executable to use (mandatory is "vspscript.exe").
-        inline void executeAnalysis(VSP::AeroSettings settings,
-                                    const std::string &vspExecutable = "vspaero.exe")
+        void executeAnalysis(VSP::AeroSettings settings,
+                             const std::string &vspExecutable = "vspaero.exe")
         {
 
             aeroCoeffs.liftCoefficient.clear();
@@ -315,13 +376,20 @@ namespace SILENTORCOMPONENT
             vspaero.writeFooter(settings);
             std::cout << "\n ✓ VSPAERO file generated: MyAircraft_DegenGeom.vspaero" << std::endl;
             // // close file .VSPAERO mandatory
+            // vspaero.close();
+
+            // // Costruisci il comando
+            // std::string command = vspExecutable + " -omp 4 " + nameOfAircrfat + "_copy_DegenGeom";
+
+            // // Esegui l'analisi
+            // executeCommand(command,2);
+
+            // In executeAnalysis
             vspaero.close();
 
-            // Costruisci il comando
-            std::string command = vspExecutable + " -omp 4 " + nameOfAircrfat + "_copy_DegenGeom";
-
-            // Esegui l'analisi
-            executeCommand(command,2);
+            std::filesystem::path degenGeomPath = std::filesystem::path(parentFolder) / (nameOfAircrfat + "_copy_DegenGeom");
+            std::string command = vspExecutable + " -omp 4 \"" + degenGeomPath.string() + "\"";
+            executeCommand(command, 2);
 
             VSPPolar::PolarReader reader;
             reader.readFile(nameOfAircrfat + "_copy_DegenGeom.polar");
@@ -335,15 +403,7 @@ namespace SILENTORCOMPONENT
                 aeroCoeffs.pitchingMomentCoefficient.push_back(point.CMm);
             }
 
-            // Remove the genreted files
-            // Remove Copy Aircrfat
-            std::filesystem::remove(std::filesystem::path(parentFolder) / (nameOfAircrfat + "_copy.vsp3"));
-
-            // Remove VSP Script
-            std::filesystem::remove(std::filesystem::path(parentFolder) / filenameVspScript);
-
-            // Remove VSPAERO file
-            std::filesystem::remove(std::filesystem::path(parentFolder) / (nameOfAircrfat + "_copy_DegenGeom.vspaero"));
+            
         }
 
         // Getters results

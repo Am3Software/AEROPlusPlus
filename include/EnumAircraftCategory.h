@@ -6,6 +6,7 @@ enum class AircraftCategory
     FIGHTER,
     TRANSPORT_JET,
     GENERAL_AVIATION,
+    REGIONAL_TURBOPROP,
     UAV,
     UNKNOWN
 };
@@ -21,6 +22,9 @@ AircraftCategory stringToAircraftCategory(const std::string& cat)
     }
     if (cat == "GA" || cat == "general aviation") {
         return AircraftCategory::GENERAL_AVIATION;
+    }
+    if (cat == "Regional_Turboprop" || cat == "regional_turboprop") {
+        return AircraftCategory::REGIONAL_TURBOPROP;
     }
     if (cat == "UAV" ) {
         return AircraftCategory::UAV;

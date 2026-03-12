@@ -49,10 +49,18 @@ namespace LONGITUDINAL_STABILITY
         double deltaCmDeltaIncidenceHorizontalTail = 0.0;
         double deltaCLDeltaElevatorDeflection = 0.0;
         double deltaCLDeltaIncidenceHorizontalTail = 0.0;
-
+        
         double liftSlopeAircraft = 0.0;
 
         double neutralPointAsFractionOfMAC = 0.0;
+    };
+
+    struct LongitudinalDynamicDerivatives
+    {
+        double deltaCmDeltaAlphaDot = 0.0;
+        double deltaCLDeltaAlphaDot = 0.0;
+        double deltaCmDeltaPitchSpeed = 0.0;
+        double deltaCLdeltaPitchSpeed = 0.0;
     };
 
     struct LongitudinalAerodynamicCoefficients
@@ -78,6 +86,8 @@ namespace LONGITUDINAL_STABILITY
         double deltaCmDeltaAlphaNacelle = 0.0;
     };
 
+    
+
     class LongitudinalStabilityCalculator
     {
 
@@ -98,10 +108,12 @@ namespace LONGITUDINAL_STABILITY
         VSP::AeroSettings settings;
         RegressionMethod regressionMethod;
         LONGITUDINAL_STABILITY::LongitudinalStabilityDerivatives aircraftLongitudinalDerivatives;
+        LONGITUDINAL_STABILITY::LongitudinalDynamicDerivatives aircraftLongitudinalDynamicDerivatives;
         LONGITUDINAL_STABILITY::LongitudinalStabilityDerivativesToSingleComponent singleComponentsDerivatives;
         LONGITUDINAL_STABILITY::LongitudinalAerodynamicCoefficients longitudinalAerodynamicCoefficients;
         std::string nameOfAircraft;
 
+        // Static derivatives
         double deltaCmClWingContribution = 0.0;
         double deltaCmClHorizontalTailContribution = 0.0;
         double deltaCmClCanardContribution = 0.0;
@@ -116,15 +128,24 @@ namespace LONGITUDINAL_STABILITY
 
         double deltaCmDeltaAlphaAircraft = 0.0;
         double deltaCmDeltaClAircraft = 0.0;
+        double deltaCmDeltaPitchSpeed = 0.0;
         double deltaCmDeltaElevatorDeflection = 0.0;
         double deltaCmDeltaIncidenceHorizontalTail = 0.0;
         double deltaCLDeltaElevatorDeflection = 0.0;
         double deltaCLDeltaIncidenceHorizontalTail = 0.0;
+        double deltaCLdeltaPitchSpeed = 0.0;
 
+        // Aircraft lift slope
         double liftSlopeAircraft = 0.0;
 
+        // Aerodynamic coefficients at zero AoA
         double pitchingMomentAtZeroAoA = 0.0;
         double liftCoefficientAtZeroAoA = 0.0;
+
+        // Dynamic derivatives
+        double deltaCmDeltaAlphaDot = 0.0;
+        double deltaCLDeltaAlphaDot = 0.0;
+        double kFactorToAccountWingFuselageEffects = 1.1; // Default value is K = 1.1
 
         int foundIndexAtZeroAoA = -1;
 
@@ -542,7 +563,7 @@ namespace LONGITUDINAL_STABILITY
             VSP::Wing &horizontalTail,
             VSP::Fuselage fuselage,
             VSP::Nacelle nacelle,
-            VSP::Disk disk,
+            VSP::Disk disk = VSP::Disk(),
             VSP::Wing *canard = nullptr,
             VSP::Wing *verticalTail = nullptr)
             : builder(builder),
@@ -716,7 +737,7 @@ namespace LONGITUDINAL_STABILITY
             // Create ODE45 solver to integrate downwash angle over angle of attack range
             // dε/dα = 114.6 * CLα_w / (π * AR_w)
             // Integration from AoA_min to AoA_max with initial condition y0
-            ODE45 odeSolver45([=](double x, double y)
+            ODE45 odeSolver45([=](double x, const double& y)
                               { return 114.6 * finiteWingLiftSlope / (M_PI * wingAspectRatioToLambdaFunction); },
                               settings.AoA.front(),
                               settings.AoA.back(),
@@ -1546,16 +1567,31 @@ namespace LONGITUDINAL_STABILITY
                 deltaCLDeltaIncidenceHorizontalTail = finiteHorizontalTailLiftSlope * 0.5 * (etaMinimumConventionalTail + etaMaximumConventionalTail) *
                                                       (horizontalTail.planformArea / wing.planformArea);
 
-                deltaCmDeltaIncidenceHorizontalTail = - finiteHorizontalTailLiftSlope * 0.5 * (etaMinimumConventionalTail + etaMaximumConventionalTail) *
+                deltaCmDeltaIncidenceHorizontalTail = -finiteHorizontalTailLiftSlope * 0.5 * (etaMinimumConventionalTail + etaMaximumConventionalTail) *
                                                       (horizontalTail.planformArea / wing.planformArea) * (fuselage.tailArm / wing.MAC);
 
-                liftSlopeAircraft = finiteWingLiftSlope * (1 + (finiteHorizontalTailLiftSlope / finiteWingLiftSlope) * (horizontalTail.planformArea / wing.planformArea) * 
-                                                           0.5 * (etaMinimumConventionalTail + etaMaximumConventionalTail) * downWashGradient);
+                deltaCLDeltaAlphaDot = (etaMinimumConventionalTail + etaMaximumConventionalTail) * (horizontalTail.planformArea / wing.planformArea) * (fuselage.tailArm / wing.MAC) *
+                                       downWashGradient * finiteHorizontalTailLiftSlope;
+                
+                deltaCLdeltaPitchSpeed = (etaMinimumConventionalTail + etaMaximumConventionalTail) * (horizontalTail.planformArea / wing.planformArea) * (fuselage.tailArm / wing.MAC) *
+                                          finiteHorizontalTailLiftSlope;
+
+                deltaCmDeltaAlphaDot = -kFactorToAccountWingFuselageEffects * (etaMinimumConventionalTail + etaMaximumConventionalTail) * (horizontalTail.planformArea / wing.planformArea) *
+                                       std::pow((fuselage.tailArm / wing.MAC), 2.0) * downWashGradient * finiteHorizontalTailLiftSlope;
+
+
+                deltaCmDeltaPitchSpeed = -kFactorToAccountWingFuselageEffects * (etaMinimumConventionalTail + etaMaximumConventionalTail) * (horizontalTail.planformArea / wing.planformArea) *
+                                       std::pow((fuselage.tailArm / wing.MAC), 2.0) *  finiteHorizontalTailLiftSlope;
+
+
+                liftSlopeAircraft = finiteWingLiftSlope * (1 + (finiteHorizontalTailLiftSlope / finiteWingLiftSlope) * (horizontalTail.planformArea / wing.planformArea) *
+                                                                   0.5 * (etaMinimumConventionalTail + etaMaximumConventionalTail) * downWashGradient);
 
                 break;
 
             case TypeOfTail::V_TAIL:
             case TypeOfTail::V_REV_TAIL:
+
                 deltaCmDeltaElevatorDeflection = -finiteHorizontalTailLiftSlope * 0.5 * (etaMinimumConventionalTail + etaMaximumConventionalTail) *
                                                  ((horizontalTail.planformArea / wing.planformArea) * (fuselage.tailArm / wing.MAC) *
                                                   factorToAccountHorizontalTailContributionAndDownwash) *
@@ -1567,15 +1603,28 @@ namespace LONGITUDINAL_STABILITY
                 deltaCLDeltaIncidenceHorizontalTail = finiteHorizontalTailLiftSlope * 0.5 * (etaMinimumConventionalTail + etaMaximumConventionalTail) *
                                                       (horizontalTail.planformArea / wing.planformArea);
 
-                deltaCmDeltaIncidenceHorizontalTail = - finiteHorizontalTailLiftSlope * 0.5 * (etaMinimumConventionalTail + etaMaximumConventionalTail) *
+                deltaCmDeltaIncidenceHorizontalTail = -finiteHorizontalTailLiftSlope * 0.5 * (etaMinimumConventionalTail + etaMaximumConventionalTail) *
                                                       (horizontalTail.planformArea / wing.planformArea) * (fuselage.tailArm / wing.MAC);
 
-                liftSlopeAircraft = finiteWingLiftSlope * (1 + (finiteHorizontalTailLiftSlope / finiteWingLiftSlope) * (horizontalTail.planformArea / wing.planformArea) * 
-                                                          0.5 * (etaMinimumConventionalTail + etaMaximumConventionalTail) * downWashGradient);
+                deltaCLDeltaAlphaDot = (etaMinimumConventionalTail + etaMaximumConventionalTail) * (horizontalTail.planformArea / wing.planformArea) * (fuselage.tailArm / wing.MAC) *
+                                       downWashGradient * finiteHorizontalTailLiftSlope;
+
+                deltaCLdeltaPitchSpeed = (etaMinimumConventionalTail + etaMaximumConventionalTail) * (horizontalTail.planformArea / wing.planformArea) * (fuselage.tailArm / wing.MAC) *
+                                         finiteHorizontalTailLiftSlope;
+
+                deltaCmDeltaAlphaDot = -kFactorToAccountWingFuselageEffects * (etaMinimumConventionalTail + etaMaximumConventionalTail) * (horizontalTail.planformArea / wing.planformArea) *
+                                       std::pow((fuselage.tailArm / wing.MAC), 2.0) * downWashGradient * finiteHorizontalTailLiftSlope;
+
+                deltaCmDeltaPitchSpeed = -kFactorToAccountWingFuselageEffects * (etaMinimumConventionalTail + etaMaximumConventionalTail) * (horizontalTail.planformArea / wing.planformArea) *
+                                         std::pow((fuselage.tailArm / wing.MAC), 2.0) * finiteHorizontalTailLiftSlope;
+
+                liftSlopeAircraft = finiteWingLiftSlope * (1 + (finiteHorizontalTailLiftSlope / finiteWingLiftSlope) * (horizontalTail.planformArea / wing.planformArea) *
+                                                                   0.5 * (etaMinimumConventionalTail + etaMaximumConventionalTail) * downWashGradient);
 
                 break;
 
             case TypeOfTail::T_TAIL:
+
                 deltaCmDeltaElevatorDeflection = -finiteHorizontalTailLiftSlope *
                                                  ((horizontalTail.planformArea / wing.planformArea) * (fuselage.tailArm / wing.MAC) *
                                                   factorToAccountHorizontalTailContributionAndDownwash) *
@@ -1586,6 +1635,18 @@ namespace LONGITUDINAL_STABILITY
                 deltaCLDeltaIncidenceHorizontalTail = finiteHorizontalTailLiftSlope * (horizontalTail.planformArea / wing.planformArea);
 
                 deltaCmDeltaIncidenceHorizontalTail = - finiteHorizontalTailLiftSlope * (horizontalTail.planformArea / wing.planformArea) * (fuselage.tailArm / wing.MAC);
+
+                deltaCLDeltaAlphaDot = (horizontalTail.planformArea / wing.planformArea) * (fuselage.tailArm / wing.MAC) *
+                                       downWashGradient * finiteHorizontalTailLiftSlope;
+
+                deltaCLdeltaPitchSpeed =  (horizontalTail.planformArea / wing.planformArea) * (fuselage.tailArm / wing.MAC) *
+                                         finiteHorizontalTailLiftSlope;
+
+                deltaCmDeltaAlphaDot = -kFactorToAccountWingFuselageEffects * (horizontalTail.planformArea / wing.planformArea) *
+                                       std::pow((fuselage.tailArm / wing.MAC), 2.0) * downWashGradient * finiteHorizontalTailLiftSlope;
+
+                deltaCmDeltaPitchSpeed = -kFactorToAccountWingFuselageEffects * (horizontalTail.planformArea / wing.planformArea) *
+                                         std::pow((fuselage.tailArm / wing.MAC), 2.0) * finiteHorizontalTailLiftSlope;
 
                 liftSlopeAircraft = finiteWingLiftSlope * (1 + (finiteHorizontalTailLiftSlope / finiteWingLiftSlope) * (horizontalTail.planformArea / wing.planformArea) * downWashGradient);
 
@@ -1623,71 +1684,72 @@ namespace LONGITUDINAL_STABILITY
                 }
             }
 
-            // Disable every deflections of the control surfaces.
+            // // Disable every deflections of the control surfaces.
 
-            for (size_t n = 0; n < wing.mov.defl.size(); n++)
-            {
+            // for (size_t n = 0; n < wing.mov.defl.size(); n++)
+            // {
 
-                if (wing.mov.defl[n] != 0.0)
-                {
-                    std::cout << "Warning: Wing control surface deflection detected. Longitudinal stability derivatives will be calculated for the undeflected configuration only." << std::endl;
+            //     if (wing.mov.defl[n] != 0.0)
+            //     {
+            //         std::cout << "Warning: Wing control surface deflection detected. Longitudinal stability derivatives will be calculated for the undeflected configuration only." << std::endl;
 
-                    wing.mov.defl[n] = 0.0;
+            //         wing.mov.defl[n] = 0.0;
 
-                    aircraftInfo.wing.mov.defl[n] = 0.0;
-                }
-            }
+            //         aircraftInfo.wing.mov.defl[n] = 0.0;
+            //     }
+            // }
 
-            if (canard != nullptr)
-            {
-                for (size_t n = 0; n < canard->mov.defl.size(); n++)
-                {
+            // if (canard != nullptr)
+            // {
+            //     for (size_t n = 0; n < canard->mov.defl.size(); n++)
+            //     {
 
-                    if (canard->mov.defl[n] != 0.0)
-                    {
-                        std::cout << "Warning: Canard control surface deflection detected. Longitudinal stability derivatives will be calculated for the undeflected configuration only." << std::endl;
+            //         if (canard->mov.defl[n] != 0.0)
+            //         {
+            //             std::cout << "Warning: Canard control surface deflection detected. Longitudinal stability derivatives will be calculated for the undeflected configuration only." << std::endl;
 
-                        canard->mov.defl[n] = 0.0;
+            //             canard->mov.defl[n] = 0.0;
 
-                        aircraftInfo.canard.mov.defl[n] = 0.0;
-                    }
-                }
-            }
+            //             aircraftInfo.canard.mov.defl[n] = 0.0;
+            //         }
+            //     }
+            // }
 
-            for (size_t n = 0; n < horizontalTail.mov.defl.size(); n++)
-            {
+            // for (size_t n = 0; n < horizontalTail.mov.defl.size(); n++)
+            // {
 
-                if (horizontalTail.mov.defl[n] != 0.0)
-                {
-                    std::cout << "Warning: Horizontal Tail control surface deflection detected. Longitudinal stability derivatives will be calculated for the undeflected configuration only." << std::endl;
+            //     if (horizontalTail.mov.defl[n] != 0.0)
+            //     {
+            //         std::cout << "Warning: Horizontal Tail control surface deflection detected. Longitudinal stability derivatives will be calculated for the undeflected configuration only." << std::endl;
 
-                    horizontalTail.mov.defl[n] = 0.0;
+            //         horizontalTail.mov.defl[n] = 0.0;
 
-                    aircraftInfo.hor.mov.defl[n] = 0.0;
-                }
-            }
+            //         aircraftInfo.hor.mov.defl[n] = 0.0;
+            //     }
+            // }
 
-            if (verticalTail != nullptr)
-            {
-                for (size_t n = 0; n < verticalTail->mov.defl.size(); n++)
-                {
+            // if (verticalTail != nullptr)
+            // {
+            //     for (size_t n = 0; n < verticalTail->mov.defl.size(); n++)
+            //     {
 
-                    if (verticalTail->mov.defl[n] != 0.0)
-                    {
-                        std::cout << "Warning: Vertical Tail control surface deflection detected. Longitudinal stability derivatives will be calculated for the undeflected configuration only." << std::endl;
+            //         if (verticalTail->mov.defl[n] != 0.0)
+            //         {
+            //             std::cout << "Warning: Vertical Tail control surface deflection detected. Longitudinal stability derivatives will be calculated for the undeflected configuration only." << std::endl;
 
-                        verticalTail->mov.defl[n] = 0.0;
+            //             verticalTail->mov.defl[n] = 0.0;
 
-                        aircraftInfo.ver.mov.defl[n] = 0.0;
-                    }
-                }
-            }
+            //             aircraftInfo.ver.mov.defl[n] = 0.0;
+            //         }
+            //     }
+            // }
 
             // Calculate CL0wfh and Cm0wfh
 
             if (!builder.getCommonData().getHasCanard())
             {
                 silentor.GetGeometryWithThisComponent(aircraftInfo, allGeomData, {wing.id, fuselage.id, horizontalTail.id});
+                
             }
 
             else
@@ -1711,7 +1773,6 @@ namespace LONGITUDINAL_STABILITY
 
             neutralPointAsFractionOfMAC = xCGAsFractionOfMAC - deltaCmDeltaClAircraft;
 
-
             // ========================================================================
             // STEP 14.2: Saving results in the structs
             // ========================================================================
@@ -1724,6 +1785,11 @@ namespace LONGITUDINAL_STABILITY
                                                .deltaCLDeltaIncidenceHorizontalTail = deltaCLDeltaIncidenceHorizontalTail,
                                                .liftSlopeAircraft = liftSlopeAircraft,
                                                .neutralPointAsFractionOfMAC = neutralPointAsFractionOfMAC};
+
+            aircraftLongitudinalDynamicDerivatives = {.deltaCmDeltaAlphaDot = deltaCmDeltaAlphaDot,
+                                                      .deltaCLDeltaAlphaDot = deltaCLDeltaAlphaDot,
+                                                      .deltaCmDeltaPitchSpeed = deltaCmDeltaPitchSpeed,
+                                                      .deltaCLdeltaPitchSpeed = deltaCLdeltaPitchSpeed};
 
             singleComponentsDerivatives = {.deltaCmDeltaAlphaWing = deltaCmClWingContribution * finiteWingLiftSlope,
                                            .deltaCmDeltaAlphaCanard = deltaCmClCanardContribution * finiteWingLiftSlope,
@@ -1747,6 +1813,7 @@ namespace LONGITUDINAL_STABILITY
 
         // Getters for the results
         LONGITUDINAL_STABILITY::LongitudinalStabilityDerivatives getTotalAircrfatLongitudinalDerivatives() const { return aircraftLongitudinalDerivatives; }
+        LONGITUDINAL_STABILITY::LongitudinalDynamicDerivatives getTotalAircrfatLongitudinalDynamicDerivatives() const { return aircraftLongitudinalDynamicDerivatives; }
         LONGITUDINAL_STABILITY::LongitudinalStabilityDerivativesToSingleComponent getLongitudinalStabilityDerivativesToSingleComponent() const { return singleComponentsDerivatives; }
         LONGITUDINAL_STABILITY::LongitudinalAerodynamicCoefficients getLongitudinalAerodynamicCoefficients() const { return longitudinalAerodynamicCoefficients;}
     };

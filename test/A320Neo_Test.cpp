@@ -2,6 +2,10 @@
 #define UNICODE         // Assicura che Windows usi le versioni wide delle strutture
 #define _UNICODE
 
+#include <vtkAOSDataArrayTemplate.h>
+template class vtkAOSDataArrayTemplate<int>;
+template class vtkAOSDataArrayTemplate<long long>;
+
 #include "VSPScriptGenerator.h"
 #include "VSPAeroGenerator.h"
 #include "VSPGEOMETRYEXTRACTOR.h"
@@ -36,7 +40,11 @@
 #include "DIRECTIONALSTABILITY.h"
 #include "LATERALSTABILITY.h"
 #include "SILENTORCOMPONENT.h"
-#include "StaticDerivativesExcelWriter.h"
+#include "DerivativesExcelWriter.h"
+#include "MomentOfInertiaCalculator.h"
+#include "ChordCalculator.h"
+#include "DegenGeomParser.h"
+#include "Plotter3D.h"
 #include <Eigen/Dense>
 #include <iostream>
 #include <filesystem>
@@ -52,6 +60,8 @@
 
 int main()
 {
+
+    std::string aircraftName = "A320Neo";
 
     // ==================== DETERMINE BUILD DIRECTORY ====================
     // Get the current directory and go to build/
@@ -90,11 +100,11 @@ int main()
     // ====================  SCRIPT GENERATION ====================
     std::cout << "\n1. Generating AngelScript script (.vspscript)..." << std::endl;
 
-    VSP::ScriptGenerator script("P2012.vspscript");
+    VSP::ScriptGenerator script(aircraftName + ".vspscript");
 
     // --- CONTROL SURFACES ---
     VSP::Aircraft ac;
-    ac.movables = "faer"; // Flap + Aileron + Elevator + Rudder
+    ac.movables = "sfaer"; // Flap + Aileron + Elevator + Rudder
 
     // ac.ver.id = "vertical";
     // ac.ver.mov.type = {'r'};
@@ -105,46 +115,74 @@ int main()
     VSP::Wing wing;
     wing.id = "wing";
     ac.wing.id = wing.id;
-    wing.typeOfWing = TypeOfWing::STRAIGHT_TAPERED;
+    wing.typeOfWing = TypeOfWing::CRANKED;
     wing.useDetailedPanels = true;
-    wing.airfoilType = "XS_FIVE_DIGIT";
-    wing.idealcl = {0.3, 0.3, 0.3, 0.3};
-    wing.camberloc = {0.15, 0.15, 0.15, 0.15};
-    wing.thickchord = {0.15, 0.15, 0.15, 0.12};
-    wing.twist = {3, -0.1060, -1.4};
-    wing.twistloc = {0, 0, 0};
-    wing.xloc = 4.568;
+    wing.airfoilType = "XS_FILE_AIRFOIL";
+    wing.affile = {"airfoil/SC_02_0714.dat",
+                   "airfoil/SC_02_0714.dat",
+                   "airfoil/SC_02_0712.dat",
+                   "airfoil/SC_02_0712.dat",
+                   "airfoil/SC_02_0712.dat"};
+    wing.camber = {0.2, 0.2, 0.2, 0.2, 0.2};
+    wing.camberloc = {0.4, 0.4, 0.4, 0.4, 0.4};
+    wing.twist = {0, 0,  0,-3.5};
+    wing.twistloc = {0, 0, 0, 0};
+    // wing.idealcl = {0.3, 0.3, 0.3, 0.3};
+    wing.thickchord = {0.14, 0.14, 0.12, 0.12, 0.12};
+    wing.xloc = 11.765;
     wing.yloc = 0.0;
-    wing.zloc = 0.773;
+    wing.zloc = -0.570;
     wing.xrot = 0;
     wing.yrot = 0;
     wing.zrot = 0;
 
-    wing.span = {2.882, 4.118 * 0.5, 4.118 * 0.5};
-    wing.ctip = {2.0038, 1.7269, 1.45};
-    wing.croot = {2.0038, 2.0038, 1.7269};
+    wing.span = {6.39327, 10.64270, 0.37267, 2.44506};
+    wing.ctip = {3.779, 1.143, 0.884, 0.382};
+    wing.croot = {7.25, 3.779, 1.143, 0.884};
 
-    wing.sectessU = {21, 21, 21};
-    wing.wtess = 40;
+    wing.kinkStation = 6.39327; 
+    wing.taperInbord = wing.ctip.front() / wing.croot.front();
+
+    wing.sectessU = {15, 15, 15, 15};
+    wing.wtess = 25;
 
     // Control surfaces
-    wing.mov.type = {'f', 'a'};
-    wing.mov.eta_inner = {0.10, 0.70};
-    wing.mov.eta_outer = {0.70, 1.0};
-    wing.mov.cf_c_inner = {0.25, 0.3};
-    wing.mov.cf_c_outer = {0.3, 0.3};
-    wing.mov.tessellation = {10, 10};
-    wing.mov.defl = {30, 0};
+    wing.mov.type = {'s', 's', 's', 's', 's', 'f', 'f', 'a'};
+    wing.mov.eta_inner = {0.113480, 0.315809, 0.466194, 0.598461, 0.723475, 0.10, 0.324019, 0.693484};
+    wing.mov.eta_outer = {0.272845, 0.464194, 0.598461, 0.721475, 0.828508, 0.320019, 0.688484, 0.831076};
+    wing.mov.cf_c_inner = {0.110063, 0.14, 0.14, 0.14, 0.14, 0.20, 0.20, 0.286600};
+    wing.mov.cf_c_outer = wing.mov.cf_c_inner;
+    wing.mov.tessellation = {10, 10, 10, 10, 10, 10, 10, 10};
+    wing.mov.defl = {0, 0, 0, 0, 0, 0, 0, 0};
 
     ac.wing.mov.type = wing.mov.type;
     ac.wing.mov.defl = wing.mov.defl;
 
-    wing.sweep = {0, 0, 0};
-    wing.sweeploc = {0, 0, 0};
-    wing.secsweeploc = {1, 1, 1};
-    wing.dihedral = {0, 2.73, 2.73};
+    wing.sweep = {28.31, 28.31, 55.34, 39.62};
+    wing.sweeploc = {0, 0, 0, 0};
+    wing.secsweeploc = {1, 1, 1, 1};
+    wing.dihedral = {6.0, 6.0, 24.5, 75.37};
 
-    script.makeWing(wing, 2);
+    wing.blending = true;
+
+    wing.blend.InLEMode = {0,0,0,4,0};
+    wing.blend.InTEMode = {0,0,0,5,0};
+    wing.blend.OutLEMode = {0,0,2,0,0};
+    wing.blend.OutTEMode = {0,0,0,0,0};
+    wing.blend.InLESweep = {0,0,0,0,0};
+    wing.blend.OutLESweep = {0,0,0,0,0};
+    wing.blend.InLEDihedral = {0,0,0,0,0};
+    wing.blend.OutLEDihedral = {0,0,0,0,0};
+    wing.blend.InTESweep = {0,0,0,0,0};
+    wing.blend.OutTESweep = {0,0,0,0,0};
+    wing.blend.InTEDihedral = {0,0,0,0,0};
+    wing.blend.OutTEDihedral = {0,0,0,0,0};
+    wing.blend.InLEStrength = {1,1,1,0.75,1};
+    wing.blend.InTEStrength = {1,1,1,0.75,1};
+    wing.blend.OutLEStrength = {1,1,0.75,1,1};
+    wing.blend.OutTEStrength = {1,1,1,1,1};
+
+    script.makeWing(wing, 2,  wing.typeOfWing);
     std::cout << "   - Main wing created (with flap and aileron)" << std::endl;
 
     std::cout << "     - Calculating MAC..." << std::endl;
@@ -160,35 +198,42 @@ int main()
     horizontal.type = "WING";
     horizontal.useDetailedPanels = true;
     horizontal.airfoilType = "XS_FOUR_SERIES";
-    horizontal.camber = {0, 0};
-    horizontal.camberloc = {0.2, 0.2};
+    horizontal.camber = {0.2, 0.2};
+    horizontal.camberloc = {0.4, 0.4};
     horizontal.thickchord = {0.12, 0.12};
-    horizontal.twist = {0};
-    horizontal.twistloc = {0.25};
-    horizontal.xloc = 10.70;
+    horizontal.twist = {0,0};
+    horizontal.twistloc = {0,0};
+    horizontal.xloc = 31.77;
     horizontal.yloc = 0.0;
-    horizontal.zloc = 0.200;
+    horizontal.zloc = 1.089;
     horizontal.xrot = 0;
     horizontal.yrot = 0;
     // horizontal.span = {2.622};
-    horizontal.span = {2.69309};
+    horizontal.span = {5.97783};
     // horizontal.ctip = {0.698};
-    horizontal.ctip = {0.89150};
+    horizontal.ctip = {1.318};
     // horizontal.croot = {1.298};
-    horizontal.croot = {1.42319};
-    horizontal.sweep = {13.1};
+
+    horizontal.capTreatment = true;
+    horizontal.croot = {4.0, 1.318};
+    horizontal.capLength = {0.31468};
+    horizontal.capOffset = {0.0};
+    horizontal.capStrength = {1.0};
+    horizontal.capType = {"Round"};
+
+    horizontal.sweep = {33.040};
     horizontal.sweeploc = {0};
     horizontal.secsweeploc = {1};
-    horizontal.dihedral = {0};
+    horizontal.dihedral = {8.4};
     horizontal.sectessU = {15};
     horizontal.wtess = {25};
     horizontal.mov.type = {'e'};
-    horizontal.mov.eta_inner = {0.0};
+    horizontal.mov.eta_inner = {0.190068};
     horizontal.mov.eta_outer = {1.0};
-    horizontal.mov.cf_c_inner = {0.25};
-    horizontal.mov.cf_c_outer = {0.3};
+    horizontal.mov.cf_c_inner = {0.28};
+    horizontal.mov.cf_c_outer = {0.28};
     horizontal.mov.tessellation = {10};
-    horizontal.mov.defl = {-10};
+    horizontal.mov.defl = {0};
 
     ac.hor.mov.type = horizontal.mov.type;
     ac.hor.mov.defl = horizontal.mov.defl;
@@ -208,36 +253,57 @@ int main()
     vertical.type = "WING";
     vertical.airfoilType = "XS_FOUR_SERIES";
     vertical.useDetailedPanels = true;
-    vertical.camber = {0, 0, 0};
-    vertical.camberloc = {0.2, 0.2, 0.2};
-    vertical.thickchord = {0.1, 0.1, 0.1};
-    vertical.twist = {0, 0};
-    vertical.twistloc = {0, 0};
-    vertical.xloc = 8.240;
+    vertical.camber = {0, 0, 0, 0, 0};
+    vertical.camberloc = {0.2, 0.2, 0.2, 0.2, 0.2};
+    vertical.thickchord = {0.12, 0.12, 0.12, 0.12, 0.12};
+    vertical.twist = {0, 0, 0, 0};
+    vertical.twistloc = {0, 0, 0, 0};
+    vertical.xloc = 28.304;
+    vertical.zloc = 2.787;
     vertical.yloc = 0.0;
-    vertical.zloc = 0.738;
+
     vertical.xrot = 90;
     vertical.yrot = 0;
-    // vertical.zrot = -3.77;
-    vertical.zrot = -5.409;
-    // vertical.span = {0.372, 1.962};
-    // vertical.ctip = {2.412, 0.768};
-    // vertical.croot = {3.157, 2.412};
-    vertical.span = {0.372, 2.18354};
-    vertical.ctip = {1.92778, 0.76914};
-    vertical.croot = {3.24261, 1.92778};
+    vertical.zrot = -2.5;
+
+    vertical.span = {0.469, 0.734, 4.20030, 0.46670};
+    vertical.ctip = {5.404, 4.66825, 1.996, 1.615};
+    vertical.croot = {7.40267, 5.404, 4.66825, 1.996};
+    vertical.sweep = {77.37, 50.560, 40.050, 46.190};
+    vertical.sweeploc = {0, 0, 0, 0};
+    vertical.secsweeploc = {1, 1, 1, 1};
+    vertical.dihedral = {0, 0, 0, 0};
+
+    vertical.blending = true;
+
+    vertical.blend.InLEMode = {0, 4, 0, 0, 0};
+    vertical.blend.InTEMode = {0, 0, 0, 0, 0};
+    vertical.blend.OutLEMode = {0, 0, 0, 2, 0};
+    vertical.blend.OutTEMode = {0, 0, 0, 0, 0};
+    vertical.blend.InLESweep = {0, 0, 0, 0, 0};
+    vertical.blend.OutLESweep = {0, 0, 0, 0, 0};
+    vertical.blend.InLEDihedral = {0, 0, 0, 0, 0};
+    vertical.blend.OutLEDihedral = {0, 0, 0, 0, 0};
+    vertical.blend.InTESweep = {0, 0, 0, 0, 0};
+    vertical.blend.OutTESweep = {0, 0, 0, 0, 0};
+    vertical.blend.InTEDihedral = {0, 0, 0, 0, 0};
+    vertical.blend.OutTEDihedral = {0, 0, 0, 0, 0};
+    vertical.blend.InLEStrength = {1, 0.4, 1, 1, 1};
+    vertical.blend.InTEStrength = {1, 1, 1, 1, 1};
+    vertical.blend.OutLEStrength = {1, 1, 1, 1.30, 1};
+    vertical.blend.OutTEStrength = {1, 1, 1, 1, 1};
     // vertical.sweep = {60, 32.85714};
-    vertical.sweep = {73.84152, 30.12277};
-    vertical.sweeploc = {0, 0};
-    vertical.secsweeploc = {1, 1};
-    vertical.dihedral = {0, 0};
-    vertical.sectessU = {21};
-    vertical.wtess = {41};
+    // vertical.sweep = {73.84152, 30.12277};
+    // vertical.sweeploc = {0, 0};
+    // vertical.secsweeploc = {1, 1};
+    // vertical.dihedral = {0, 0};
+    vertical.sectessU = {15, 15, 15, 15};
+    vertical.wtess = {25};
     vertical.mov.type = {'r'};
-    vertical.mov.eta_inner = {0.0};
+    vertical.mov.eta_inner = {0.141176};
     vertical.mov.eta_outer = {1.0};
-    vertical.mov.cf_c_inner = {0.25};
-    vertical.mov.cf_c_outer = {0.3};
+    vertical.mov.cf_c_inner = {0.367212};
+    vertical.mov.cf_c_outer = {0.367212};
     vertical.mov.tessellation = {10};
     ac.ver.mov.type = vertical.mov.type;
     ac.ver.isSplittedDeflection = false;
@@ -250,33 +316,20 @@ int main()
     // --- FUSELAGE ---
     VSP::Fuselage fus;
     fus.id = "Fuselage";
-    fus.type = "TransportFuse";
-    fus.advancedFuselage = false;
-    // fus.fuselagePresetName = "AirbusGenericTransportJet";
-    fus.customFuselage = true;
+    // fus.type = "TransportFuse";
+    fus.advancedFuselage = true;
+    fus.fuselagePresetName = "AirbusGenericTransportJet";
+    fus.customFuselage = false;
 
     // fus.length         = 37.57;
     // fus.diameter       = 4.14;
     // fus.width          = 3.95010;
-    fus.length = 11.7;
-    fus.diameter = 1.546;
-    // fus.nosemult = 1.902;
-    // fus.aftmult = 2.665;
-    // fus.nosecenter = -0.217;
-    // fus.aftcenter = 0.164;
-    // fus.aftwidth = 0.185;
-    // fus.aftheight = 0.364;
-    // fus.utess = 30;
-    // fus.wtess = 15;
-    fus.nosemult = 1.945;
-    fus.aftmult = 2.665;
-    fus.nosecenter = -0.319;
-    fus.aftcenter = 0.120;
-    fus.aftwidth = 0.185;
-    fus.aftheight = 0.256;
+    fus.length = 37.57;
+    fus.diameter = 4.141;
+    fus.width = 3.95010;
+
     fus.utess = 30;
     fus.wtess = 15;
-
 
     script.makeFuselage(fus, wing, horizontal);
     std::cout << "   - Fuselage created" << std::endl;
@@ -287,43 +340,42 @@ int main()
     VSP::Nacelle nac;
     nac.id = "nacelle";
     nac.advancedNacelle = true;
-    // nac.nacellePresetName = "GeneralTurboFan";
+    nac.nacellePresetName = "GeneralTurbofan";
     // nac.nacellePresetName = "GeneralTurboProp_Spec2";
-    nac.nacellePresetName = "GeneralTurboProp_Spec1";
+    // nac.nacellePresetName = "GeneralTurboProp_Spec1";
     // nac.length = 3.458;
     // nac.diameter = 2.735;
     // nac.xloc = {13.06,13.06};
     // nac.yloc = {5.75,-5.75};
     // nac.zloc = {-1.283,-1.283};
     // nac.length = 2.72821;
-    nac.length = 3.361182;
-    nac.aDiameter = 0.82918;
-    nac.bDiameter = 0.80097;
-    nac.xloc = {3.443, 3.443};
-    nac.yloc = {2.295, -2.295};
-    nac.zloc = {0.820, 0.820};
+    nac.length = 3.458;
+    nac.diameter = 2.735;
+    nac.xloc = {13.006,13.006};
+    nac.yloc = {5.75, -5.75};
+    nac.zloc = {-1.283, -1.283};
     nac.xrot = {0.0, 0.0};
     nac.yrot = {0.0, 0.0};
     nac.zrot = {0.0, 0.0};
 
-    VSP::Disk disk;
-    disk.id = "disk";
-    disk.type = "Disk";
-    disk.diameter = {1.950, 1.950};
-    disk.xloc = {3.443, 3.443};
-    disk.yloc = {2.295, -2.295};
-    disk.zloc = {0.820, 0.820};
-    disk.xrot = {0.0, 0.0};
-    disk.yrot = {0.0, 0.0};
-    disk.zrot = {0.0, 0.0};
-    disk.utess = {8, 8};
-    disk.wtess = {9, 9};
+    // VSP::Disk disk;
+    // disk.id = "disk";
+    // disk.type = "Disk";
+    // disk.diameter = {1.950, 1.950};
+    // disk.xloc = {3.443, 3.443};
+    // disk.yloc = {2.295, -2.295};
+    // disk.zloc = {0.820, 0.820};
+    // disk.xrot = {0.0, 0.0};
+    // disk.yrot = {0.0, 0.0};
+    // disk.zrot = {0.0, 0.0};
+    // disk.utess = {8, 8};
+    // disk.wtess = {9, 9};
 
     for (size_t i = 1; i <= nac.xloc.size(); i++)
     {
 
         script.makeNacelle(nac, i);
-        script.MakeDisk(disk, i - 1);
+        // script.MakeDisk(disk, i - 1);
     }
 
     // nac.type = "STACK";
@@ -376,20 +428,20 @@ int main()
     // std::cout << "   - EO/IR sensor created" << std::endl;
 
     // --- DEGEN GEOM ---
-    script.makeDegenGeom("P2012", false);
+    script.makeDegenGeom(aircraftName, false);
     std::cout << "   - DegenGeom configured" << std::endl;
 
-    std::cout << "\n✓ AngelScript script generated: P2012.vspscript" << std::endl;
+    std::cout << "\n✓ AngelScript script generated: " << aircraftName << ".vspscript" << std::endl;
 
     // ==================== GENERATE VSPAERO FILE ====================
     std::cout << "\n2. Generating VSPAERO file (.vspaero)..." << std::endl;
 
-    VSP::VSPAeroGenerator vspaero("P2012");
+    VSP::VSPAeroGenerator vspaero(aircraftName);
 
     // --- AERODYNAMIC SETTINGS ---
     VSP::AeroSettings settings;
 
-    double altitude = 10000.0;
+    double altitude = 25000.0;
 
     ConvLength convlength(Length::FT, Length::M, altitude);
 
@@ -408,13 +460,13 @@ int main()
     double taperRatio = wing.ctip.back() / wing.croot.front();
 
     settings.altitude = altitude;                                                                       // Returns the first converted altitude value
-    settings.Sref = 25.0;                                                                               // Reference area [m²]
-    settings.Cref = macCalc.getMAC(TypeOfWing::STRAIGHT_TAPERED, wing.croot.front(), taperRatio, span); // Reference chord [m]
-    settings.Bref = 14.0;                                                                               // Wingspan [m]
+    settings.Sref = wing.planformArea;                                                                               // Reference area [m²]
+    settings.Cref = wing.MAC; // Reference chord [m]
+    settings.Bref = wing.totalProjectedSpan;                                                                               // Wingspan [m]
     settings.X_cg = wing.xloc + 0.25 * settings.Cref;                                                   // Center of gravity
     settings.Y_cg = 0.0;
     settings.Z_cg = 0.25 * fus.diameter;
-    settings.Mach = 0.15;                                                // Mach number
+    settings.Mach = 0.55;                                                // Mach number
     settings.AoA = {-2, 0, 2};                                           // Angles of attack
     settings.Beta = {0};                                                 // Sideslip angle
     settings.Vinf = settings.Mach * speedOfSound;                        // Velocity [m/s]
@@ -469,12 +521,12 @@ int main()
     {
         // ==================== VSPScript execution ====================
 
-        std::string exeVSPScript = "vspscript.exe -script P2012.vspscript";
+        std::string exeVSPScript = "vspscript.exe -script " + aircraftName + ".vspscript";
         std::cout << "\nExecuting: " << exeVSPScript << std::endl;
 
         int retVSPScript = system(exeVSPScript.c_str());
 
-        if (retVSPScript != 0 && !std::filesystem::exists("P2012.vsp3"))
+        if (retVSPScript != 0 && !std::filesystem::exists(aircraftName + ".vsp3"))
         {
             std::cerr << "VSPScript: execution failed" << std::endl;
             return 1;
@@ -608,15 +660,43 @@ int main()
     //     return 1;
     // }
 
+    // ==================== 3D - AIRCRAFT REPRESENTATION TEST ====================
+
+    // Leggi il file DegenGeom
+    DegenGeomReader reader(aircraftName + "_DegenGeom.csv");
+    auto components = reader.read();
+
+    // Crea il plotter
+    AircraftPlotter plotter(aircraftName);
+    plotter.setResolution(2560, 1440);
+    plotter.setBackground(12, 116, 228);
+    std::map<std::string, std::array<double, 3>> colorMap = {
+        {wing.id, {0, 0, 255}},
+        {horizontal.id, {0, 255, 0}},
+        {vertical.id, {255, 0, 255}},
+        {fus.id, {180, 180, 180}},
+        {nac.id, {100, 200, 255}}}; // matcha nacelle_1 e nacelle_2
+        // {&disk.id, {80, 80, 80}}};
+
+    for (const auto &surf : components)
+    {
+        plotter.addComponentWithColorMap(surf, colorMap);
+    }
+
+    // Mostra la finestra 3D interattiva
+    plotter.show();
+
+    plotter.saveAllViews(std::filesystem::current_path().string());
+
     // ==================== COG CALCULATION ====================
 
-    BuildAircraft builder("P2012", settings);
+    BuildAircraft builder(aircraftName, settings);
 
     builder.buildAircraft();
 
     AircraftBuildData data = builder.getBuildData();
 
-    COG::COGCalculator calcCenterOfGravity("P2012",
+    COG::COGCalculator calcCenterOfGravity(aircraftName,
                                            data.commonData,
                                            data.wingData,
                                            data.fuselageData,
@@ -671,78 +751,24 @@ int main()
     // // baseData.setDiveSpeed(111);
     // // baseData.
 
-    LONGITUDINAL_STABILITY::LongitudinalStabilityCalculator stabilityCalc(builder,
-                                                                          cogData,
-                                                                          ac,
-                                                                          settings,
-                                                                          wing,
-                                                                          horizontal,
-                                                                          fus,
-                                                                          nac,
-                                                                          disk);
+    // ================= CHORD INTERPOLATOR TEST ====================
 
-    stabilityCalc.calculateLongitudinalStability();
+    std::vector<double> etaStaionVec = {0.0, 0.25, 0.40, 0.5, 0.75, 1.0};
+    std::vector<double> chordEvaluated;
 
-    // AR = 4.0
-    std::vector<double> x_AR4 = {1.987690, 1.882740, 1.774640, 1.618870, 1.488560, 1.392180,
-                                 1.254540, 1.178300, 1.091490, 1.023750, 0.960280, 0.882022,
-                                 0.805917, 0.738358, 0.668714, 0.618095, 0.563305, 0.516943,
-                                 0.464390, 0.422469, 0.387092, 0.355955, 0.331126, 0.302226,
-                                 0.283739, 0.271578, 0.261451};
-    std::vector<double> y_AR4 = {0.050866, 0.048525, 0.049383, 0.053791, 0.061171, 0.069339,
-                                 0.087354, 0.096420, 0.109800, 0.120915, 0.136225, 0.157999,
-                                 0.183987, 0.218368, 0.256997, 0.289128, 0.329754, 0.363968,
-                                 0.419383, 0.478945, 0.561724, 0.644469, 0.720818, 0.818352,
-                                 0.892536, 0.962438, 1.021750};
+    for (const auto &eta : etaStaionVec)
+    {
+        chordEvaluated.push_back(ChordCalculator(wing).getChordAtEtaStation(eta, wing.typeOfWing));
+    }
 
-    // AR = 6.0
-    std::vector<double> x_AR6 = {1.990130, 1.913810, 1.848090, 1.792470, 1.708250, 1.624030,
-                                 1.538210, 1.474690, 1.400020, 1.326960, 1.255480, 1.191990,
-                                 1.112620, 1.036470, 0.949220, 0.874730, 0.816087, 0.762289,
-                                 0.721171, 0.664194, 0.610485, 0.577303, 0.539452, 0.492178,
-                                 0.444966, 0.410536, 0.377657, 0.343454, 0.318751, 0.291008,
-                                 0.271138, 0.254182};
-    std::vector<double> y_AR6 = {0.092095, 0.090585, 0.088992, 0.092077, 0.097504, 0.102932,
-                                 0.106786, 0.115222, 0.122160, 0.130673, 0.139172, 0.152368,
-                                 0.167276, 0.186918, 0.211407, 0.240555, 0.263232, 0.295388,
-                                 0.322685, 0.354867, 0.398129, 0.423776, 0.462152, 0.514882,
-                                 0.575543, 0.644036, 0.707757, 0.804805, 0.897018, 1.006710,
-                                 1.106810, 1.173580};
+    Plot plotChordDistrubution(etaStaionVec, chordEvaluated,
+                               "Eta station (-)",
+                               "Chord (m)",
+                               "Chord distribution",
+                               "Distribution",
+                               "linespoints", "2", "1", "7", "1", "orange");
 
-    // AR = 9.0
-    std::vector<double> x_AR9 = {1.978750, 1.913580, 1.842040, 1.762560, 1.662440, 1.551230,
-                                 1.447980, 1.351100, 1.247900, 1.166990, 1.094010, 1.011530,
-                                 0.929097, 0.851491, 0.778604, 0.701086, 0.639517, 0.577934,
-                                 0.525979, 0.482010, 0.434975, 0.403750, 0.370997, 0.347771,
-                                 0.318248, 0.295022, 0.275038, 0.256643};
-    std::vector<double> y_AR9 = {0.127089, 0.127606, 0.128173, 0.130390, 0.134357, 0.144758,
-                                 0.155097, 0.168557, 0.185241, 0.206507, 0.226124, 0.250576,
-                                 0.279787, 0.316892, 0.347613, 0.395823, 0.450253, 0.503096,
-                                 0.566968, 0.635536, 0.718408, 0.790048, 0.869633, 0.947555,
-                                 1.033460, 1.111380, 1.197210, 1.283030};
-
-    // AR = 12.0
-    std::vector<double> x_AR12 = {1.985290, 1.910570, 1.808870, 1.689720, 1.592820, 1.473690,
-                                  1.384750, 1.295880, 1.199070, 1.116580, 1.051570, 0.988131,
-                                  0.919988, 0.851845, 0.780598, 0.723658, 0.668384, 0.613199,
-                                  0.554859, 0.502967, 0.462216, 0.426157, 0.396660, 0.367087,
-                                  0.336013, 0.314452, 0.285081, 0.272894, 0.254563};
-    std::vector<double> y_AR12 = {0.149248, 0.149840, 0.155407, 0.165871, 0.176159, 0.189796,
-                                  0.201607, 0.221350, 0.242742, 0.265607, 0.286748, 0.306289,
-                                  0.333800, 0.361311, 0.398366, 0.435307, 0.481754, 0.539306,
-                                  0.600056, 0.671860, 0.745162, 0.808908, 0.897986, 0.977546,
-                                  1.068220, 1.155650, 1.260590, 1.327320, 1.421070};
-
-    // Initialize interpolator with power regression method
-    Interpolant2D upwashInterpolator(1, RegressionMethod::POWER);
-
-    // Add all curves
-    upwashInterpolator.addCurve(4.0, x_AR4, y_AR4);
-    upwashInterpolator.addCurve(6.0, x_AR6, y_AR6);
-    upwashInterpolator.addCurve(9.0, x_AR9, y_AR9);
-    upwashInterpolator.addCurve(12.0, x_AR12, y_AR12);
-
-    double downWashGradientOnWingDueToCanard = upwashInterpolator.interpolate(0.8, 9.0);
+    // ================= AIRCRAFT GEOMETRY EXTRACTION TEST ====================
 
     std::cout << "========================================" << std::endl;
     std::cout << "  AIRCRAFT GEOMETRY EXTRACTION TOOL" << std::endl;
@@ -753,11 +779,9 @@ int main()
     std::cout << "[STEP 1] Extracting all aircraft geometries..." << std::endl;
 
     VSPGEOMTRYEXTRACTOR::GeometryExtractor geomExtractor;
-    geomExtractor.extractAllGeoms("P2012", "P2012_AllGeoms.vspscript");
+    geomExtractor.extractAllGeoms(aircraftName, aircraftName + "_AllGeoms.vspscript");
 
     VSPGEOMTRYEXTRACTOR::AircraftGeometryData allGeomData = geomExtractor.getGeometryData();
-
-    
 
     std::cout << "✓ Found " << allGeomData.allGeoms.size() << " geometries\n"
               << std::endl;
@@ -768,17 +792,18 @@ int main()
     VSPGEOMTRYEXTRACTOR::DiametersExtractor fuseExtractor;
 
     VSPGEOMTRYEXTRACTOR::FuselageDiametersAndXStation fuseData = fuseExtractor.extractFuselageDiameters(
-        "P2012",
+        aircraftName,
         allGeomData,
         fus.length);
 
     VSPGEOMTRYEXTRACTOR::DiametersExtractor nacelleExctractor;
     VSPGEOMTRYEXTRACTOR::NacelleDiametersAndXStation nacelleData = nacelleExctractor.extractNacelleDiameters(
-        "P2012",
+        aircraftName,
         allGeomData,
         nac.length);
 
     // ==================== FUSELAGE SECTION DATA ====================
+
     std::cout << "=== Fuselage Sections Data ===" << std::endl;
     std::cout << std::fixed << std::setprecision(4);
     std::cout << std::left << std::setw(12) << "Section"
@@ -798,6 +823,7 @@ int main()
     }
 
     // ==================== NACELLE SECTION DATA ====================
+
     std::cout << "\n=== Nacelle Sections Data ===" << std::endl;
     std::cout << std::fixed << std::setprecision(4);
     std::cout << std::left << std::setw(12) << "Section"
@@ -817,6 +843,17 @@ int main()
     }
 
     // ==================== LONGITUDINAL DERIVATIVES TEST ====================
+
+    LONGITUDINAL_STABILITY::LongitudinalStabilityCalculator stabilityCalc(builder,
+                                                                          cogData,
+                                                                          ac,
+                                                                          settings,
+                                                                          wing,
+                                                                          horizontal,
+                                                                          fus,
+                                                                          nac);
+
+    stabilityCalc.calculateLongitudinalStability();
 
     std::cout << "\n=== LONGITUDINAL AIRCRAFT DERIVATIVES TEST ===" << std::endl;
     std::cout << std::fixed << std::setprecision(6);
@@ -847,18 +884,6 @@ int main()
 
     directionalStabilityCalc.calculateDirectionalStabilityDerivatives();
 
-
-    // // ==================== TEST SILENTOR COMPONENT ====================
-
-    // SILENTORCOMPONENT::SilentorComponent silentor("P2012");
-
-    // silentor.GetGeometryWithSilentComponent("P2012_silent_componets.vspscript", ac, allGeomData, {"wing","TransportFuse"});
-
-    // silentor.executeAnalysis(settings);
-
-    // std::vector<double> liftCoefficienttWingFuselage = silentor.getAerodynamicCoefficients().liftCoefficient;
-
-
     // ==================== LATERAL STABILITY TEST ====================
 
     LATERAL_STABILITY::LateralStabilityCalculator lateralStabilityCalc(builder,
@@ -874,29 +899,42 @@ int main()
 
     lateralStabilityCalc.calculateLateralStabilityDerivatives();
 
-
-    // ==================== TEST EXCEL WRITER====================
+    // ==================== TEST EXCEL WRITER ====================
 
     DerivativeExcelWriter excelWriter;
 
+    // Case 1
+
     excelWriter.writeDerivativesToExcel("TestExcelDerivatives.xlsx",
-                                        "P2012",
+                                        aircraftName,
                                         settings,
                                         stabilityCalc.getLongitudinalStabilityDerivativesToSingleComponent(),
                                         directionalStabilityCalc.getSingleComponentsDerivativesSideForce(),
                                         directionalStabilityCalc.getSingleComponentsDerivativesYaw(),
                                         lateralStabilityCalc.getComponentsLateralStabilityDerivativesRoll(),
                                         stabilityCalc.getTotalAircrfatLongitudinalDerivatives(),
+                                        stabilityCalc.getTotalAircrfatLongitudinalDynamicDerivatives(),
                                         directionalStabilityCalc.getAircraftDirectionalDerivatives(),
                                         lateralStabilityCalc.getAircraftLateralStabilityDerivativesRoll());
 
+    // Case 2
 
-
-
+    // excelWriter.writeDerivativesToExcel("TestExcelDerivatives.xlsx",
+    //                                     aircraftName,
+    //                                     settings,
+    //                                     stabilityCalc.getLongitudinalStabilityDerivativesToSingleComponent(),
+    //                                     {},
+    //                                     {},
+    //                                     {},
+    //                                     stabilityCalc.getTotalAircrfatLongitudinalDerivatives(),
+    //                                     stabilityCalc.getTotalAircrfatLongitudinalDynamicDerivatives(),
+    //                                     {},
+    //                                     {}
+    //                                     );
 
     // ==================== TEST TRIM CONDITION ==========================
 
-    double liftCoefficientAtZeroAoA  = stabilityCalc.getLongitudinalAerodynamicCoefficients().liftCoefficientAtZeroAoA;
+    double liftCoefficientAtZeroAoA = stabilityCalc.getLongitudinalAerodynamicCoefficients().liftCoefficientAtZeroAoA;
     double pitchingMomentAtZeroAoA = stabilityCalc.getLongitudinalAerodynamicCoefficients().pitchingMomentAtZeroAoA;
 
     double aircraftLiftSlope = stabilityCalc.getTotalAircrfatLongitudinalDerivatives().liftSlopeAircraft;
@@ -908,16 +946,13 @@ int main()
     double deltaCLDeltaHorDeflection = stabilityCalc.getTotalAircrfatLongitudinalDerivatives().deltaCLDeltaElevatorDeflection;
     double elevetorControlPower = stabilityCalc.getTotalAircrfatLongitudinalDerivatives().deltaCmDeltaElevatorDeflection;
 
-
-
-
     Eigen::MatrixXd matrixA(2, 2);
     matrixA << pitchingMomentSlopeAircraft, elevetorControlPower,
-               aircraftLiftSlope, deltaCLDeltaHorDeflection;
+        aircraftLiftSlope, deltaCLDeltaHorDeflection;
 
     Eigen::VectorXd vectorB(2);
-    vectorB << -(pitchingMomentAtZeroAoA + deltaCmdeltaHorIncidence*horizontal.yrot), 
-                 -(liftCoefficientAtZeroAoA + deltaCLdeltaHorIncidence*horizontal.yrot);
+    vectorB << -(pitchingMomentAtZeroAoA + deltaCmdeltaHorIncidence * horizontal.yrot),
+        -(liftCoefficientAtZeroAoA + deltaCLdeltaHorIncidence * horizontal.yrot);
 
     Eigen::VectorXd trimSolution = matrixA.colPivHouseholderQr().solve(vectorB);
 
@@ -928,7 +963,7 @@ int main()
     double deltaH = 0.0;
     double vectorLength = 0.0;
     double numberOfIntervalsForChart = 100;
-    std::vector<double> alphaAngle = {trimSolution(0),10.0};
+    std::vector<double> alphaAngle = {trimSolution(0), 10.0};
     double minVale = *std::min_element(alphaAngle.begin(), alphaAngle.end());
     double maxVale = *std::max_element(alphaAngle.begin(), alphaAngle.end());
 
@@ -947,14 +982,14 @@ int main()
 
         amplifiedAlphaValuesVector.emplace_back(i); // Uso l'indice i così le coppie (xLinear, yLinear) corrispondono ai punti della retta nel dominio originale.
 
-        deltaE.push_back(-((pitchingMomentAtZeroAoA + deltaCmdeltaHorIncidence*horizontal.yrot + pitchingMomentSlopeAircraft*i) / (elevetorControlPower)));
-        CLe.push_back(liftCoefficientAtZeroAoA + aircraftLiftSlope*i + deltaCLdeltaHorIncidence*horizontal.yrot + deltaCLDeltaHorDeflection*deltaE.back());
- 
+        deltaE.push_back(-((pitchingMomentAtZeroAoA + deltaCmdeltaHorIncidence * horizontal.yrot + pitchingMomentSlopeAircraft * i) / (elevetorControlPower)));
+        CLe.push_back(liftCoefficientAtZeroAoA + aircraftLiftSlope * i + deltaCLdeltaHorIncidence * horizontal.yrot + deltaCLDeltaHorDeflection * deltaE.back());
     }
 
     // ========================================================================
-    //     Optional: Plot downwash angle vs angle of attack (currently commented)
-    //     ========================================================================
+    //     TRIM CONDITION PLOT
+    // ========================================================================
+
     Plot plot(CLe, deltaE,
               "CL (-)",
               "Elevator deflection (deg)",
@@ -962,11 +997,85 @@ int main()
               "deltaE vs CLe",
               "lines", "1", "1", "", "", "blue");
 
+    // ==================== MOMENT OF INERTIA TEST ====================
+
+    MomentOfInertia momentOfInertiaCalculator(builder);
+
+    MomentOfInertia::Result inertiaResult = momentOfInertiaCalculator.compute(wing, fus);
+
+    std::cout << "\n=== MOMENT OF INERTIA RESULTS ===" << std::endl;
+    std::cout << "Ixx: " << inertiaResult.Ixx << " kg·m²" << std::endl;
+    std::cout << "Iyy: " << inertiaResult.Iyy << " kg·m²" << std::endl;
+    std::cout << "Izz: " << inertiaResult.Izz << " kg·m²" << std::endl;
+
+    // ==================== SHORT PERIOD TEST ====================
+
+    double WTO = data.commonData.getWTO();
+
+    double dynamicPressure = 0.5 * settings.rho * std::pow(settings.Vinf, 2);
+
+    double momentDerivativeWithRespectToQ = (settings.rho * settings.Vinf * settings.Sref *
+                                             std::pow(settings.Cref, 2) * 57.3 * stabilityCalc.getTotalAircrfatLongitudinalDynamicDerivatives().deltaCmDeltaPitchSpeed) /
+                                            (4 * inertiaResult.Iyy);
+
+    double momentDerivativeWithRespectToAlpha = (dynamicPressure * settings.Sref * settings.Cref *
+                                                 57.3 * stabilityCalc.getTotalAircrfatLongitudinalDerivatives().deltaCmDeltaAlphaAircraft) /
+                                                inertiaResult.Iyy;
+
+    double zitaSP = -momentDerivativeWithRespectToQ / (2 * std::sqrt(-momentDerivativeWithRespectToAlpha));
+    double omegaNSP = std::sqrt(-momentDerivativeWithRespectToAlpha);
+
+    double actualDamping = 2 * zitaSP * omegaNSP * WTO;
+
+    double stiffness = std::pow(omegaNSP, 2) * WTO;
+
+    ODE45 ode45( // CTAD → ODE45<vector<double>>
+        [WTO, actualDamping, stiffness](double /*t*/, const std::vector<double> &y) -> std::vector<double>
+        {
+            return {
+                y[1],                                                    // x'
+                -(actualDamping / WTO) * y[1] - (stiffness / WTO) * y[0] // x''
+            };
+        },
+        0.0,                   // t0
+        20.0,                  // tf
+        std::vector{0.0, 0.1}, // y0 = {deltaAlpha, deltaQ}  <- vector<double> → deduce State
+        0.01                   // dt
+    );
+
+    // Estrai le colonne dal risultato
+    const auto &ySolutions = ode45.getY(); // vector<vector<double>>
+
+    // Estrai x(t) e x_dot(t) come vettori separati
+    std::vector<double> x_vec, xdot_vec;
+    x_vec.reserve(ySolutions.size());
+    xdot_vec.reserve(ySolutions.size());
+
+    for (const auto &row : ySolutions)
+    {
+        x_vec.push_back(57.3 * row[0]);    // AoA vartion (deg)
+        xdot_vec.push_back(57.3 * row[1]); // Pitch rate (deg/s)
+    }
+
+    Plot plotPitchRate(ode45.getT(), xdot_vec,
+                       "Time (s)",
+                       "Pitch rate (deg/s)",
+                       "Short period response",
+                       "SP response",
+                       "lines", "1", "1", "", "", "blue");
+
+    Plot plotAoA(ode45.getT(), x_vec,
+                 "Time (s)",
+                 "AOA (deg)",
+                 "Short period response",
+                 "SP response",
+                 "lines", "1", "1", "", "", "blue");
+
     // ==================== SAVE OUTPUT FILES ====================
     SaveFiles saveFiles;
 
     std::cout << "\n=== SAVING FILES ===" << std::endl;
-    saveFiles.saveFiles("MyAircraft_test_folder", "P2012");
+    saveFiles.saveFiles(aircraftName + "_folder", aircraftName);
     std::cout << "✓ Files saved successfully" << std::endl;
 
     return 0;

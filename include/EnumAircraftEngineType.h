@@ -6,7 +6,11 @@ enum class AircraftEngineType
     SINGLE_ENGINE,
     TWIN_ENGINE,
     MULTI_PROPELLER_ENGINE,
-    JET,
+    PISTON_PROPELLER,
+    TURBOPROP,
+    HYBRID,
+    ELECTRIC,
+    JET_TURBOFAN,
     UNKNOWN
 };
 
@@ -22,8 +26,20 @@ AircraftEngineType stringToAircraftEngineType(const std::string& comp)
     if (comp == "multi_propeller_engine" || comp == "Multi_Propeller_Engine"){
         return AircraftEngineType::MULTI_PROPELLER_ENGINE;
     }
-    if (comp == "jet" || comp == "Jet"){
-        return AircraftEngineType::JET;
+    if (comp == "jet_turbfan" || comp == "Jet_Turbofan"){
+        return AircraftEngineType::JET_TURBOFAN;
+    }
+    if (comp == "piston_propeller" || comp == "Piston_Propeller"){
+        return AircraftEngineType::PISTON_PROPELLER;
+    }
+    if (comp == "turboprop" || comp == "Turboprop"){
+        return AircraftEngineType::TURBOPROP;
+    }
+    if (comp == "hybrid" || comp == "Hybrid"){
+        return AircraftEngineType::HYBRID;
+    }
+    if (comp == "electric" || comp == "Electric"){
+        return AircraftEngineType::ELECTRIC;
     }
     return AircraftEngineType::UNKNOWN;
 }

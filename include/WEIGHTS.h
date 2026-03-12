@@ -1046,7 +1046,7 @@ public:
 
             break;
 
-        case AircraftEngineType::JET:
+        case AircraftEngineType::JET_TURBOFAN:
         case AircraftEngineType::MULTI_PROPELLER_ENGINE:
 
             if (horizontalData.getTypeOfStabilizer() == TypeOfStabilizer::FIXED)
@@ -1114,7 +1114,7 @@ public:
 
             break;
 
-        case AircraftEngineType::JET:
+        case AircraftEngineType::JET_TURBOFAN:
         case AircraftEngineType::MULTI_PROPELLER_ENGINE:
 
             if (verticalData.getTypeOfTail() == TypeOfTail::CONVENTIONAL_TAIL)
@@ -1545,7 +1545,7 @@ public:
     double propulsionGroupWeight(EngineBaseData engineData)
     {
 
-        if (engineData.getAircraftEngineType() == AircraftEngineType::JET)
+        if (engineData.getAircraftEngineType() == AircraftEngineType::JET_TURBOFAN)
         {
 
             singleEngineWeight = 2.7 * std::pow(engineData.getThrustLbf(), 0.75);
@@ -1599,7 +1599,7 @@ public:
     {
 
 
-        if (engineData.getAircraftEngineType() == AircraftEngineType::JET)
+        if (engineData.getAircraftEngineType() == AircraftEngineType::JET_TURBOFAN)
         {
 
         singleEngineWeight = 2.7 * std::pow(engineData.getThrustLbf(), 0.75);

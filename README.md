@@ -1,21 +1,33 @@
 # AERO++
 
-C++ header-only API for aircraft preliminary design — aerodynamics, weight & balance, inertia, performance,  statistical analysis, and data visualization
+C++ header-only API for aircraft preliminary design — aerodynamics, weight & balance, inertia, performance, statistical analysis, 3D visualization, and data export.
 
 ## Features
 
 - Header-only library (easy integration)
-- Includes Eigen for linear algebra
-- Gnuplot integration for data visualization
+- Eigen for linear algebra
+- Gnuplot integration for 2D data visualization
+- **VTK-based 3D aircraft visualization** — interactive rendering and multi-view PNG export
+- **Per-component color mapping** — assign colors to each aircraft component by name
+- OpenVSP DegenGeom CSV parser
+- OpenCASCADE integration for STEP/IGES geometry import
 - Cross-platform support (Linux, macOS, Windows)
 
 ## Dependencies
 
-This library requires:
-- **Boost** (iostreams, system, filesystem)
-- **gnuplot** (for plotting functionality)
-- **Eigen** (included in this repository)
-- **gnuplot-iostream** (included in this repository)
+| Dependency | Required | Purpose |
+|------------|----------|---------|
+| **Boost** | Optional | gnuplot-iostream plotting |
+| **gnuplot** | Optional | 2D data visualization |
+| **Eigen** | Included | Linear algebra |
+| **gnuplot-iostream** | Included | gnuplot C++ wrapper |
+| **OpenXLSX** | Auto-downloaded | Excel file I/O |
+| **tinyxml2** | Auto-downloaded | XML parsing |
+| **VTK** | Optional | 3D aircraft visualization |
+| **OpenCASCADE** | Optional | STEP/IGES geometry import |
+| **Python3** | Optional | Scripting / bindings |
+
+> OpenXLSX and tinyxml2 are automatically downloaded via CMake FetchContent if not found.
 
 ---
 
@@ -25,68 +37,133 @@ This library requires:
 
 ```bash
 sudo apt-get update
-sudo apt-get install build-essential cmake libboost-all-dev gnuplot
+sudo apt-get install build-essential cmake libboost-all-dev gnuplot libvtk9-dev
 ```
 
 ### macOS
 
-Install dependencies using Homebrew:
-
 ```bash
-brew install cmake boost gnuplot
+brew install cmake boost gnuplot vtk
 ```
 
-### Windows (MSYS2 - Recommended)
+### Windows (MSYS2 — Recommended)
 
 1. **Download and install MSYS2** from [msys2.org](https://www.msys2.org/)
 
 2. **Open MSYS2 MinGW 64-bit terminal** and run:
 
 ```bash
-pacman -Syu  # Update package database
+pacman -Syu                                    # Update package database
 pacman -S mingw-w64-x86_64-gcc
+pacman -S mingw-w64-x86_64-cmake
 pacman -S mingw-w64-x86_64-boost
 pacman -S mingw-w64-x86_64-gnuplot
-pacman -S mingw-w64-x86_64-cmake
-pacman -S make
+pacman -S mingw-w64-x86_64-vtk                 # 3D visualization
+pacman -S mingw-w64-x86_64-opencascade         # STEP/IGES import (optional)
+pacman -S mingw-w64-x86_64-python              # Python bindings (optional)
 ```
 
-**Important:** Always use the **MSYS2 MinGW 64-bit** terminal for compilation, not the default MSYS2 terminal.
+> **Important:** Always use the **MSYS2 MinGW 64-bit** terminal, not the default MSYS2 terminal.
 
 ---
 
 ## Quick Start
 
-### Option 1: Using CMake (Recommended)
+### Build with CMake (Recommended)
 
-1. **Clone the repository:**
 ```bash
 git clone https://github.com/Am3Software/AEROPlusPlus.git
 cd AEROPlusPlus
-```
-
-2. **Build the test:**
-```bash
-mkdir build
-cd build
+mkdir build && cd build
 cmake ..
 cmake --build .
 ```
 
-3. **Run the test:**
+CMake will automatically:
+- Download OpenXLSX and tinyxml2 if not found
+- Auto-detect VTK in common installation paths
+- Print a configuration summary with all detected dependencies
+- Skip unavailable optional features with a warning (no hard failures)
+
+### Run the tests
+
 ```bash
-./RegressionTest        # Linux/macOS/MSYS2
-RegressionTest.exe      # Windows CMD (if not using MSYS2)
+./TestVSPCreator     # Linux/macOS/MSYS2
+TestVSPCreator.exe   # Windows CMD
 ```
 
-### Option 2: Direct compilation with g++
+### Custom VTK path
 
+If VTK is installed in a non-standard location:
 ```bash
-g++ -I./include test/RegressionTest.cpp -lboost_iostreams -lboost_system -o RegressionTest
-./RegressionTest
+cmake -DVTK_DIR=/path/to/vtk/cmake ..
 ```
 
-**Note for MSYS2 users:** Use `-lboost_iostreams-mt -lboost_system-mt` flags instead.
+---
+
+## 3D Visualization — AircraftPlotter
+
+The `AircraftPlotter` class (in `include/Plotter3D.h`) translates MATLAB's `plotDegenSurf` and `PlotAircraft` into C++ using VTK.
+
+### Basic usage
+
+```cpp
+#include "Plotter3D.h"
+#include "DegenGeomParser.h"
+#include <filesystem>
+
+// Parse OpenVSP DegenGeom CSV
+DegenGeomReader reader("P2012_DegenGeom.csv");
+auto components = reader.read();
+
+// Create plotter
+AircraftPlotter plotter("P2012", "logo/AeroPlusPLus_logo.png");
+plotter.setResolution(2560, 1440);              // 2K output
+plotter.setBackground(38, 38, 38);              // dark grey background (RGB 0-255)
+
+// Assign colors per component (RGB 0-255, matched by name prefix)
+std::map<std::string, std::array<double, 3>> colorMap = {
+    {"wing",       {  0,   0, 255}},
+    {"horizontal", {  0, 255,   0}},
+    {"vertical",   {255,   0, 255}},
+    {"Fuselage",   {180, 180, 180}},
+    {"nacelle",    {100, 200, 255}},
+    {"disk",       { 80,  80,  80}},
+};
+
+for (const auto& surf : components)
+    plotter.addComponentWithColorMap(surf, colorMap);
+
+// Save all views + open interactive window
+plotter.plotAndSave(std::filesystem::current_path().string());
+```
+
+### Available views
+
+| Method | Description |
+|--------|-------------|
+| `saveAllViews(dir)` | Saves Top, Side, Front, Perspective PNG — non-blocking |
+| `savePNG(file, view)` | Saves a single PNG with chosen view |
+| `show(view)` | Opens interactive 3D window — blocking |
+| `plotAndSave(dir)` | Saves all views then opens interactive window |
+
+### Camera views
+
+```cpp
+CameraView::TOP         // Top-down view (X+ = nose up)
+CameraView::SIDE        // Side view (nose left, tail right)
+CameraView::FRONT       // Front view (nose toward observer)
+CameraView::PERSPECTIVE // Perspective view (azimuth=-45, elevation=45)
+```
+
+### Setters
+
+```cpp
+plotter.setResolution(3840, 2160);          // 4K
+plotter.setBackground(135, 206, 235);       // sky blue (RGB 0-255)
+plotter.setOpacity(0.8);                    // semi-transparent surfaces
+plotter.setLogo("logo/logo.png", 0.12, 20); // logo, size 12% of width, 20px margin
+```
 
 ---
 
@@ -94,34 +171,23 @@ g++ -I./include test/RegressionTest.cpp -lboost_iostreams -lboost_system -o Regr
 
 ### Method 1: Include directly
 
-1. Clone or download this repository
-2. Add the include path to your compiler:
-
 ```cpp
-#include "AEROPlusPlus/include/your_header.h"
+#include "AEROPlusPlus/include/Plotter3D.h"
+#include "AEROPlusPlus/include/DegenGeomParser.h"
 #include <Eigen/Dense>
-#include "gnuplot-iostream.h"
-```
-
-Compile with:
-```bash
-g++ -I/path/to/AEROPlusPlus/include your_code.cpp -lboost_iostreams -lboost_system -o your_program
 ```
 
 ### Method 2: CMake integration
 
-Add to your `CMakeLists.txt`:
-
 ```cmake
-# Add include directory
 include_directories(/path/to/AEROPlusPlus/include)
 
-# Find Boost
+find_package(VTK REQUIRED)
 find_package(Boost COMPONENTS iostreams system filesystem REQUIRED)
 
-# Link your executable
 add_executable(your_program your_code.cpp)
-target_link_libraries(your_program ${Boost_LIBRARIES})
+target_link_libraries(your_program ${Boost_LIBRARIES} ${VTK_LIBRARIES})
+vtk_module_autoinit(TARGETS your_program MODULES ${VTK_LIBRARIES})
 ```
 
 ---
@@ -130,16 +196,21 @@ target_link_libraries(your_program ${Boost_LIBRARIES})
 
 ```
 AEROPlusPlus/
-├── include/                # Header files
-│   ├── Eigen/              # Eigen library (included)
-│   ├── gnuplot-iostream.h  # Gnuplot wrapper (included)
-│   └── *.h                # AERO++ API headers
-├── test/                  # Test files
-│   └── RegressionTest.cpp
-|   └── AircraftData.cpp
-|   └── TestLaunchVSP.cpp
-|   └── TestVSPCreator.cpp
-├── CMakeLists.txt       # CMake configuration
+├── include/                    # All API headers (header-only)
+│   ├── Eigen/                  # Eigen library (included)
+│   ├── gnuplot-iostream.h      # Gnuplot C++ wrapper (included)
+│   ├── Plotter3D.h             # VTK 3D aircraft visualization
+│   ├── DegenGeomParser.h       # OpenVSP DegenGeom CSV parser
+│   └── *.h                     # Other AERO++ API headers
+├── test/                       # Test / example files
+│   ├── RegressionTest.cpp
+│   ├── AircraftData.cpp
+│   ├── TestLaunchVSP.cpp
+│   └── TestVSPCreator.cpp
+├── logo/                       # Project logo (used in PNG exports)
+│   └── AeroPlusPLus_logo.png
+├── ExcelFiles/                 # Example Excel data files
+├── CMakeLists.txt
 ├── README.md
 └── LICENSE
 ```
@@ -148,7 +219,8 @@ AEROPlusPlus/
 
 ## Examples
 
-## Quick Example — Wing Definition + Weight & Balance (P2012 case study)
+### Wing Definition + Weight & Balance (P2012 case study)
+
 ```cpp
 // Define wing geometry and generate OpenVSP script
 VSP::Wing wing;
@@ -160,31 +232,45 @@ wing.xloc  = 4.568;
 
 script.makeWing(wing, 2);
 
-// Weight & Balance — center of gravity computation
+// Weight & Balance — center of gravity
 COG::COGCalculator cog("P2012", commonData, wingData,
                         fuselageData, engineData, ...);
 cog.calculateCOGAircraft();
-
 std::cout << "Xcg: " << cog.getCOGData().xCG << " m\n";
 ```
 
-> Full workflow from geometry to W&B on a real aircraft: [`test/TestVSPCreator.cpp`](test/TestVSPCreator.cpp)
+> Full workflow: [`test/TestVSPCreator.cpp`](test/TestVSPCreator.cpp)
+
+---
 
 ## Troubleshooting
 
-### Windows: "Boost not found"
-Make sure you're using the MSYS2 MinGW 64-bit terminal and have installed boost with:
+### "VTK not found"
 ```bash
+# MSYS2
+pacman -S mingw-w64-x86_64-vtk
+
+# Or specify manually
+cmake -DVTK_DIR=/path/to/vtk/cmake ..
+```
+
+### "Boost not found"
+```bash
+# MSYS2
 pacman -S mingw-w64-x86_64-boost
+
+# Linux
+sudo apt install libboost-all-dev
 ```
 
 ### "gnuplot not found"
-Ensure gnuplot is installed and in your system PATH:
-- **Linux/macOS:** `which gnuplot`
-- **Windows (MSYS2):** `where gnuplot`
+Ensure gnuplot is installed and in your PATH:
+```bash
+which gnuplot        # Linux/macOS
+where gnuplot        # Windows CMD
+```
 
-### Compilation errors with Boost
-Try specifying the Boost libraries explicitly:
+### Compilation errors with Boost on MSYS2
 ```bash
 g++ -I./include test.cpp -lboost_iostreams-mt -lboost_system-mt -lboost_filesystem-mt
 ```
@@ -193,7 +279,7 @@ g++ -I./include test.cpp -lboost_iostreams-mt -lboost_system-mt -lboost_filesyst
 
 ## License
 
- Apache 2.0
+Apache 2.0
 
 ---
 
@@ -211,6 +297,8 @@ Amedeo Falco
 
 ## Acknowledgments
 
-- [Eigen](https://eigen.tuxfamily.org/) - C++ template library for linear algebra
-- [gnuplot-iostream](https://github.com/dstahlke/gnuplot-iostream) - C++ interface to gnuplot
-- [Boost](https://www.boost.org/) - C++ libraries
+- [Eigen](https://eigen.tuxfamily.org/) — C++ template library for linear algebra
+- [gnuplot-iostream](https://github.com/dstahlke/gnuplot-iostream) — C++ interface to gnuplot
+- [Boost](https://www.boost.org/) — C++ libraries
+- [VTK](https://vtk.org/) — Visualization Toolkit for 3D rendering
+- [OpenVSP](https://openvsp.org/) — Open-source parametric aircraft geometry tool

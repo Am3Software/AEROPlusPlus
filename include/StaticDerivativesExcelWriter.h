@@ -9,7 +9,7 @@
 
 using namespace OpenXLSX;
 
-class StaticDerivativeExcelWriter
+class DerivativeExcelWriter
 {
 
 protected:
@@ -26,7 +26,7 @@ private:
     int indexToStartWriteDerivativeTableLateral = 5;
 
 public:
-    StaticDerivativeExcelWriter()
+    DerivativeExcelWriter()
     {
     }
 

@@ -71,6 +71,8 @@ namespace VSP
                 double deltaXtoHorizontal = 0.0;
                 double percentagePositionOfXCG = 0.25;
                 std::vector<double> panelsArea;
+                std::vector<double> panelsYStation;
+                std::vector<double> chordsAtYStation;
                 double averageDihedral = 0.0;
                 double averageLeadingEdgeSweep = 0.0;
                 double sweepC2 = 0.0;
@@ -191,8 +193,6 @@ namespace VSP
                         double xLocPercent = 0;
                 } attachDomeBody;
         };
-
-
 
         struct Nacelle
         {
@@ -407,17 +407,29 @@ namespace VSP
                         }
                         else if (wing.airfoilType == "XS_FILE_AIRFOIL")
                         {
+
+                                if (idx == 0)
+                                {
+
+                                        for (size_t ii = 0; ii < wing.affile.size(); ii++)
+                                        {
+                                                writeCommand("ChangeXSecShape(GetXSecSurf(" + wing.id + "," +
+                                                             std::to_string(1) + ")," + std::to_string(ii) + ",XS_FILE_AIRFOIL);");
+                                                writeUpdate();
+                                        }
+                                }
+
                                 if (idx < wing.affile.size())
                                 {
                                         writeCommand("ReadFileAirfoil(GetXSec(GetXSecSurf(" + wing.id +
                                                      ",1)," + std::to_string(idx) + "),\"" + wing.affile[idx] + "\");");
+                                }
 
-                                        if (idx < wing.thickchord.size())
-                                        {
-                                                writeCommand("SetParmVal(" + wing.id + ",\"ThickChord\",\"XSecCurve_" +
-                                                             std::to_string(idx) + "\"," + std::to_string(wing.thickchord[idx]) + ");");
-                                                file << "\r\n";
-                                        }
+                                if (idx <= wing.thickchord.size())
+                                {
+                                        writeCommand("SetParmVal(" + wing.id + ",\"ThickChord\",\"XSecCurve_" +
+                                                     std::to_string(idx) + "\"," + std::to_string(wing.thickchord[idx]) + ");");
+                                        file << "\r\n";
                                 }
                         }
 
@@ -437,6 +449,8 @@ namespace VSP
                                 }
                                 writeUpdate();
                         }
+
+                       
 
                         writeUpdate();
                 }
@@ -511,7 +525,7 @@ namespace VSP
                                 wing.totalSpan *= equalsIgnoreCase(wing.id, "wing") || equalsIgnoreCase(wing.id, "horizontal") ? 2 : 1; // Perchè totalSpan è la somma delle semiali, e per il calcolo del MAC serve la span totale
 
                                 // Se ci fosse una winglet la penultima sezione è la transition e l'ultima è la winglet
-                                if (wing.blending)
+                                if (wing.blending && equalsIgnoreCase(wing.id, "wing"))
                                 {
                                         for (size_t i = 0; i < wing.span.size() - 2; i++)
                                         {
@@ -536,7 +550,6 @@ namespace VSP
                                         }
                                 }
 
-                                
                                 // Calcolo sweep medio e dihedral medio pesati con l'area dei pannelli
 
                                 totalPanlesArea = std::accumulate(wing.panelsArea.begin(), wing.panelsArea.end(), 0.0);
@@ -549,7 +562,6 @@ namespace VSP
 
                                 wing.totalProjectedSpan = wing.totalSpan * cos(wing.averageDihedral / 57.3); // Proiezione della span totale sul piano orizzontale
 
-                                
                                 // Calcolo di MAC, yMAC, area e aspect ratio in base al tipo di ala
 
                                 switch (wingType)
@@ -557,7 +569,7 @@ namespace VSP
                                 case TypeOfWing::STRAIGHT_TAPERED:
 
                                 {
-                                        if (wing.blending)
+                                        if (wing.blending && equalsIgnoreCase(wing.id, "wing"))
                                         {
                                                 wing.taperRatio = (*(wing.ctip.end() - 3)) / wing.croot.front();
                                                 // *(wing.ctip.end() - 3) ---> accedo col puntatore al valore dll'iteratore, per prendere la corda tip del terzultimo pannello, dato che è equivalente wing.ctip[wing.ctip.size()-3]
@@ -567,6 +579,26 @@ namespace VSP
 
                                                 wing.planformArea = 0.5 * wing.totalProjectedSpan * wing.croot.front() * (1 + wing.taperRatio);
                                                 wing.aspectRatio = std::pow(wing.totalProjectedSpan, 2) / wing.planformArea;
+
+                                                for (size_t n = 0; n < wing.panelsArea.size(); n++)
+                                                {
+                                                        if (n == 0)
+                                                        {
+
+                                                                wing.panelsYStation.push_back(0.0);
+                                                                wing.panelsYStation.push_back(wing.span[n] * std::cos(wing.sweep[n] / 57.3)); // Proiezione della lunghezza del pannello sul piano orizzontale, che è la distanza y della stazione del pannello dal centro di proiezione della semiala, che coincide con il centro di proiezione dell'ala intera
+
+                                                                wing.chordsAtYStation.push_back(wing.croot.front());
+                                                                wing.chordsAtYStation.push_back(wing.ctip.front());
+                                                        }
+
+                                                        else
+                                                        {
+
+                                                                wing.panelsYStation.push_back(wing.span[n - 1] + wing.span[n] * std::cos(wing.sweep[n] / 57.3));
+                                                                wing.chordsAtYStation.push_back(wing.ctip[n]);
+                                                        }
+                                                }
                                         }
                                         else
                                         {
@@ -577,6 +609,26 @@ namespace VSP
 
                                                 wing.planformArea = 0.5 * wing.totalProjectedSpan * wing.croot.front() * (1 + wing.taperRatio);
                                                 wing.aspectRatio = std::pow(wing.totalProjectedSpan, 2) / wing.planformArea;
+
+                                                for (size_t n = 0; n < wing.panelsArea.size(); n++)
+                                                {
+                                                        if (n == 0)
+                                                        {
+
+                                                                wing.panelsYStation.push_back(0.0);
+                                                                wing.panelsYStation.push_back(wing.span[n] * std::cos(wing.sweep[n] / 57.3)); // Proiezione della lunghezza del pannello sul piano orizzontale, che è la distanza y della stazione del pannello dal centro di proiezione della semiala, che coincide con il centro di proiezione dell'ala intera
+
+                                                                wing.chordsAtYStation.push_back(wing.croot.front());
+                                                                wing.chordsAtYStation.push_back(wing.ctip.front());
+                                                        }
+
+                                                        else
+                                                        {
+
+                                                                wing.panelsYStation.push_back(wing.panelsYStation.back() + wing.span[n] * std::cos(wing.sweep[n] / 57.3));
+                                                                wing.chordsAtYStation.push_back(wing.ctip[n]);
+                                                        }
+                                                }
                                         }
                                 }
 
@@ -586,7 +638,7 @@ namespace VSP
 
                                 {
 
-                                        if (wing.blending)
+                                        if (wing.blending && equalsIgnoreCase(wing.id, "wing"))
                                         {
 
                                                 wing.taperRatio = (*(wing.ctip.end() - 3)) / wing.croot.front();
@@ -596,11 +648,29 @@ namespace VSP
                                                 wing.yMAC = macCalc.getYMAC(wingType, wing.totalProjectedSpan, wing.taperRatio,
                                                                             wing.kinkStation, wing.taperInbord);
 
-                                                wing.planformArea = 0.5 * wing.totalProjectedSpan * wing.croot.front() * (1 - wing.taperInbord) *
-                                                                        2 * wing.kinkStation / wing.totalProjectedSpan +
-                                                                    (wing.taperRatio) + wing.taperInbord;
+                                                wing.planformArea = 0.5 * wing.totalProjectedSpan * wing.croot.front() * ((1 - wing.taperInbord) * 2 * wing.kinkStation / wing.totalProjectedSpan + wing.taperRatio + wing.taperInbord);
 
                                                 wing.aspectRatio = std::pow(wing.totalProjectedSpan, 2) / wing.planformArea;
+
+                                                for (size_t n = 0; n < wing.croot.size() - 2; n++)
+                                                {
+                                                        if (n == 0)
+                                                        {
+
+                                                                wing.panelsYStation.push_back(0.0);
+                                                                wing.panelsYStation.push_back(wing.span[n] * std::cos(wing.sweep[n] / 57.3)); // Proiezione della lunghezza del pannello sul piano orizzontale, che è la distanza y della stazione del pannello dal centro di proiezione della semiala, che coincide con il centro di proiezione dell'ala intera
+
+                                                                wing.chordsAtYStation.push_back(wing.croot.front());
+                                                                wing.chordsAtYStation.push_back(wing.ctip.front());
+                                                        }
+
+                                                        else
+                                                        {
+
+                                                                wing.panelsYStation.push_back(wing.panelsYStation.back() + wing.span[n] * std::cos(wing.sweep[n] / 57.3));
+                                                                wing.chordsAtYStation.push_back(wing.ctip[n]);
+                                                        }
+                                                }
                                         }
 
                                         else
@@ -618,6 +688,26 @@ namespace VSP
                                                                     (wing.taperRatio) + wing.taperInbord;
 
                                                 wing.aspectRatio = std::pow(wing.totalProjectedSpan, 2) / wing.planformArea;
+
+                                                for (size_t n = 0; n < wing.croot.size() - 1; n++)
+                                                {
+                                                        if (n == 0)
+                                                        {
+
+                                                                wing.panelsYStation.push_back(0.0);
+                                                                wing.panelsYStation.push_back(wing.span[n] * std::cos(wing.sweep[n] / 57.3)); // Proiezione della lunghezza del pannello sul piano orizzontale, che è la distanza y della stazione del pannello dal centro di proiezione della semiala, che coincide con il centro di proiezione dell'ala intera
+
+                                                                wing.chordsAtYStation.push_back(wing.croot.front());
+                                                                wing.chordsAtYStation.push_back(wing.ctip.front());
+                                                        }
+
+                                                        else
+                                                        {
+
+                                                                wing.panelsYStation.push_back(wing.panelsYStation.back() + wing.span[n] * std::cos(wing.sweep[n] / 57.3));
+                                                                wing.chordsAtYStation.push_back(wing.ctip[n]);
+                                                        }
+                                                }
                                         }
 
                                         break;
@@ -686,17 +776,16 @@ namespace VSP
                                 writeCommand("ReadVSPFile( fnamePreset );");
                                 file << "\r\n";
 
-
                                 writeCommand("string fuselageName = \"fuselage\";");
                                 file << "\r\n";
 
                                 writeCommand("array< string > @geom_ids = FindGeomsWithName( fuselageName );");
                                 file << "\r\n";
 
-                                writeCommand("string fuselage = geom_ids[0];");
+                                writeCommand("string " + fuselage.id + " = geom_ids[0];");
                                 file << "\r\n";
 
-                                writeCommand("SetGeomName(fuselage , \"" + fuselage.id + "\");");
+                                writeCommand("SetGeomName(" + fuselage.id + ", \"" + fuselage.id + "\");");
                                 file << "\r\n";
 
                                 writeUpdate();
@@ -866,10 +955,10 @@ namespace VSP
                                 writeCommand("array< string > @geom_ids = FindGeomsWithName( fuselageName );");
                                 file << "\r\n";
 
-                                writeCommand("string fuselage = geom_ids[0];");
+                                writeCommand("string " + fuselage.id + " = geom_ids[0];");
                                 file << "\r\n";
 
-                                writeCommand("SetGeomName(fuselage , \"" + fuselage.id + "\");");
+                                writeCommand("SetGeomName(" + fuselage.id + ", \"" + fuselage.id + "\");");
                                 file << "\r\n";
 
                                 writeUpdate();
@@ -889,12 +978,11 @@ namespace VSP
                                 writeCommand("array< string > @geom_ids = FindGeomsWithName( fuselageName );");
                                 file << "\r\n";
 
-                                writeCommand("string fuselage = geom_ids[0];");
+                                writeCommand("string " + fuselage.id + " = geom_ids[0];");
                                 file << "\r\n";
 
-                                writeCommand("SetGeomName(fuselage , \"" + fuselage.id + "\");");
+                                writeCommand("SetGeomName(" + fuselage.id + ", \"" + fuselage.id + "\");");
                                 file << "\r\n";
-
                                 writeUpdate();
 
                                 // REFERENCE GEOMETRY VALUES
@@ -905,6 +993,9 @@ namespace VSP
                                 file << "\r\n";
 
                                 writeCommand("double refFuselageMaxWidth  = 3.95010;");
+                                file << "\r\n";
+
+                                writeCommand("double fuselagedeltaX  = 0.0;");
                                 file << "\r\n";
 
                                 // FUSELAGE TO CUSTOMIZE
@@ -937,46 +1028,46 @@ namespace VSP
                                 file << "\r\n";
 
                                 // Variable declarations
-                                writeCommand("double fuselageDiameter = 0; ");
+                                writeCommand("double fuselageDiameter = 0.0; ");
                                 file << "\r\n";
 
-                                writeCommand("double fuselageWidth = 0; ");
+                                writeCommand("double fuselageWidth = 0.0; ");
                                 file << "\r\n";
 
-                                writeCommand("double newFuselageDiameter = 0; ");
+                                writeCommand("double newFuselageDiameter = 0.0; ");
                                 file << "\r\n";
 
-                                writeCommand("double newFuselageWidth = 0; ");
+                                writeCommand("double newFuselageWidth = 0.0; ");
                                 file << "\r\n";
 
                                 writeCommand("if (i==0) {");
                                 file << "\r\n";
 
-                                writeCommand("fuselageDiameter  = GetParmVal(fuselage,\"Ellipse_Height\",\"XSecCurve_\" + (i));");
+                                writeCommand("fuselageDiameter  = GetParmVal(" + fuselage.id + ",\"Ellipse_Height\",\"XSecCurve_\" + (i));");
                                 file << "\r\n";
 
-                                writeCommand("fuselageWidth     = GetParmVal(fuselage,\"Ellipse_Width\",\"XSecCurve_\" + (i));");
+                                writeCommand("fuselageWidth     = GetParmVal(" + fuselage.id + ",\"Ellipse_Width\",\"XSecCurve_\" + (i));");
                                 file << "\r\n";
 
                                 writeCommand(" newFuselageDiameter  = fuselageDiameter*diamterFuselageScalingFactor;");
                                 file << "\r\n";
 
-                                writeCommand("SetParmVal(fuselage,\"Ellipse_Height\",\"XSecCurve_\" + (i),newFuselageDiameter);");
+                                writeCommand("SetParmVal(" + fuselage.id + ",\"Ellipse_Height\",\"XSecCurve_\" + (i),newFuselageDiameter);");
                                 file << "\r\n";
 
                                 writeCommand(" newFuselageWidth  = fuselageWidth*widthFuselageScalingFactor;");
                                 file << "\r\n";
 
-                                writeCommand("SetParmVal(fuselage,\"Ellipse_Width\",\"XSecCurve_\" + (i),newFuselageWidth);");
+                                writeCommand("SetParmVal(" + fuselage.id + ",\"Ellipse_Width\",\"XSecCurve_\" + (i),newFuselageWidth);");
                                 file << "\r\n";
 
                                 writeCommand("} else if (i>0) {");
                                 file << "\r\n";
 
-                                writeCommand(" fuselageDiameter  = GetParmVal(fuselage,\"Height\",\"XSecCurve_\" + (i));");
+                                writeCommand(" fuselageDiameter  = GetParmVal(" + fuselage.id + ",\"Height\",\"XSecCurve_\" + (i));");
                                 file << "\r\n";
 
-                                writeCommand(" fuselageWidth     = GetParmVal(fuselage,\"Width\",\"XSecCurve_\" + (i));");
+                                writeCommand(" fuselageWidth     = GetParmVal(" + fuselage.id + ",\"Width\",\"XSecCurve_\" + (i));");
                                 file << "\r\n";
 
                                 writeCommand("} ");
@@ -985,7 +1076,7 @@ namespace VSP
                                 writeCommand("if (i>= 1) {");
                                 file << "\r\n";
 
-                                writeCommand("double fuselagedeltaX    = GetParmVal(fuselage , \"XDelta\",\"XSec_\" + (i));");
+                                writeCommand("fuselagedeltaX    = GetParmVal(" + fuselage.id + " , \"XDelta\",\"XSec_\" + (i));");
                                 file << "\r\n";
 
                                 writeCommand("double newFuselageDeltaX = 0; ");
@@ -995,21 +1086,21 @@ namespace VSP
                                 writeCommand(" newFuselageDeltaX  = fuselagedeltaX*newFuselageFineRatio/fuselageRefFineRatio;");
                                 file << "\r\n";
 
-                                writeCommand("SetParmVal(fuselage,\"XDelta\",\"XSec_\" + (i),newFuselageDeltaX);");
+                                writeCommand("SetParmVal(" + fuselage.id + ",\"XDelta\",\"XSec_\" + (i),newFuselageDeltaX);");
                                 file << "\r\n";
 
                                 // Diameter
                                 writeCommand(" newFuselageDiameter  = fuselageDiameter*diamterFuselageScalingFactor;");
                                 file << "\r\n";
 
-                                writeCommand("SetParmVal(fuselage,\"Height\",\"XSecCurve_\" + (i),newFuselageDiameter);");
+                                writeCommand("SetParmVal(" + fuselage.id + ",\"Height\",\"XSecCurve_\" + (i),newFuselageDiameter);");
                                 file << "\r\n";
 
                                 // Width
                                 writeCommand(" newFuselageWidth  = fuselageWidth*widthFuselageScalingFactor;");
                                 file << "\r\n";
 
-                                writeCommand("SetParmVal(fuselage,\"Width\",\"XSecCurve_\" + (i),newFuselageWidth);");
+                                writeCommand("SetParmVal(" + fuselage.id + ",\"Width\",\"XSecCurve_\" + (i),newFuselageWidth);");
                                 file << "\r\n";
 
                                 writeCommand("}");
@@ -1035,10 +1126,10 @@ namespace VSP
                                 writeCommand("array< string > @geom_ids = FindGeomsWithName( fuselageName );");
                                 file << "\r\n";
 
-                                writeCommand("string fuselage = geom_ids[0];");
+                                writeCommand("string " + fuselage.id + " = geom_ids[0];");
                                 file << "\r\n";
 
-                                writeCommand("SetGeomName(fuselage , \"" + fuselage.id + "\");");
+                                writeCommand("SetGeomName(" + fuselage.id + ", \"" + fuselage.id + "\");");
                                 file << "\r\n";
 
                                 writeUpdate();
@@ -1165,10 +1256,10 @@ namespace VSP
                                 writeCommand("array< string > @geom_ids = FindGeomsWithName( fuselageName );");
                                 file << "\r\n";
 
-                                writeCommand("string fuselage = geom_ids[0];");
+                                writeCommand("string " + fuselage.id + " = geom_ids[0];");
                                 file << "\r\n";
 
-                                writeCommand("SetGeomName(fuselage , \"" + fuselage.id + "\");");
+                                writeCommand("SetGeomName(" + fuselage.id + ", \"" + fuselage.id + "\");");
                                 file << "\r\n";
 
                                 writeUpdate();
@@ -1203,10 +1294,10 @@ namespace VSP
                                 writeCommand("array< string > @geom_ids = FindGeomsWithName( fuselageName );");
                                 file << "\r\n";
 
-                                writeCommand("string fuselage = geom_ids[0];");
+                                writeCommand("string " + fuselage.id + " = geom_ids[0];");
                                 file << "\r\n";
 
-                                writeCommand("SetGeomName(fuselage , \"" + fuselage.id + "\");");
+                                writeCommand("SetGeomName(" + fuselage.id + ", \"" + fuselage.id + "\");");
                                 file << "\r\n";
 
                                 writeUpdate();
@@ -1226,7 +1317,10 @@ namespace VSP
                                 writeCommand("array< string > @geom_ids = FindGeomsWithName( fuselageName );");
                                 file << "\r\n";
 
-                                writeCommand("string fuselage = geom_ids[0];");
+                                writeCommand("string " + fuselage.id + " = geom_ids[0];");
+                                file << "\r\n";
+
+                                writeCommand("SetGeomName(" + fuselage.id + ", \"" + fuselage.id + "\");");
                                 file << "\r\n";
 
                                 for (int i = 1; i <= fuselage.counterBlendedEngine; i++)
@@ -1259,10 +1353,10 @@ namespace VSP
                                 writeCommand("array< string > @geom_ids = FindGeomsWithName( fuselageName );");
                                 file << "\r\n";
 
-                                writeCommand("string fuselage = geom_ids[0];");
+                                writeCommand("string " + fuselage.id + " = geom_ids[0];");
                                 file << "\r\n";
 
-                                writeCommand("SetGeomName(fuselage , \"" + fuselage.id + "\");");
+                                writeCommand("SetGeomName(" + fuselage.id + ", \"" + fuselage.id + "\");");
                                 file << "\r\n";
 
                                 writeUpdate();
@@ -1296,47 +1390,49 @@ namespace VSP
                         if (fuselage.advancedFuselage)
                         {
                                 makeAdvancedFuselage(fuselage);
-                                return;
                         }
 
-                        writeComment("fuselage");
-                        writeCommand("string " + fuselage.id + " = AddGeom(\"" + fuselage.type + "\");");
-                        file << "\r\n";
-
-                        writeCommand("SetGeomName(" + fuselage.id + ", \"" + fuselage.id + "\");");
-                        file << "\r\n";
-
-                        writeCommand("SetGeomDrawType(" + fuselage.id + ", GEOM_DRAW_SHADE);");
-                        file << "\r\n";
-
-                        writeCommand("SetParmVal(" + fuselage.id + ",\"Length\",\"Design\"," +
-                                     std::to_string(fuselage.length) + ");");
-                        writeCommand("SetParmVal(" + fuselage.id + ",\"Diameter\",\"Design\"," +
-                                     std::to_string(fuselage.diameter) + ");");
-                        file << "\r\n";
-
-                        if (fuselage.customFuselage)
+                        else
                         {
-                                writeCommand("SetParmVal(" + fuselage.id + ",\"NoseMult\",\"Design\"," +
-                                             std::to_string(fuselage.nosemult) + ");");
-                                file << "\r\n";
-                                writeCommand("SetParmVal(" + fuselage.id + ",\"AftMult\",\"Design\"," +
-                                             std::to_string(fuselage.aftmult) + ");");
-                                file << "\r\n";
-                                writeCommand("SetParmVal(" + fuselage.id + ",\"NoseCenter\",\"Design\"," +
-                                             std::to_string(fuselage.nosecenter) + ");");
-                                file << "\r\n";
-                                writeCommand("SetParmVal(" + fuselage.id + ",\"AftCenter\",\"Design\"," +
-                                             std::to_string(fuselage.aftcenter) + ");");
-                                file << "\r\n";
-                                writeCommand("SetParmVal(" + fuselage.id + ",\"AftWidth\",\"Design\"," +
-                                             std::to_string(fuselage.aftwidth) + ");");
-                                file << "\r\n";
-                                writeCommand("SetParmVal(" + fuselage.id + ",\"AftHeight\",\"Design\"," +
-                                             std::to_string(fuselage.aftheight) + ");");
+                                writeComment("fuselage");
+                                writeCommand("string " + fuselage.id + " = AddGeom(\"" + fuselage.type + "\");");
                                 file << "\r\n";
 
-                                fuselage.width = fuselage.diameter;
+                                writeCommand("SetGeomName(" + fuselage.id + ", \"" + fuselage.id + "\");");
+                                file << "\r\n";
+
+                                writeCommand("SetGeomDrawType(" + fuselage.id + ", GEOM_DRAW_SHADE);");
+                                file << "\r\n";
+
+                                writeCommand("SetParmVal(" + fuselage.id + ",\"Length\",\"Design\"," +
+                                             std::to_string(fuselage.length) + ");");
+                                writeCommand("SetParmVal(" + fuselage.id + ",\"Diameter\",\"Design\"," +
+                                             std::to_string(fuselage.diameter) + ");");
+                                file << "\r\n";
+
+                                if (fuselage.customFuselage)
+                                {
+                                        writeCommand("SetParmVal(" + fuselage.id + ",\"NoseMult\",\"Design\"," +
+                                                     std::to_string(fuselage.nosemult) + ");");
+                                        file << "\r\n";
+                                        writeCommand("SetParmVal(" + fuselage.id + ",\"AftMult\",\"Design\"," +
+                                                     std::to_string(fuselage.aftmult) + ");");
+                                        file << "\r\n";
+                                        writeCommand("SetParmVal(" + fuselage.id + ",\"NoseCenter\",\"Design\"," +
+                                                     std::to_string(fuselage.nosecenter) + ");");
+                                        file << "\r\n";
+                                        writeCommand("SetParmVal(" + fuselage.id + ",\"AftCenter\",\"Design\"," +
+                                                     std::to_string(fuselage.aftcenter) + ");");
+                                        file << "\r\n";
+                                        writeCommand("SetParmVal(" + fuselage.id + ",\"AftWidth\",\"Design\"," +
+                                                     std::to_string(fuselage.aftwidth) + ");");
+                                        file << "\r\n";
+                                        writeCommand("SetParmVal(" + fuselage.id + ",\"AftHeight\",\"Design\"," +
+                                                     std::to_string(fuselage.aftheight) + ");");
+                                        file << "\r\n";
+
+                                        fuselage.width = fuselage.diameter;
+                                }
                         }
 
                         writeUpdate();
@@ -1403,6 +1499,8 @@ namespace VSP
 
                         int numSections = wing.span.size();
 
+                       
+                        
                         if (wing.useDetailedPanels)
                         {
                                 for (int i = 1; i <= numSections; i++)
@@ -1456,10 +1554,14 @@ namespace VSP
                                 writeUpdate();
                         }
 
-                        for (int i = 1; i <= numSections + 1; i++)
+                         for (int i = 1; i <= numSections + 1; i++)
                         {
                                 shapeAirfoil(wing, i);
                         }
+
+                         writeUpdate();
+
+                       
 
                         writeCommand("SetParmVal(" + wingID + ",\"Tess_W\",\"Shape\"," +
                                      std::to_string(wing.wtess) + ");");
@@ -1532,12 +1634,13 @@ namespace VSP
                                 int nsec = numSections + 1;
                                 bool dihedralControlSurf = false;
 
-                                for (int i = 1; i < nsec; i++)
+                                for (int i = 0; i < nsec; i++) // era i < nsec: mancava l'ultima iterazione
                                 {
-                                        std::string secID = "XSec_" + std::to_string(i - 1);
+                                        std::string secID = "XSec_" + std::to_string(i);
 
-                                        if (i > 0)
+                                        if (i > 0) // era i > 0: il blending inboard parte da i=2, come in MATLAB (if i > 1)
                                         {
+                                                // -------- InLE --------
                                                 writeCommand("SetParmVal(" + wingID + ",\"InLEMode\",\"" + secID + "\"," +
                                                              std::to_string(wing.blend.InLEMode[i]) + ");");
 
@@ -1549,11 +1652,32 @@ namespace VSP
                                                                              std::to_string(wing.blend.InLESweep[i]) + ");");
                                                                 writeCommand("SetParmVal(" + wingID + ",\"InLEDihedral\",\"" + secID + "\"," +
                                                                              std::to_string(wing.blend.InLEDihedral[i]) + ");");
+                                                                writeCommand("SetParmVal(" + wingID + ",\"InLEStrength\",\"" + secID + "\"," +
+                                                                             std::to_string(wing.blend.InLEStrength[i]) + ");");
                                                         }
-                                                        writeCommand("SetParmVal(" + wingID + ",\"InLEStrength\",\"" + secID + "\"," +
-                                                                     std::to_string(wing.blend.InLEStrength[i]) + ");");
+                                                        else if (wing.blend.InLEMode[i] == 2)
+                                                        {
+                                                                writeCommand("SetParmVal(" + wingID + ",\"InLEStrength\",\"" + secID + "\"," +
+                                                                             std::to_string(wing.blend.InLEStrength[i]) + ");");
+                                                        }
+                                                        else if (wing.blend.InLEMode[i] == 3)
+                                                        {
+                                                                writeCommand("SetParmVal(" + wingID + ",\"InLEStrength\",\"" + secID + "\"," +
+                                                                             std::to_string(wing.blend.InLEStrength[i]) + ");");
+                                                        }
+                                                        else if (wing.blend.InLEMode[i] == 4)
+                                                        {
+                                                                writeCommand("SetParmVal(" + wingID + ",\"InLEStrength\",\"" + secID + "\"," +
+                                                                             std::to_string(wing.blend.InLEStrength[i]) + ");");
+                                                        }
+                                                        else if (wing.blend.InLEMode[i] == 5)
+                                                        {
+                                                                writeCommand("SetParmVal(" + wingID + ",\"InLEStrength\",\"" + secID + "\"," +
+                                                                             std::to_string(wing.blend.InLEStrength[i]) + ");");
+                                                        }
                                                 }
 
+                                                // -------- InTE --------
                                                 writeCommand("SetParmVal(" + wingID + ",\"InTEMode\",\"" + secID + "\"," +
                                                              std::to_string(wing.blend.InTEMode[i]) + ");");
 
@@ -1565,13 +1689,36 @@ namespace VSP
                                                                              std::to_string(wing.blend.InTESweep[i]) + ");");
                                                                 writeCommand("SetParmVal(" + wingID + ",\"InTEDihedral\",\"" + secID + "\"," +
                                                                              std::to_string(wing.blend.InTEDihedral[i]) + ");");
+                                                                writeCommand("SetParmVal(" + wingID + ",\"InTEStrength\",\"" + secID + "\"," +
+                                                                             std::to_string(wing.blend.InTEStrength[i]) + ");");
                                                         }
-                                                        writeCommand("SetParmVal(" + wingID + ",\"InTEStrength\",\"" + secID + "\"," +
-                                                                     std::to_string(wing.blend.InTEStrength[i]) + ");");
+                                                        else if (wing.blend.InTEMode[i] == 2)
+                                                        {
+                                                                // NOTA: il MATLAB scrive "InLEStrength" con il valore di InTEStrength (replicato fedelmente)
+                                                                writeCommand("SetParmVal(" + wingID + ",\"InLEStrength\",\"" + secID + "\"," +
+                                                                             std::to_string(wing.blend.InTEStrength[i]) + ");");
+                                                        }
+                                                        else if (wing.blend.InTEMode[i] == 3)
+                                                        {
+                                                                writeCommand("SetParmVal(" + wingID + ",\"InTEStrength\",\"" + secID + "\"," +
+                                                                             std::to_string(wing.blend.InTEStrength[i]) + ");");
+                                                        }
+                                                        else if (wing.blend.InTEMode[i] == 4)
+                                                        {
+                                                                // NOTA: il MATLAB scrive "InLEStrength" con il valore di InLEStrength (replicato fedelmente)
+                                                                writeCommand("SetParmVal(" + wingID + ",\"InLEStrength\",\"" + secID + "\"," +
+                                                                             std::to_string(wing.blend.InLEStrength[i]) + ");");
+                                                        }
+                                                        else if (wing.blend.InTEMode[i] == 5)
+                                                        {
+                                                                writeCommand("SetParmVal(" + wingID + ",\"InTEStrength\",\"" + secID + "\"," +
+                                                                             std::to_string(wing.blend.InTEStrength[i]) + ");");
+                                                        }
                                                 }
 
-                                                if (i < nsec - 1)
+                                                if (i < nsec) // outboard blending: solo se non siamo all'ultima sezione
                                                 {
+                                                        // -------- OutLE --------
                                                         writeCommand("SetParmVal(" + wingID + ",\"OutLEMode\",\"" + secID + "\"," +
                                                                      std::to_string(wing.blend.OutLEMode[i]) + ");");
 
@@ -1583,11 +1730,36 @@ namespace VSP
                                                                                      std::to_string(wing.blend.OutLESweep[i]) + ");");
                                                                         writeCommand("SetParmVal(" + wingID + ",\"OutLEDihedral\",\"" + secID + "\"," +
                                                                                      std::to_string(wing.blend.OutLEDihedral[i]) + ");");
+                                                                        writeCommand("SetParmVal(" + wingID + ",\"OutLEStrength\",\"" + secID + "\"," +
+                                                                                     std::to_string(wing.blend.OutLEStrength[i]) + ");");
                                                                 }
+                                                                else if (wing.blend.OutLEMode[i] == 2)
+                                                                {
+                                                                        writeCommand("SetParmVal(" + wingID + ",\"OutLEStrength\",\"" + secID + "\"," +
+                                                                                     std::to_string(wing.blend.OutLEStrength[i]) + ");");
+                                                                }
+                                                                else if (wing.blend.OutLEMode[i] == 3)
+                                                                {
+                                                                        writeCommand("SetParmVal(" + wingID + ",\"OutLEStrength\",\"" + secID + "\"," +
+                                                                                     std::to_string(wing.blend.OutLEStrength[i]) + ");");
+                                                                }
+                                                                else if (wing.blend.OutLEMode[i] == 4)
+                                                                {
+                                                                        writeCommand("SetParmVal(" + wingID + ",\"OutLEStrength\",\"" + secID + "\"," +
+                                                                                     std::to_string(wing.blend.OutLEStrength[i]) + ");");
+                                                                }
+                                                                else if (wing.blend.OutLEMode[i] == 5)
+                                                                {
+                                                                        writeCommand("SetParmVal(" + wingID + ",\"OutLEStrength\",\"" + secID + "\"," +
+                                                                                     std::to_string(wing.blend.OutLEStrength[i]) + ");");
+                                                                }
+                                                                // NOTA: il MATLAB scrive OutLEStrength una seconda volta dopo il blocco if/elseif
+                                                                // per tutti i mode != 0 (doppia scrittura replicata fedelmente)
                                                                 writeCommand("SetParmVal(" + wingID + ",\"OutLEStrength\",\"" + secID + "\"," +
                                                                              std::to_string(wing.blend.OutLEStrength[i]) + ");");
                                                         }
 
+                                                        // -------- OutTE --------
                                                         writeCommand("SetParmVal(" + wingID + ",\"OutTEMode\",\"" + secID + "\"," +
                                                                      std::to_string(wing.blend.OutTEMode[i]) + ");");
 
@@ -1599,21 +1771,43 @@ namespace VSP
                                                                                      std::to_string(wing.blend.OutTESweep[i]) + ");");
                                                                         writeCommand("SetParmVal(" + wingID + ",\"OutTEDihedral\",\"" + secID + "\"," +
                                                                                      std::to_string(wing.blend.OutTEDihedral[i]) + ");");
+                                                                        writeCommand("SetParmVal(" + wingID + ",\"OutTEStrength\",\"" + secID + "\"," +
+                                                                                     std::to_string(wing.blend.OutTEStrength[i]) + ");");
                                                                 }
-                                                                writeCommand("SetParmVal(" + wingID + ",\"OutTEStrength\",\"" + secID + "\"," +
-                                                                             std::to_string(wing.blend.OutTEStrength[i]) + ");");
+                                                                else if (wing.blend.OutTEMode[i] == 2)
+                                                                {
+                                                                        writeCommand("SetParmVal(" + wingID + ",\"OutTEStrength\",\"" + secID + "\"," +
+                                                                                     std::to_string(wing.blend.OutTEStrength[i]) + ");");
+                                                                }
+                                                                else if (wing.blend.OutTEMode[i] == 3)
+                                                                {
+                                                                        writeCommand("SetParmVal(" + wingID + ",\"OutTEStrength\",\"" + secID + "\"," +
+                                                                                     std::to_string(wing.blend.OutTEStrength[i]) + ");");
+                                                                }
+                                                                else if (wing.blend.OutTEMode[i] == 4)
+                                                                {
+                                                                        writeCommand("SetParmVal(" + wingID + ",\"OutTEStrength\",\"" + secID + "\"," +
+                                                                                     std::to_string(wing.blend.OutTEStrength[i]) + ");");
+                                                                }
+                                                                else if (wing.blend.OutTEMode[i] == 5)
+                                                                {
+                                                                        writeCommand("SetParmVal(" + wingID + ",\"OutTEStrength\",\"" + secID + "\"," +
+                                                                                     std::to_string(wing.blend.OutTEStrength[i]) + ");");
+                                                                }
                                                         }
                                                 }
 
                                                 file << "\r\n";
                                         }
 
-                                        if (i != nsec - 1)
+                                        // -------- RotateMatchDideralFlag --------
+                                        if (i != nsec-1)
                                         {
-                                                if (i - 1 < wing.dihedral.size() && wing.dihedral[i - 1] != 0)
+                                                // era wing.dihedral[i]: sbagliato, il loop è 1-based quindi serve [i-1]
+                                                if (i  < (int)wing.dihedral.size() && wing.dihedral[i] != 0)
                                                 {
                                                         writeCommand("SetParmVal(" + wingID + ",\"RotateMatchDideralFlag\",\"XSec_" +
-                                                                     std::to_string(i - 1) + "\",1);");
+                                                                     std::to_string(i+1) + "\",1);");
                                                 }
                                                 else
                                                 {
@@ -1621,7 +1815,7 @@ namespace VSP
                                                         if (!dihedralControlSurf)
                                                         {
                                                                 bool allZero = true;
-                                                                for (int k = 0; k < totalSurf && k < wing.dihedral.size(); k++)
+                                                                for (int k = 0; k < totalSurf && k < (int)wing.dihedral.size(); k++)
                                                                 {
                                                                         if (wing.dihedral[k] != 0)
                                                                         {
@@ -2649,8 +2843,6 @@ namespace VSP
                                 writeUpdate();
                         }
                 }
-
-              
 
                 /// @brief Generates commands to compute and save degenerate geometry files.
                 /// @param name Name of the vehicle to be used for file naming.

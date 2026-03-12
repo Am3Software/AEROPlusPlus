@@ -12,7 +12,7 @@
 /// @param labelY label for Y axis
 /// @param title title of the plot
 /// @param legend legend for the plot
-/// @param typeOfPlot type of plot (e.g., lines, points)
+/// @param typeOfPlot type of plot (e.g., lines, points, linespoints (lines + marker))
 /// @param lineType Line type (lt) - Gnuplot line styles:
 ///        - "1" : solid line ─────────
 ///        - "2" : dashed line - - - - -
@@ -138,11 +138,11 @@ private:
                 if (style.markerType.empty()) {
                     lineCmd = "set style line " + std::to_string(i + 1) + 
                              " lc rgb '" + style.color + "' lw " + style.thicknessLine + 
-                             " lt " + style.lineType + "\n";
+                             " dt " + style.lineType + "\n";
                 } else {
                     lineCmd = "set style line " + std::to_string(i + 1) + 
                              " lc rgb '" + style.color + "' lw " + style.thicknessLine + 
-                             " lt " + style.lineType + " pt " + style.markerType + 
+                             " dt " + style.lineType + " pt " + style.markerType + 
                              " ps " + style.markerDimension + "\n";
                 }
                 gp << lineCmd;

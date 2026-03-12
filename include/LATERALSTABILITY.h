@@ -1036,59 +1036,59 @@ namespace LATERAL_STABILITY
                 settings.AoA = {0.0};
             }
 
-            // Disable every deflections of the control surfaces.
+            // // Disable every deflections of the control surfaces.
 
-            for (size_t n = 0; n < wing.mov.defl.size(); n++)
-            {
+            // for (size_t n = 0; n < wing.mov.defl.size(); n++)
+            // {
 
-                if (wing.mov.defl[n] != 0.0)
-                {
-                    std::cout << "Warning: Wing control surface deflection detected. Lateral stability derivatives will be calculated for the undeflected configuration only." << std::endl;
+            //     if (wing.mov.defl[n] != 0.0 || aircraftInfo.wing.mov.defl[n] != 0.0)
+            //     {
+            //         std::cout << "Warning: Wing control surface deflection detected. Lateral stability derivatives will be calculated for the undeflected configuration only." << std::endl;
 
-                    wing.mov.defl[n] = 0.0;
+            //         wing.mov.defl[n] = 0.0;
 
-                    aircraftInfo.wing.mov.defl[n] = 0.0;
-                }
-            }
+            //         aircraftInfo.wing.mov.defl[n] = 0.0;
+            //     }
+            // }
 
-            for (size_t n = 0; n < canard.mov.defl.size(); n++)
-            {
+            // for (size_t n = 0; n < canard.mov.defl.size(); n++)
+            // {
 
-                if (canard.mov.defl[n] != 0.0)
-                {
-                    std::cout << "Warning: Canard control surface deflection detected. Lateral stability derivatives will be calculated for the undeflected configuration only." << std::endl;
+            //     if (canard.mov.defl[n] != 0.0 || aircraftInfo.canard.mov.defl[n] != 0.0)
+            //     {
+            //         std::cout << "Warning: Canard control surface deflection detected. Lateral stability derivatives will be calculated for the undeflected configuration only." << std::endl;
 
-                    canard.mov.defl[n] = 0.0;
+            //         canard.mov.defl[n] = 0.0;
 
-                    aircraftInfo.canard.mov.defl[n] = 0.0;
-                }
-            }
+            //         aircraftInfo.canard.mov.defl[n] = 0.0;
+            //     }
+            // }
 
-            for (size_t n = 0; n < horizontalTail.mov.defl.size(); n++)
-            {
+            // for (size_t n = 0; n < horizontalTail.mov.defl.size(); n++)
+            // {
 
-                if (horizontalTail.mov.defl[n] != 0.0)
-                {
-                    std::cout << "Warning: Horizontal Tail control surface deflection detected. Lateral stability derivatives will be calculated for the undeflected configuration only." << std::endl;
+            //     if (horizontalTail.mov.defl[n] != 0.0 || aircraftInfo.hor.mov.defl[n] != 0.0)
+            //     {
+            //         std::cout << "Warning: Horizontal Tail control surface deflection detected. Lateral stability derivatives will be calculated for the undeflected configuration only." << std::endl;
 
-                    horizontalTail.mov.defl[n] = 0.0;
+            //         horizontalTail.mov.defl[n] = 0.0;
 
-                    aircraftInfo.hor.mov.defl[n] = 0.0;
-                }
-            }
+            //         aircraftInfo.hor.mov.defl[n] = 0.0;
+            //     }
+            // }
 
-            for (size_t n = 0; n < verticalTail.mov.defl.size(); n++)
-            {
+            // for (size_t n = 0; n < verticalTail.mov.defl.size(); n++)
+            // {
 
-                if (verticalTail.mov.defl[n] != 0.0)
-                {
-                    std::cout << "Warning: Vertical Tail control surface deflection detected. Lateral stability derivatives will be calculated for the undeflected configuration only." << std::endl;
+            //     if (verticalTail.mov.defl[n] != 0.0 || aircraftInfo.ver.mov.defl[n] != 0.0)
+            //     {
+            //         std::cout << "Warning: Vertical Tail control surface deflection detected. Lateral stability derivatives will be calculated for the undeflected configuration only." << std::endl;
 
-                    verticalTail.mov.defl[n] = 0.0;
+            //         verticalTail.mov.defl[n] = 0.0;
 
-                    aircraftInfo.ver.mov.defl[n] = 0.0;
-                }
-            }
+            //         aircraftInfo.ver.mov.defl[n] = 0.0;
+            //     }
+            // }
 
             // ========================================================================
             // STEP 1: Calculate Wing-Fuselage and Horizontal_Fuselage Contribution to Lateral Stability Derivative
@@ -1111,22 +1111,24 @@ namespace LATERAL_STABILITY
                 allGeomData,
                 fuselage.length);
 
-            SILENTORCOMPONENT::SilentorComponent silentor(builder.getCommonData().getNameOfAircraft(),
-                                                          "Silent_components.vspscript");
+            SILENTORCOMPONENT::SilentorComponent silentorWingFuselage(builder.getCommonData().getNameOfAircraft(),
+                                                          "Silent_components_wing_fuselage.vspscript");
 
             // Calculate CLwf
-            silentor.GetGeometryWithThisComponent(aircraftInfo, allGeomData, {wing.id, fuselage.id});
+            silentorWingFuselage.GetGeometryWithThisComponent(aircraftInfo, allGeomData, {wing.id, fuselage.id});
 
-            silentor.executeAnalysis(settings);
+            silentorWingFuselage.executeAnalysis(settings);
 
-            std::vector<double> liftCoefficientWingFuselage = silentor.getAerodynamicCoefficients().liftCoefficient;
+            std::vector<double> liftCoefficientWingFuselage = silentorWingFuselage.getAerodynamicCoefficients().liftCoefficient;
 
             // Calculate CLhf
-            silentor.GetGeometryWithThisComponent(aircraftInfo, allGeomData, {horizontalTail.id, fuselage.id});
+            SILENTORCOMPONENT::SilentorComponent silentorHorizontalFuselage(builder.getCommonData().getNameOfAircraft(),
+                                                                      "Silent_components_horizontal_fuselage.vspscript");
+            silentorHorizontalFuselage.GetGeometryWithThisComponent(aircraftInfo, allGeomData, {horizontalTail.id, fuselage.id});
 
-            silentor.executeAnalysis(settings);
+            silentorHorizontalFuselage.executeAnalysis(settings);
 
-            std::vector<double> liftCoefficientHorizontalFuselage = silentor.getAerodynamicCoefficients().liftCoefficient;
+            std::vector<double> liftCoefficientHorizontalFuselage = silentorHorizontalFuselage.getAerodynamicCoefficients().liftCoefficient;
 
             // Calculate Cl_beta/CL|sweepC2
             Interpolant3D ratioRollBettaLiftCoefficientInterpolator(2, RegressionMethod::POLYNOMIAL);

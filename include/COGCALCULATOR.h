@@ -573,7 +573,7 @@ namespace COG
 
         // LANDING GEAR COG
 
-        std::tuple<double, double, double> inline calculateCOGLandingGear()
+        std::tuple<double, double, double> calculateCOGLandingGear()
         {
 
             weight.landingGearWeightTorenbeek(builderData);
@@ -805,7 +805,7 @@ namespace COG
         }
 
         // ======================= Weights function =======================
-        void inline getWeights()
+        void getWeights()
         {
 
 
@@ -1031,7 +1031,7 @@ namespace COG
                                        operatingItemsWeight + payloadWeight + crewWeight + fuelWeight};
         }
 
-        std::tuple<double, double, double> inline calculateCOGAircraft()
+        std::tuple<double, double, double> calculateCOGAircraft()
         {
 
         
