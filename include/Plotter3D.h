@@ -62,7 +62,11 @@ private:
     double bgR = 0.15, bgG = 0.15, bgB = 0.15;
     int    logoMargin    = 20;        ///< Margine dal bordo in pixel
 
-    // ── Geometria ─────────────────────────────────────────────────────────────
+ 
+    /// @brief Builds a VTK PolyData object from a degenerate surface
+    /// @param surf The degenerate surface containing mesh data (x, y, z, nu, nw)
+    /// @return A VTK PolyData smart pointer containing the quad mesh
+    /// @throws std::invalid_argument if nu or nw < 2, or if data size is inconsistent
     vtkSmartPointer<vtkPolyData> buildPolyData(const DegenSurf& surf) const
     {
         if (surf.nu < 2 || surf.nw < 2)
@@ -92,6 +96,8 @@ private:
         return pd;
     }
 
+    /// @brief Adds all component actors to the renderer with their respective colors and properties
+    /// @param renderer VTK renderer to which actors will be added
     void addActors(vtkSmartPointer<vtkRenderer> renderer) const
     {
         for (const auto& surf : components)
@@ -111,6 +117,8 @@ private:
         }
     }
 
+    /// @brief Adds lighting to the renderer (headlight and fill light)
+    /// @param renderer VTK renderer to which lights will be added
     void addLights(vtkSmartPointer<vtkRenderer> renderer) const
     {
         auto light = vtkSmartPointer<vtkLight>::New();
@@ -125,6 +133,9 @@ private:
         renderer->AddLight(fill);
     }
 
+    /// @brief Configures the camera position and orientation based on the selected view
+    /// @param renderer VTK renderer whose camera will be configured
+    /// @param view Camera view type (TOP, SIDE, FRONT, or PERSPECTIVE)
     void setupCamera(vtkSmartPointer<vtkRenderer> renderer, CameraView view) const
     {
         renderer->SetBackground(bgR, bgG, bgB);
@@ -167,10 +178,11 @@ private:
         addLights(renderer);
     }
 
-    // ── Logo overlay — renderer su layer 1, viewport in basso a destra ────────
-    /// @brief Aggiunge il logo PNG come overlay in basso a destra nella render window.
-    ///        Usa un secondo renderer su Layer 1 con viewport calcolato dalla dimensione logo.
-    ///        Il logo viene scalato a logoMaxWidth mantenendo l'aspect ratio.
+    
+    /// @brief Adds a PNG logo as an overlay in the bottom-right corner of the render window
+    /// @details Uses a second renderer on Layer 1 with viewport calculated from logo dimensions.
+    ///          The logo is scaled to 25% of window width while maintaining aspect ratio.
+    /// @param renderWindow VTK render window to which the logo overlay will be added
     void addLogoOverlay(vtkSmartPointer<vtkRenderWindow> renderWindow) const
     {
         if (logoFilePath.empty())
@@ -221,7 +233,10 @@ private:
         renderWindow->AddRenderer(logoRenderer);
     }
 
-    // ── Core save ─────────────────────────────────────────────────────────────
+   
+    /// @brief Saves a single rendered view to a PNG file with specified camera orientation
+    /// @param filename Output PNG file path
+    /// @param view Camera view type (TOP, SIDE, FRONT, or PERSPECTIVE)
     void saveView(const std::string& filename, CameraView view) const
     {
         if (components.empty()) { std::cerr << "Nessun componente!\n"; return; }
@@ -257,18 +272,25 @@ private:
     }
 
 public:
+    /// @brief Constructs an AircraftPlotter for a specific aircraft
+    /// @param name Name of the aircraft (used in window titles and filenames)
     explicit AircraftPlotter(const std::string& name) : aircraftName(name) {}
 
-    // ── Aggiunta componenti ───────────────────────────────────────────────────
+    
 
-    /// @brief Aggiunge un componente con colore di default
+    /// @brief Adds a component with default color
+    /// @param surf Degenerate surface containing the component geometry
     void addComponent(const DegenSurf& surf)
     {
         components.push_back(surf);
         std::cout << "Componente aggiunto: " << surf.name << "\n";
     }
 
-    /// @brief Aggiunge un componente con colore da mappa prefisso→RGB [0,255]
+    /// @brief Adds a component with color determined from a prefix-to-RGB mapping
+    /// @param surf Degenerate surface containing the component geometry
+    /// @param colorMap Map from component name prefix to RGB color array [0-255]
+    /// @details Component color is set by matching the component name prefix with map keys.
+    ///          If no match is found, defaults to gray (128, 128, 128).
     void addComponentWithColorMap(
         const DegenSurf& surf,
         const std::map<std::string, std::array<double, 3>>& colorMap)
@@ -294,9 +316,10 @@ public:
                   << "  RGB: (" << s.r*255 << ", " << s.g*255 << ", " << s.b*255 << ")\n";
     }
 
-    // ── Salvataggio ───────────────────────────────────────────────────────────
+ 
 
-    /// @brief Salva le 4 viste standard (Top, Side, Front, Perspective)
+    /// @brief Saves all four standard views (Top, Side, Front, Perspective) as PNG files
+    /// @param outputDir Output directory path (default: current directory)
     void saveAllViews(const std::string& outputDir = ".") const
     {
         saveView(outputDir + "/" + aircraftName + "_TopView.png",         CameraView::TOP);
@@ -305,14 +328,18 @@ public:
         saveView(outputDir + "/" + aircraftName + "_PerspectiveView.png", CameraView::PERSPECTIVE);
     }
 
-    /// @brief Salva un singolo PNG con la vista scelta
+    /// @brief Saves a single PNG image with the selected camera view
+    /// @param filename Output PNG file path
+    /// @param view Camera view type (default: PERSPECTIVE)
     void savePNG(const std::string& filename,
                  CameraView view = CameraView::PERSPECTIVE) const
     {
         saveView(filename, view);
     }
 
-    /// @brief Apre la finestra 3D interattiva — BLOCCANTE
+    /// @brief Opens an interactive 3D window — BLOCKING CALL
+    /// @param view Initial camera view (default: PERSPECTIVE)
+    /// @details This method blocks until the user closes the window. Trackball camera controls are enabled.
     void show(CameraView view = CameraView::PERSPECTIVE) const
     {
         if (components.empty()) { std::cerr << "Nessun componente!\n"; return; }
@@ -340,7 +367,8 @@ public:
         interactor->Start();
     }
 
-    /// @brief Salva le 4 viste poi apre la finestra interattiva
+    /// @brief Saves all four standard views then opens the interactive window
+    /// @param outputDir Output directory path for saved PNG files (default: current directory)
     void plotAndSave(const std::string& outputDir = ".") const
     {
         saveAllViews(outputDir);
@@ -349,11 +377,25 @@ public:
 
     // ── Setters ───────────────────────────────────────────────────────────────
 
+    /// @brief Sets the default color for components (normalized RGB)
+    /// @param r Red component [0.0, 1.0]
+    /// @param g Green component [0.0, 1.0]
+    /// @param b Blue component [0.0, 1.0]
     void setColor(double r, double g, double b) { colorR = r; colorG = g; colorB = b; }
+    
+    /// @brief Sets the opacity for all components
+    /// @param o Opacity value [0.0 = transparent, 1.0 = opaque]
     void setOpacity(double o)                   { opacity = o; }
+    
+    /// @brief Sets the output image resolution
+    /// @param w Width in pixels
+    /// @param h Height in pixels
     void setResolution(int w, int h)            { width = w; height = h; }
 
-    /// @brief Imposta il colore di sfondo — RGB in [0, 255]
+    /// @brief Sets the background color (RGB in [0, 255] range)
+    /// @param r Red component [0, 255]
+    /// @param g Green component [0, 255]
+    /// @param b Blue component [0, 255]
     void setBackground(double r, double g, double b)
     {
         bgR = r / 255.0;
