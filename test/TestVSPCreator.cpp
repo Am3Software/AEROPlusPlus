@@ -2,6 +2,10 @@
 #define UNICODE         // Assicura che Windows usi le versioni wide delle strutture
 #define _UNICODE
 
+#include <vtkAOSDataArrayTemplate.h>
+template class vtkAOSDataArrayTemplate<int>;
+template class vtkAOSDataArrayTemplate<long long>;
+
 #include "VSPScriptGenerator.h"
 #include "VSPAeroGenerator.h"
 #include "VSPGEOMETRYEXTRACTOR.h"
@@ -36,7 +40,11 @@
 #include "DIRECTIONALSTABILITY.h"
 #include "LATERALSTABILITY.h"
 #include "SILENTORCOMPONENT.h"
-#include "StaticDerivativesExcelWriter.h"
+#include "DerivativesExcelWriter.h"
+#include "MomentOfInertiaCalculator.h"
+#include "ChordCalculator.h"
+#include "DegenGeomParser.h"
+#include "Plotter3D.h"
 #include <Eigen/Dense>
 #include <iostream>
 #include <filesystem>
@@ -134,7 +142,7 @@ int main()
     wing.mov.cf_c_inner = {0.25, 0.3};
     wing.mov.cf_c_outer = {0.3, 0.3};
     wing.mov.tessellation = {10, 10};
-    wing.mov.defl = {30, 0};
+    wing.mov.defl = {0, 0};
 
     ac.wing.mov.type = wing.mov.type;
     ac.wing.mov.defl = wing.mov.defl;
@@ -188,7 +196,7 @@ int main()
     horizontal.mov.cf_c_inner = {0.25};
     horizontal.mov.cf_c_outer = {0.3};
     horizontal.mov.tessellation = {10};
-    horizontal.mov.defl = {-10};
+    horizontal.mov.defl = {0};
 
     ac.hor.mov.type = horizontal.mov.type;
     ac.hor.mov.defl = horizontal.mov.defl;
@@ -608,6 +616,35 @@ int main()
     //     return 1;
     // }
 
+
+    // ==================== 3D - AIRCRAFT REPRESENTATION TEST ====================
+
+    // Leggi il file DegenGeom
+    DegenGeomReader reader("P2012_DegenGeom.csv");
+    auto components = reader.read();
+
+    // Crea il plotter
+    AircraftPlotter plotter("P2012");
+    plotter.setResolution(2560,1440);
+    plotter.setBackground(12, 116, 228);
+    std::map<std::string, std::array<double, 3>> colorMap = {
+        {wing.id, {0, 0, 255}},
+        {horizontal.id, {0, 255, 0}},
+        {vertical.id, {255, 0, 255}},
+        {fus.id, {180, 180, 180}},
+        {nac.id, {100, 200, 255}}, // matcha nacelle_1 e nacelle_2
+        {disk.id, {80, 80, 80}}};
+
+    for (const auto &surf : components)
+    {
+        plotter.addComponentWithColorMap(surf, colorMap);
+    }
+
+    // Mostra la finestra 3D interattiva
+    plotter.show();
+
+    plotter.saveAllViews(std::filesystem::current_path().string());
+
     // ==================== COG CALCULATION ====================
 
     BuildAircraft builder("P2012", settings);
@@ -671,78 +708,24 @@ int main()
     // // baseData.setDiveSpeed(111);
     // // baseData.
 
-    LONGITUDINAL_STABILITY::LongitudinalStabilityCalculator stabilityCalc(builder,
-                                                                          cogData,
-                                                                          ac,
-                                                                          settings,
-                                                                          wing,
-                                                                          horizontal,
-                                                                          fus,
-                                                                          nac,
-                                                                          disk);
+    // ================= CHORD INTERPOLATOR TEST ====================
 
-    stabilityCalc.calculateLongitudinalStability();
+   std::vector<double> etaStaionVec = {0.0, 0.25, 0.40, 0.5, 0.75, 1.0};
+   std::vector<double> chordEvaluated;
 
-    // AR = 4.0
-    std::vector<double> x_AR4 = {1.987690, 1.882740, 1.774640, 1.618870, 1.488560, 1.392180,
-                                 1.254540, 1.178300, 1.091490, 1.023750, 0.960280, 0.882022,
-                                 0.805917, 0.738358, 0.668714, 0.618095, 0.563305, 0.516943,
-                                 0.464390, 0.422469, 0.387092, 0.355955, 0.331126, 0.302226,
-                                 0.283739, 0.271578, 0.261451};
-    std::vector<double> y_AR4 = {0.050866, 0.048525, 0.049383, 0.053791, 0.061171, 0.069339,
-                                 0.087354, 0.096420, 0.109800, 0.120915, 0.136225, 0.157999,
-                                 0.183987, 0.218368, 0.256997, 0.289128, 0.329754, 0.363968,
-                                 0.419383, 0.478945, 0.561724, 0.644469, 0.720818, 0.818352,
-                                 0.892536, 0.962438, 1.021750};
+    for (const auto &eta : etaStaionVec)
+    {
+        chordEvaluated.push_back(ChordCalculator(wing).getChordAtEtaStation(eta, wing.typeOfWing));
+    }
 
-    // AR = 6.0
-    std::vector<double> x_AR6 = {1.990130, 1.913810, 1.848090, 1.792470, 1.708250, 1.624030,
-                                 1.538210, 1.474690, 1.400020, 1.326960, 1.255480, 1.191990,
-                                 1.112620, 1.036470, 0.949220, 0.874730, 0.816087, 0.762289,
-                                 0.721171, 0.664194, 0.610485, 0.577303, 0.539452, 0.492178,
-                                 0.444966, 0.410536, 0.377657, 0.343454, 0.318751, 0.291008,
-                                 0.271138, 0.254182};
-    std::vector<double> y_AR6 = {0.092095, 0.090585, 0.088992, 0.092077, 0.097504, 0.102932,
-                                 0.106786, 0.115222, 0.122160, 0.130673, 0.139172, 0.152368,
-                                 0.167276, 0.186918, 0.211407, 0.240555, 0.263232, 0.295388,
-                                 0.322685, 0.354867, 0.398129, 0.423776, 0.462152, 0.514882,
-                                 0.575543, 0.644036, 0.707757, 0.804805, 0.897018, 1.006710,
-                                 1.106810, 1.173580};
+    Plot plotChordDistrubution(etaStaionVec, chordEvaluated,
+                       "Eta station (-)",
+                       "Chord (m)",
+                       "Chord distribution",
+                       "Distribution",
+                       "linespoints", "2", "1", "7", "1", "orange");
 
-    // AR = 9.0
-    std::vector<double> x_AR9 = {1.978750, 1.913580, 1.842040, 1.762560, 1.662440, 1.551230,
-                                 1.447980, 1.351100, 1.247900, 1.166990, 1.094010, 1.011530,
-                                 0.929097, 0.851491, 0.778604, 0.701086, 0.639517, 0.577934,
-                                 0.525979, 0.482010, 0.434975, 0.403750, 0.370997, 0.347771,
-                                 0.318248, 0.295022, 0.275038, 0.256643};
-    std::vector<double> y_AR9 = {0.127089, 0.127606, 0.128173, 0.130390, 0.134357, 0.144758,
-                                 0.155097, 0.168557, 0.185241, 0.206507, 0.226124, 0.250576,
-                                 0.279787, 0.316892, 0.347613, 0.395823, 0.450253, 0.503096,
-                                 0.566968, 0.635536, 0.718408, 0.790048, 0.869633, 0.947555,
-                                 1.033460, 1.111380, 1.197210, 1.283030};
-
-    // AR = 12.0
-    std::vector<double> x_AR12 = {1.985290, 1.910570, 1.808870, 1.689720, 1.592820, 1.473690,
-                                  1.384750, 1.295880, 1.199070, 1.116580, 1.051570, 0.988131,
-                                  0.919988, 0.851845, 0.780598, 0.723658, 0.668384, 0.613199,
-                                  0.554859, 0.502967, 0.462216, 0.426157, 0.396660, 0.367087,
-                                  0.336013, 0.314452, 0.285081, 0.272894, 0.254563};
-    std::vector<double> y_AR12 = {0.149248, 0.149840, 0.155407, 0.165871, 0.176159, 0.189796,
-                                  0.201607, 0.221350, 0.242742, 0.265607, 0.286748, 0.306289,
-                                  0.333800, 0.361311, 0.398366, 0.435307, 0.481754, 0.539306,
-                                  0.600056, 0.671860, 0.745162, 0.808908, 0.897986, 0.977546,
-                                  1.068220, 1.155650, 1.260590, 1.327320, 1.421070};
-
-    // Initialize interpolator with power regression method
-    Interpolant2D upwashInterpolator(1, RegressionMethod::POWER);
-
-    // Add all curves
-    upwashInterpolator.addCurve(4.0, x_AR4, y_AR4);
-    upwashInterpolator.addCurve(6.0, x_AR6, y_AR6);
-    upwashInterpolator.addCurve(9.0, x_AR9, y_AR9);
-    upwashInterpolator.addCurve(12.0, x_AR12, y_AR12);
-
-    double downWashGradientOnWingDueToCanard = upwashInterpolator.interpolate(0.8, 9.0);
+    // ================= AIRCRAFT GEOMETRY EXTRACTION TEST ====================
 
     std::cout << "========================================" << std::endl;
     std::cout << "  AIRCRAFT GEOMETRY EXTRACTION TOOL" << std::endl;
@@ -779,6 +762,7 @@ int main()
         nac.length);
 
     // ==================== FUSELAGE SECTION DATA ====================
+
     std::cout << "=== Fuselage Sections Data ===" << std::endl;
     std::cout << std::fixed << std::setprecision(4);
     std::cout << std::left << std::setw(12) << "Section"
@@ -798,6 +782,7 @@ int main()
     }
 
     // ==================== NACELLE SECTION DATA ====================
+
     std::cout << "\n=== Nacelle Sections Data ===" << std::endl;
     std::cout << std::fixed << std::setprecision(4);
     std::cout << std::left << std::setw(12) << "Section"
@@ -817,6 +802,20 @@ int main()
     }
 
     // ==================== LONGITUDINAL DERIVATIVES TEST ====================
+
+    LONGITUDINAL_STABILITY::LongitudinalStabilityCalculator stabilityCalc(builder,
+                                                                          cogData,
+                                                                          ac,
+                                                                          settings,
+                                                                          wing,
+                                                                          horizontal,
+                                                                          fus,
+                                                                          nac,
+                                                                          disk);
+
+    stabilityCalc.calculateLongitudinalStability();
+
+    
 
     std::cout << "\n=== LONGITUDINAL AIRCRAFT DERIVATIVES TEST ===" << std::endl;
     std::cout << std::fixed << std::setprecision(6);
@@ -848,17 +847,7 @@ int main()
     directionalStabilityCalc.calculateDirectionalStabilityDerivatives();
 
 
-    // // ==================== TEST SILENTOR COMPONENT ====================
-
-    // SILENTORCOMPONENT::SilentorComponent silentor("P2012");
-
-    // silentor.GetGeometryWithSilentComponent("P2012_silent_componets.vspscript", ac, allGeomData, {"wing","TransportFuse"});
-
-    // silentor.executeAnalysis(settings);
-
-    // std::vector<double> liftCoefficienttWingFuselage = silentor.getAerodynamicCoefficients().liftCoefficient;
-
-
+   
     // ==================== LATERAL STABILITY TEST ====================
 
     LATERAL_STABILITY::LateralStabilityCalculator lateralStabilityCalc(builder,
@@ -875,10 +864,12 @@ int main()
     lateralStabilityCalc.calculateLateralStabilityDerivatives();
 
 
-    // ==================== TEST EXCEL WRITER====================
+    // ==================== TEST EXCEL WRITER ====================
 
     DerivativeExcelWriter excelWriter;
 
+    // Case 1
+    
     excelWriter.writeDerivativesToExcel("TestExcelDerivatives.xlsx",
                                         "P2012",
                                         settings,
@@ -887,12 +878,24 @@ int main()
                                         directionalStabilityCalc.getSingleComponentsDerivativesYaw(),
                                         lateralStabilityCalc.getComponentsLateralStabilityDerivativesRoll(),
                                         stabilityCalc.getTotalAircrfatLongitudinalDerivatives(),
+                                        stabilityCalc.getTotalAircrfatLongitudinalDynamicDerivatives(),
                                         directionalStabilityCalc.getAircraftDirectionalDerivatives(),
                                         lateralStabilityCalc.getAircraftLateralStabilityDerivativesRoll());
 
+    // Case 2
 
-
-
+    // excelWriter.writeDerivativesToExcel("TestExcelDerivatives.xlsx",
+    //                                     "P2012",
+    //                                     settings,
+    //                                     stabilityCalc.getLongitudinalStabilityDerivativesToSingleComponent(),
+    //                                     {},
+    //                                     {},
+    //                                     {},
+    //                                     stabilityCalc.getTotalAircrfatLongitudinalDerivatives(),
+    //                                     stabilityCalc.getTotalAircrfatLongitudinalDynamicDerivatives(),
+    //                                     {},
+    //                                     {}
+    //                                     );
 
     // ==================== TEST TRIM CONDITION ==========================
 
@@ -953,13 +956,92 @@ int main()
     }
 
     // ========================================================================
-    //     Optional: Plot downwash angle vs angle of attack (currently commented)
-    //     ========================================================================
+    //     TRIM CONDITION PLOT
+    // ========================================================================
+
     Plot plot(CLe, deltaE,
               "CL (-)",
               "Elevator deflection (deg)",
               "Trim - condition",
               "deltaE vs CLe",
+              "lines", "1", "1", "", "", "blue");
+
+
+    
+    // ==================== MOMENT OF INERTIA TEST ====================
+
+    MomentOfInertia momentOfInertiaCalculator(builder);
+
+    MomentOfInertia::Result inertiaResult = momentOfInertiaCalculator.compute(wing, fus);
+
+
+    std::cout << "\n=== MOMENT OF INERTIA RESULTS ===" << std::endl;
+    std::cout << "Ixx: " << inertiaResult.Ixx << " kg·m²" << std::endl;
+    std::cout << "Iyy: " << inertiaResult.Iyy << " kg·m²" << std::endl;
+    std::cout << "Izz: " << inertiaResult.Izz << " kg·m²" << std::endl;
+
+
+    // ==================== SHORT PERIOD TEST ====================
+
+    double WTO = data.commonData.getWTO();
+    
+    double dynamicPressure = 0.5 * settings.rho * std::pow(settings.Vinf, 2);
+
+    double momentDerivativeWithRespectToQ = (settings.rho * settings.Vinf * settings.Sref *
+                                             std::pow(settings.Cref, 2) * 57.3 * stabilityCalc.getTotalAircrfatLongitudinalDynamicDerivatives().deltaCmDeltaPitchSpeed) /
+                                            (4 * inertiaResult.Iyy);
+
+    double momentDerivativeWithRespectToAlpha = (dynamicPressure * settings.Sref * settings.Cref *
+                                                 57.3 * stabilityCalc.getTotalAircrfatLongitudinalDerivatives().deltaCmDeltaAlphaAircraft) /
+                                                inertiaResult.Iyy;
+
+    double zitaSP = - momentDerivativeWithRespectToQ / (2 * std::sqrt(-momentDerivativeWithRespectToAlpha));
+    double omegaNSP = std::sqrt(-momentDerivativeWithRespectToAlpha);
+
+    double actualDamping = 2*zitaSP*omegaNSP*WTO;
+
+    double stiffness = std::pow(omegaNSP, 2)*WTO;
+
+    ODE45 ode45( // CTAD → ODE45<vector<double>>
+        [WTO, actualDamping, stiffness](double /*t*/, const std::vector<double> &y) -> std::vector<double>
+        {
+            return {
+                y[1],                            // x'
+                -(actualDamping / WTO) * y[1] - (stiffness / WTO) * y[0] // x''
+            };
+        },
+        0.0,                   // t0
+        20.0,                  // tf
+        std::vector{0.0, 0.1}, // y0 = {deltaAlpha, deltaQ}  <- vector<double> → deduce State
+        0.01                   // dt
+    );
+
+    // Estrai le colonne dal risultato
+    const auto &ySolutions = ode45.getY(); // vector<vector<double>>
+
+    // Estrai x(t) e x_dot(t) come vettori separati
+    std::vector<double> x_vec, xdot_vec;
+    x_vec.reserve(ySolutions.size());
+    xdot_vec.reserve(ySolutions.size());
+
+    for (const auto &row : ySolutions)
+    {
+        x_vec.push_back(57.3*row[0]);    // AoA vartion (deg)
+        xdot_vec.push_back(57.3*row[1]); // Pitch rate (deg/s)
+    }
+
+     Plot plotPitchRate(ode45.getT(), xdot_vec,
+              "Time (s)",
+              "Pitch rate (deg/s)",
+              "Short period response",
+              "SP response",
+              "lines", "1", "1", "", "", "blue");
+
+    Plot plotAoA(ode45.getT(), x_vec,
+              "Time (s)",
+              "AOA (deg)",
+              "Short period response",
+              "SP response",
               "lines", "1", "1", "", "", "blue");
 
     // ==================== SAVE OUTPUT FILES ====================
