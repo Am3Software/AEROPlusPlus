@@ -206,14 +206,14 @@ AEROPlusPlus/
 │   ├── RegressionTest.cpp
 │   ├── AircraftData.cpp
 │   ├── TestLaunchVSP.cpp
-│   └── TestVSPCreator.cpp
+│   ├── TestVSPCreator.cpp
+│   └── A320Neo_Test.cpp
 ├── logo/                       # Project logo (used in PNG exports)
 │   └── AeroPlusPLus_logo.png
 ├── ExcelFiles/                 # Example Excel data files
 ├── CMakeLists.txt
 ├── README.md
 └── LICENSE
-```
 
 ---
 
