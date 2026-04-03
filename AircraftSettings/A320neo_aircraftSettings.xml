@@ -1,34 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
 <myXMLDataToAircraft>
 	<generalData>
-		<nameOfAircraft>P2012</nameOfAircraft>
-		<aircraftCategory>GA</aircraftCategory>
-		<aircraftEngineCategory>Twin_Engine</aircraftEngineCategory>
+		<nameOfAircraft>A320neo</nameOfAircraft>
+		<aircraftCategory>Transport_Jet</aircraftCategory>
+		<aircraftEngineCategory>Jet_Engine</aircraftEngineCategory>
 		<setConvergenceToll>0.01</setConvergenceToll>
-		<numberOfPax>9</numberOfPax>
-		<wingPosition>High_Wing</wingPosition>
-		<rangeCovered>500</rangeCovered>
-		<maximumTakeOffWeight>3680.0</maximumTakeOffWeight>
-		<maxFuelCapability>694.0</maxFuelCapability>
-		<payload>720.0</payload>
+		<numberOfPax>180</numberOfPax>
+		<wingPosition>Low_Wing</wingPosition>
+		<rangeCovered>2050</rangeCovered>
+		<maximumTakeOffWeight>79000</maximumTakeOffWeight>
+		<maxFuelCapability>21585</maxFuelCapability>
+		<payload>15660</payload>
 		<nUlt>2.5</nUlt>
-		<diveSpeed>111.0</diveSpeed>
-		<climbCASSpeed>85</climbCASSpeed>
-		<descentCASSpeed>135</descentCASSpeed>
-		<RateOfDescent>648</RateOfDescent>
+		<diveSpeed>291.25</diveSpeed>
+		<climbCASSpeed>310</climbCASSpeed>
+		<descentCASSpeed>300</descentCASSpeed>
+		<RateOfDescent>2000</RateOfDescent>
 		<tailConfiguration>Conventional_Tail</tailConfiguration>
 		<controlSurfaceParameter>0.64</controlSurfaceParameter>
 		<isaDeltaTemp>0</isaDeltaTemp>
 		<obstacolHeightTakeOff>35</obstacolHeightTakeOff>
 		<obstacolHeightLanding>50</obstacolHeightLanding>
 		<holdingTime>0.5</holdingTime>
-		<altitudeHolding>5000</altitudeHolding>
-		<holdingMach>0.06</holdingMach>
+		<altitudeHolding>10000</altitudeHolding>
+		<holdingMach>0.25</holdingMach>
 		<altitudeAlternate>0</altitudeAlternate>
-		<alternateMach>5000</alternateMach>
+		<alternateMach>0</alternateMach>
 		<alternateRange>0</alternateRange>
 		<reserveFraction>0.05</reserveFraction>
-		<oswaldFactorCruise>0.80142</oswaldFactorCruise>
+		<oswaldFactorCruise>0.7391</oswaldFactorCruise>
 		<takeOffAirportAltitude>0</takeOffAirportAltitude>
 		<groundFrictionCoeffTakeOff>0.03</groundFrictionCoeffTakeOff>
 		<landingAirportAltitude>0</landingAirportAltitude>
@@ -38,44 +38,44 @@
 		<nApproachCoeff>1.3</nApproachCoeff>
 		<nTouchDownCoeff>1.15</nTouchDownCoeff>
 		<nFlareCoeff>1.23</nFlareCoeff>
-		<enableAPU>false</enableAPU>
+		<enableAPU>true</enableAPU>
 		<enableFeQ>true</enableFeQ>
 		<enableACI>true</enableACI>
-		<typeOfComposite>Fiberglass</typeOfComposite>
+		<typeOfComposite>CarbonFiber</typeOfComposite>
 	</generalData>
 	<aerodynamicData>
-		<DeltaCd0TO>0.025</DeltaCd0TO>
-		<CLgroundTO>0.35257</CLgroundTO>
-		<DeltaCDOEI>0.0034</DeltaCDOEI>
-		<DeltaCDOEIClimb>0.0034</DeltaCDOEIClimb>
-		<CLgroundLnd>0.35977</CLgroundLnd>
-		<DeltaCD0Lnd>0.034</DeltaCD0Lnd>
-		<meanAirfoilWingSlope>0.11</meanAirfoilWingSlope><!-- Default value 0.11 deg^(-1) -->
+		<DeltaCd0TO>0.02</DeltaCd0TO>
+		<CLgroundTO>0.6458</CLgroundTO>
+		<DeltaCDOEI>0.005</DeltaCDOEI>
+		<DeltaCDOEIClimb>0.005</DeltaCDOEIClimb>
+		<CLgroundLnd>0.75</CLgroundLnd>
+		<DeltaCD0Lnd>0.031</DeltaCD0Lnd>
+		<meanAirfoilWingSlope>0.106</meanAirfoilWingSlope><!-- Default value 0.11 deg^(-1) -->
 		<meanAirfoilHorizontalSlope>0.11</meanAirfoilHorizontalSlope><!-- Default value 0.11 deg^(-1) -->
 		<meanAirfoilCanardSlope>0.0</meanAirfoilCanardSlope><!-- Default value 0.11 deg^(-1) -->
 		<meanAirfoilVerticalSlope>0.11</meanAirfoilVerticalSlope><!-- Default value 0.11 deg^(-1) -->
 	</aerodynamicData>
 	<wingData>
 		<wingMethodWeight>Wing_Torenbeek</wingMethodWeight>
-		<typeOfWing>Straight_Tapered</typeOfWing>
-		<spanWing>14</spanWing>
-		<planformSurface>25.7565</planformSurface>
+		<typeOfWing>Cranked</typeOfWing>
+		<spanWing>39.7074</spanWing>
+		<planformSurface>126.746</planformSurface>
 		<maximumFlapDeflection>35</maximumFlapDeflection>
 		<typeOfFlap>SLOTTED</typeOfFlap>
-		<skinRoughnessTypeWing>Production_Sheet_Metal</skinRoughnessTypeWing>
-		<wingHeightFromGround>1.86</wingHeightFromGround>
-		<sweepC4Wing>-1.2071</sweepC4Wing>
-		<sweepC2Wing>-2.4131</sweepC2Wing>
-		<cRoot>2.0038</cRoot>
+		<skinRoughnessTypeWing>Smooth_Paint</skinRoughnessTypeWing>
+		<wingHeightFromGround>3.553</wingHeightFromGround>
+		<sweepC4Wing>25.6492</sweepC4Wing>
+		<sweepC2Wing>22.8644</sweepC2Wing>
+		<cRoot>7.25</cRoot>
 		<taperRatio>0</taperRatio>
-		<wingFairingType>Filleted</wingFairingType>
-		<thicknessToRootChordRatio>0.15</thicknessToRootChordRatio>
+		<wingFairingType>Carefully_Designed</wingFairingType>
+		<thicknessToRootChordRatio>0.13825</thicknessToRootChordRatio>
 		<adimAerodynamicCenter>0.25</adimAerodynamicCenter><!-- Aerodynamic Center Position in percentage of the MAC (Mean Aerodynamic Chord) -->
-		<underCarriagePosition>Body_Mounted</underCarriagePosition>
-		<isSweptWing>false</isSweptWing>
-		<spoilerFlag>false</spoilerFlag>
+		<underCarriagePosition>Wing_Mounted</underCarriagePosition>
+		<isSweptWing>true</isSweptWing>
+		<spoilerFlag>true</spoilerFlag>
 		<isBracedWing>false</isBracedWing>
-		<isFowlerFlap>false</isFowlerFlap>
+		<isFowlerFlap>true</isFowlerFlap>
 		<isSimplifiedFlapSystem>true</isSimplifiedFlapSystem>
 		<isCompositeWing>false</isCompositeWing>
 		<isEngineInstallatedOnWing>true</isEngineInstallatedOnWing>
@@ -95,26 +95,26 @@
 		<canardPosition>Unknown</canardPosition>
 		<canardSurface>0</canardSurface>
 		<maximumCanardFlapDefelction>0</maximumCanardFlapDefelction>
-		<canardFairingType>Filleted</canardFairingType>
-		<skinRoughnessTypeCanard>Production_Sheet_Metal</skinRoughnessTypeCanard>
+		<canardFairingType>Carefully_Designed</canardFairingType>
+		<skinRoughnessTypeCanard>Smooth_Paint</skinRoughnessTypeCanard>
 		<sweepC2Canard>0</sweepC2Canard>
 		<mainSparPositionCanard>0</mainSparPositionCanard>
 		<secondSparPositionCanard>0</secondSparPositionCanard>
 	</canardData>
 	<horizontalData>
-		<horizontalSurface>5.2335</horizontalSurface>
-		<sweepC2Horizontal>6.7462</sweepC2Horizontal>
+		<horizontalSurface>32.5213</horizontalSurface>
+		<sweepC2Horizontal>21.7732</sweepC2Horizontal>
 		<maximumElevatorDeflection>25</maximumElevatorDeflection>
-		<skinRoughnessTypeHorizontal>Production_Sheet_Metal</skinRoughnessTypeHorizontal>
+		<skinRoughnessTypeHorizontal>Smooth_Paint</skinRoughnessTypeHorizontal>
 		<flagStabilizer>fixed</flagStabilizer>
-		<horizontalZPosition>0</horizontalZPosition>
+		<horizontalZPosition>2.787</horizontalZPosition>
 	</horizontalData>
 	<verticalData>
-		<spanVertical>2.334</spanVertical>
-		<verticalSurface>4.1554</verticalSurface>
+		<spanVertical>5.87</spanVertical>
+		<verticalSurface>21.5381</verticalSurface>
 		<maximumRudderDeflection>30</maximumRudderDeflection>
-		<skinRoughnessTypeVertical>Production_Sheet_Metal</skinRoughnessTypeVertical>
-		<sweepC2Vertical>12.3</sweepC2Vertical>
+		<skinRoughnessTypeVertical>Smooth_Paint</skinRoughnessTypeVertical>
+		<sweepC2Vertical>22.4565</sweepC2Vertical>
 	</verticalData>
 	<ventralFinData>
 		<ventralFinSurface>0</ventralFinSurface>
@@ -124,33 +124,33 @@
 	</ventralFinData>
 	<fuselageData>
 		<fuselageWeightMethod>Fuselage_Torenbeek</fuselageWeightMethod>
-		<fuselageWettedArea>47.8181</fuselageWettedArea>
-		<tailArm>6.2281</tailArm>
-		<maxFuselageWidth>1.546</maxFuselageWidth>
-		<maxFuselageHeight>1.546</maxFuselageHeight>
-		<skinRoughnessTypeFuselage>Production_Sheet_Metal</skinRoughnessTypeFuselage>
-		<windScreenType>Flat_With_Flush_Frame</windScreenType><!-- Put Flat_With_Protruding_Frame,Flat_With_Flush_Frame,Curved_With_Sharp_Upper_Edge or Curved_With_Rounded_Upper_Edge -->
-		<isPressurized>false</isPressurized>
-		<cargoFlag>false</cargoFlag>
-		<framesMaterial>Alluminium</framesMaterial>
+		<fuselageWettedArea>410.952</fuselageWettedArea>
+		<tailArm>19.9</tailArm>
+		<maxFuselageWidth>3.768</maxFuselageWidth>
+		<maxFuselageHeight>4.141</maxFuselageHeight>
+		<skinRoughnessTypeFuselage>Smooth_Paint</skinRoughnessTypeFuselage>
+		<windScreenType>Curved_With_Rounded_Upper_Edge</windScreenType><!-- Put Flat_With_Protruding_Frame,Flat_With_Flush_Frame,Curved_With_Sharp_Upper_Edge or Curved_With_Rounded_Upper_Edge -->
+		<isPressurized>true</isPressurized>
+		<cargoFlag>none</cargoFlag>
+		<framesMaterial>Titanium</framesMaterial>
 		<stringersMaterial>Alluminium</stringersMaterial>
 		<skinMaterial>Alluminium</skinMaterial>
 	</fuselageData>
 	<landingGearData>
 		<isRetractableGear>true</isRetractableGear>
-		<strutLengthNose>0.4</strutLengthNose>
-		<strutLengthMain>0.4</strutLengthMain>
-		<strutMainWidth>0.1</strutMainWidth>
-		<strutNoseWidth>0.08</strutNoseWidth>
-		<strutMainDiameter>0.1</strutMainDiameter>
-		<strutNoseDiameter>0.08</strutNoseDiameter>
-		<noseWheelWidth>0.1</noseWheelWidth>
-		<noseWheelDiamter>0.35</noseWheelDiamter>
-		<mainWheelWidth>0.15</mainWheelWidth>
-		<mainWheelDiamter>0.5</mainWheelDiamter>
-		<numberOfNoseWheel>1</numberOfNoseWheel>
+		<strutLengthNose>2.219</strutLengthNose>
+		<strutLengthMain>2.219</strutLengthMain>
+		<strutMainWidth>0.230</strutMainWidth>
+		<strutNoseWidth>0.180</strutNoseWidth>
+		<strutMainDiameter>0.230</strutMainDiameter>
+		<strutNoseDiameter>0.180</strutNoseDiameter>
+		<noseWheelWidth>0.168</noseWheelWidth>
+		<noseWheelDiamter>0.660</noseWheelDiamter>
+		<mainWheelWidth>0.432</mainWheelWidth>
+		<mainWheelDiamter>1.168</mainWheelDiamter>
+		<numberOfNoseWheel>2</numberOfNoseWheel>
 		<numberOfNoseStrut>1</numberOfNoseStrut>
-		<numberOfMainWheel>2</numberOfMainWheel>
+		<numberOfMainWheel>4</numberOfMainWheel>
 		<numberOfMainStrut>2</numberOfMainStrut>
 	</landingGearData>
 	<boomData>
@@ -168,38 +168,38 @@
 	</eoirData>
 	<engineData>
 		<numberOfEngines>2</numberOfEngines>
-		<numberOfBlades>4</numberOfBlades>
+		<numberOfBlades>0</numberOfBlades>
 		<engineConfiguration>Wing_Mounted</engineConfiguration>
-		<skinRoughnessTypeNacelle>Production_Sheet_Metal</skinRoughnessTypeNacelle>
-		<hasWaterInjectionSystem>false</hasWaterInjectionSystem>
-		<kPGFactor>1.35</kPGFactor>
-		<kTHRFactor>1.0</kTHRFactor>
-		<thrust>0</thrust>
-		<power>375</power>
+		<skinRoughnessTypeNacelle>Smooth_Paint</skinRoughnessTypeNacelle>
+		<hasWaterInjectionSystem>true</hasWaterInjectionSystem>
+		<kPGFactor>1.15</kPGFactor><!-- kPG = 1.16 single tractor-propeller - kPG = 1.35 for multiengine propellers airplanes - kPG = 1.15 for jet aircraft, podded engines - kPG = 1.40 for light jet aircraft, buried engines -->
+		<kTHRFactor>1.18</kTHRFactor><!-- kTHR = 1.0 no thrust reverse - kTHR = 1.18 thrust reverse installed -->
+		<thrust>35000</thrust><!-- Thrust in lbf -->
+		<power>0</power><!-- Power in Hp -->
 		<propellerEfficiency>0.8</propellerEfficiency>
-		<sfc>0.45</sfc>
-		<sfcj>0</sfcj>
-		<criticalAltitude>10000</criticalAltitude>
+		<sfc>0</sfc><!-- Specific fuel consumption propeller-driven lb/hp/hr -->
+		<sfcj>0.55</sfcj><!-- Specific fuel consumption jet-driven in lb/lb/hr -->
+		<criticalAltitude>10000</criticalAltitude><!-- Only for turbocharged engine (ft) -->
 		<thrustToPowerRatio>2.8</thrustToPowerRatio>
-		<reverseThrustToWeightRatio>0</reverseThrustToWeightRatio>
-		<nacelleWettedArea>0</nacelleWettedArea>
-		<typeOfInlet>Scoop_Inlet</typeOfInlet>
-		<aircraftEngineType>Turbocharged</aircraftEngineType>
-		<engineDeck>Generic_TurboCharged</engineDeck>
+		<reverseThrustToWeightRatio>0.0</reverseThrustToWeightRatio>
+		<nacelleWettedArea>27.573</nacelleWettedArea>
+		<typeOfInlet>Scoop_Inlet</typeOfInlet><!-- Only for propeller-drive aircraft put Scoop_Inlet or Anular_Inlet -->
+		<aircraftEngineType>Jet_Turbofan</aircraftEngineType>
+		<engineDeck>Generic_TurboFan</engineDeck>
 	</engineData>
 	<crewData>
-		<crewNumber>2</crewNumber>
+		<crewNumber>6</crewNumber>
 		<crewMass>76.51</crewMass>
 	</crewData>
 	<loadingCycleData>
 		<numbersOfAisle>1</numbersOfAisle>
-		<aisleWidth>0.394</aisleWidth>
-		<seatToWall>0.143</seatToWall>
-		<seatStrategy>1+1</seatStrategy>
-		<deltaXCabin>0.5</deltaXCabin>
-		<deltaXSeat>0.8</deltaXSeat>
-		<deltaYSeat>0.433</deltaYSeat>
-		<cockpitLength>2.9405</cockpitLength>
+		<aisleWidth>0.707</aisleWidth>
+		<seatToWall>0.19</seatToWall>
+		<seatStrategy>3+3</seatStrategy>
+		<deltaXCabin>2.12</deltaXCabin>
+		<deltaXSeat>0.773</deltaXSeat>
+		<deltaYSeat>0.54</deltaYSeat>
+		<cockpitLength>4.398</cockpitLength>
 		<isStraightTaperedWing>false</isStraightTaperedWing>
 	</loadingCycleData>
 	<weightCalibrationFactor>
@@ -211,15 +211,15 @@
 		<kFuselage>1</kFuselage>
 		<kBoom>1</kBoom>
 		<kEoir>1</kEoir>
-		<kUnderCarriage>0.5</kUnderCarriage>
+		<kUnderCarriage>1</kUnderCarriage>
 		<kAPU>1</kAPU>
-		<kControlSurfaces>1</kControlSurfaces>
+		<kControlSurfaces>1.05</kControlSurfaces>
 		<kPropulsionGroup>1</kPropulsionGroup>
 		<kInstruments>1</kInstruments>
-		<kHydraulicAndPenumatic>1</kHydraulicAndPenumatic>
-		<kElectricalGroup>1</kElectricalGroup>
-		<kAvionic>1</kAvionic>
-		<kFurnishingAndEquipment>1</kFurnishingAndEquipment>
+		<kHydraulicAndPenumatic>1.05</kHydraulicAndPenumatic>
+		<kElectricalGroup>1.05</kElectricalGroup>
+		<kAvionic>1.05</kAvionic>
+		<kFurnishingAndEquipment>1.08</kFurnishingAndEquipment>
 		<kAntiIcingAndConditioning>1</kAntiIcingAndConditioning>
 		<kOperatingItems>1</kOperatingItems>
 	</weightCalibrationFactor>
@@ -233,9 +233,9 @@
 		<kBoom>1,1</kBoom>
 		<kEoir>1,1</kEoir>
 		<kUnderCarriage>1,1</kUnderCarriage>
-		<kAPU>1,0</kAPU>
+		<kAPU>1,0.35</kAPU>
 		<kControlSurfaces>1,1</kControlSurfaces>
-		<kPropulsionGroup>1,1</kPropulsionGroup>
+		<kPropulsionGroup>1,0.3</kPropulsionGroup>
 		<kInstruments>1,1</kInstruments>
 		<kHydraulicAndPenumatic>1,1</kHydraulicAndPenumatic>
 		<kElectricalGroup>1,0</kElectricalGroup>
@@ -245,7 +245,7 @@
 		<kOperatingItems>1,0</kOperatingItems>
 		<kCrew>1,0</kCrew>
 		<kPayload>1,0</kPayload>
-		<kFuel>1.06,1</kFuel>
+		<kFuel>1,1</kFuel>
 	</cogCalibrationFactor>
 	<oswaldCoeffCalibrationFactor>
 		<keTO>0.98</keTO>
