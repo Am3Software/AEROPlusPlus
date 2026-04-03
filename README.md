@@ -88,8 +88,10 @@ CMake will automatically:
 ### Run the tests
 
 ```bash
-./TestVSPCreator     # Linux/macOS/MSYS2
-TestVSPCreator.exe   # Windows CMD
+./TestVSPCreator                  # Linux/macOS/MSYS2
+./PowerTestPropellerAircraft      # Linux/macOS/MSYS2
+TestVSPCreator.exe                # Windows CMD
+PowerTestPropellerAircraft.exe    # Windows CMD
 ```
 
 ### Custom VTK path
@@ -207,6 +209,7 @@ AEROPlusPlus/
 │   ├── AircraftData.cpp
 │   ├── TestLaunchVSP.cpp
 │   ├── TestVSPCreator.cpp
+│   ├── PowerTestPropellerAircraft.cpp
 │   └── A320Neo_Test.cpp
 ├── logo/                       # Project logo (used in PNG exports)
 │   └── AeroPlusPLus_logo.png

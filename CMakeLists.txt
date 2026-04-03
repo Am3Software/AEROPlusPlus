@@ -232,6 +232,7 @@ set(TEST_SOURCES
     test/AircraftData.cpp
     test/TestLaunchVSP.cpp
     test/TestVSPCreator.cpp
+    test/PowerTestPropellerAircraft.cpp
 )
 
 foreach(test_source ${TEST_SOURCES})
@@ -261,10 +262,11 @@ endforeach()
 # Enable testing
 # ==========================================
 enable_testing()
-add_test(NAME RegressionTest COMMAND RegressionTest)
-add_test(NAME AircraftData   COMMAND AircraftData)
-add_test(NAME TestLaunchVSP  COMMAND TestLaunchVSP)
-add_test(NAME TestVSPCreator COMMAND TestVSPCreator)
+add_test(NAME RegressionTest             COMMAND RegressionTest)
+add_test(NAME AircraftData              COMMAND AircraftData)
+add_test(NAME TestLaunchVSP             COMMAND TestLaunchVSP)
+add_test(NAME TestVSPCreator            COMMAND TestVSPCreator)
+add_test(NAME PowerTestPropellerAircraft COMMAND PowerTestPropellerAircraft)
 
 # ==========================================
 # Configuration summary
