@@ -1,0 +1,584 @@
+#pragma once
+#ifndef _USE_MATH_DEFINES
+#define _USE_MATH_DEFINES
+#endif
+
+#include <string>
+#include <vector>
+#include <cstdlib>
+#include <cmath>
+#include "Interpolant.h"
+#include "RegressionMethod.h"
+#include "WINGBASEDATA.h"
+#include "FUSELAGEBASEDATA.h"
+#include "ENGINEBASEDATA.h"
+#include "LANDINGGEARSBASEDATA.h"
+#include "EnumAircraftCategory.h"
+#include "EnumTypeOfComposite.h"
+#include "EnumAircraftEngineType.h"
+#include "EnumTypeOfStabilizer.h"
+#include "EnumTypeOfTail.h"
+#include "EnumEnginePosition.h"
+#include "EnumUndercarriagePosition.h"
+#include "EnumMaterial.h"
+#include "EnumWingPosition.h"
+#include "EnumFORCE.h"
+#include "EnumMASS.h"
+#include "EnumLENGTH.h"
+#include "EnumAREA.h"
+#include "EnumSPEED.h"
+#include "EnumSkinRoughnessType.h"
+#include "EnumWingFairingType.h"
+#include "EnumTypeOfFlap.h"
+#include "EnumWindScreenType.h"
+#include "ConvMass.h"
+#include "ConvForce.h"
+#include "ConvLength.h"
+#include "ConvArea.h"
+#include "ConvVel.h"
+#include "ConvPower.h"
+#include "ATMOSISA.h"
+#include "ODE45.h"
+#include "PLOT.h"
+#include "VSPGEOMETRYEXTRACTOR.h"
+#include "VSPScriptGenerator.h"
+#include "VSPAeroGenerator.h"
+#include "WETTEDAREA.h"
+#include "BUILDAIRCRAFT.h"
+#include "WETTEDAREA.h"
+#include "RestoreSettings.h"
+#include "ATMOSISA.h"
+#include "Interpolant2D.h"
+#include "Interpolant3D.h"
+#include "RegressionMethod.h"
+#include "ChordCalculator.h"
+#include "CD0Calculator.h"
+#include "SILENTORCOMPONENT.h"
+#include "Eigen/Dense"
+
+/// @brief Constructor for the PropellerEfficiencyCalculator class. Initializes the calculator with the necessary aircraft data, disk geometry, speed, revolution per second, and air density. The constructor takes in references to the builder object, disk geometry data, speed of the aircraft, revolution per second of the propeller, and air density at the operating altitude. This allows the calculator to have access to all relevant information needed for accurate propeller efficiency calculations.
+/// @param builder A reference to the BuildAircraft object that contains the aircraft's design.
+/// @param disk A reference to the VSP::Disk object that contains the geometric data of the propeller disk.
+/// @param speed The speed of the aircraft in m/s.
+/// @param revolutionPerSecond The revolution per second of the propeller.
+/// @param airDensity The air density at the operating altitude in kg/m^3.
+class PropellerEfficiencyCalculator
+{
+
+protected:
+    const BuildAircraft &builder;
+    VSP::Wing wing;
+    VSP::Wing canard;
+    VSP::Wing horizontal;
+    VSP::Disk disk;
+    VSP::Nacelle nacelle;
+    VSP::Fuselage fuselage;
+
+private:
+    double speed = 0.0;
+    double altitude = 0.0;
+    double airDensity = 0.0;
+    double airDensityToSlugPerFeetCubic = 0.0;
+    double revolutionPerSecond = 0.0;
+    double propellerAdvanceRatio = 0.0;
+    double propellerThrustCoefficient = 0.0;
+    double propellerPowerCoefficient = 0.0;
+    double propellerTorqueCoeffcient = 0.0;
+    double dikDiameterToFeet = 0.0;
+    double propellerEfficiency = 0.0;
+    double inducedVelocity = 0.0;
+    double propellerThrustNewton = 0.0;
+    double diskArea = 0.0;
+    double powerWatt = 0.0;
+    double etaProfile = 0.85; // Estimated profile efficiency of the propeller
+    double cardanoB = 0.0;
+    double cardanoC = 0.0;
+    double cardanoD = 0.0;
+    double cardanoP = 0.0;
+    double cardanoQ = 0.0;
+    double cardanoDiscriminant = 0.0;
+    double cardanoU = 0.0;
+    double cardanoV = 0.0;
+    double surfaceBodyBehindDisk = 0.0;
+    double factorToAccountRetardationAirflowTroughPropellerDisk = 0.0;
+    double bloackageFactor = 0.0;
+    double densityRatio = 0.0;
+    double wettedSurfaceComponentsInTheWake = 0.0;
+    double parasaiteDragAreaComponentsInTheWake = 0.0;
+    double scrubblingFactor = 0.0;
+    double integratedDesignLiftCoeffcient = 0.0;
+    double deltaMachDueToTheBladeCamber = 0.0;
+    double effectiveMach = 0.0;
+    double compressibilityFactor = 0.0;
+
+    // --- 116: Blockage factor - Scoop inlet vs J ---
+    std::vector<double> scoop_J = {
+        0.0101796, 0.111802, 0.241481, 0.417075, 0.597827,
+        0.768534, 0.954598, 1.04912, 1.13607, 1.21805,
+        1.33328, 1.43823, 1.56105, 1.67106, 1.78614,
+        1.90892, 2.01626, 2.14656, 2.28959, 2.37900,
+        2.49125, 2.59578, 2.71045, 2.82508, 2.99569};
+
+    std::vector<double> scoop_BF = {
+        1.00005, 1.00009, 1.00042, 1.00127, 1.00232,
+        1.00368, 1.00535, 1.00677, 1.00830, 1.01013,
+        1.01258, 1.01472, 1.01706, 1.01915, 1.02119,
+        1.02343, 1.02516, 1.02714, 1.02922, 1.03055,
+        1.03181, 1.03282, 1.03378, 1.03464, 1.03574};
+
+    // --- 117: Blockage factor - Annular inlet vs J ---
+    std::vector<double> annular_J = {
+        0.0126810, 0.109242, 0.203283, 0.292244, 0.386401,
+        0.528858, 0.666293, 0.834402, 1.00005, 1.26249,
+        1.39502, 1.56082, 1.72158, 1.92325, 2.06109,
+        2.23720, 2.38841, 2.49562, 2.59504, 2.69627,
+        2.82419, 2.99603};
+
+    std::vector<double> annular_BF = {
+        0.999947, 1.00003, 1.00017, 1.00031, 1.00076,
+        1.00130, 1.00200, 1.00321, 1.00462, 1.00674,
+        1.00790, 1.00972, 1.01165, 1.01429, 1.01606,
+        1.01827, 1.02013, 1.02150, 1.02245, 1.02313,
+        1.02384, 1.02485};
+
+    // --- 118: Delta Mach - Effect of blade camber ---
+    std::vector<double> integratedLiftCoeffcientValues = {
+        0.201428, 0.232620, 0.269341, 0.319669, 0.371002,
+        0.412282, 0.463630, 0.501402, 0.537167, 0.570410,
+        0.601147, 0.635925, 0.666671, 0.700439};
+
+    std::vector<double> deltaMachValues = {
+        -0.0158481, -0.0100277, -0.00298277, 0.00549675, 0.0141804,
+        0.0206193, 0.0285914, 0.0337059, 0.0382088, 0.0425062,
+        0.0458867, 0.0492705, 0.0522444, 0.0556274};
+
+    // --- 120: Compressibility factor - M_eff = 0.3 --- (11 punti)
+    std::vector<double> mach03_x = {
+        0.496008, 0.518514, 0.549096, 0.588666, 0.644956,
+        0.716279, 0.764321, 0.795918, 0.825501, 0.885217,
+        0.955506};
+    std::vector<double> compressibilityFactorAtMach03 = {
+        0.850324, 0.865093, 0.886593, 0.903328, 0.926368,
+        0.949853, 0.968331, 0.977033, 0.983999, 0.990988,
+        1.00037};
+
+    // --- 121: Compressibility factor - M_eff = 0.4 --- (12 punti)
+    std::vector<double> mach04_x = {
+        0.795241, 0.841268, 0.900279, 0.952763, 1.00962,
+        1.07893, 1.13145, 1.16728, 1.22240, 1.29908,
+        1.36079, 1.41185};
+    std::vector<double> compressibilityFactorAtMach04 = {
+        0.849914, 0.866654, 0.882537, 0.899283, 0.915165,
+        0.936913, 0.953225, 0.962798, 0.973472, 0.983729,
+        0.992673, 1.00031};
+
+    // --- 122: Compressibility factor - M_eff = 0.5 --- (12 punti)
+    std::vector<double> mach05_x = {
+        1.24941, 1.30403, 1.38396, 1.44282, 1.50379,
+        1.57121, 1.61546, 1.65784, 1.74305, 1.81332,
+        1.86867, 1.90691};
+    std::vector<double> compressibilityFactorAtMach05 = {
+        0.850063, 0.867027, 0.890520, 0.908355, 0.926626,
+        0.945119, 0.957086, 0.965580, 0.976712, 0.986313,
+        0.994167, 1.00049};
+
+    // --- 123: Compressibility factor - M_eff = 0.6 --- (10 punti)
+    std::vector<double> mach06_x = {
+        1.79391, 1.87824, 1.97955, 2.09547, 2.16077,
+        2.20714, 2.27511, 2.33890, 2.40483, 2.45582};
+    std::vector<double> compressibilityFactorAtMach06 = {
+        0.851152, 0.873564, 0.898809, 0.929923, 0.947980,
+        0.960382, 0.971934, 0.981747, 0.991779, 1.00028};
+
+    // --- 124: Compressibility factor - M_eff = 0.7 --- (13 punti)
+    std::vector<double> mach07_x = {
+        2.57964, 2.66902, 2.79660, 2.95600, 3.06446,
+        3.17716, 3.28786, 3.34536, 3.44580, 3.52481,
+        3.61459, 3.72187, 3.81623};
+    std::vector<double> compressibilityFactorAtMach07 = {
+        0.850484, 0.863355, 0.883198, 0.908923, 0.925497,
+        0.942942, 0.958433, 0.966289, 0.975480, 0.983353,
+        0.991235, 0.995660, 1.00007};
+
+public:
+    /// @brief Constructor for the PropellerEfficiencyCalculator class. Initializes the calculator with the necessary aircraft data, disk geometry, speed, revolution per second, and air density. The constructor takes in references to the builder object, disk geometry data, speed of the aircraft, revolution per second of the propeller, and air density at the operating altitude. This allows the calculator to have access to all relevant information needed for accurate propeller efficiency calculations.
+    /// @param builder A reference to the BuildAircraft object that contains the aircraft's design.
+    /// @param disk A reference to the VSP::Disk object that contains the geometric data of the propeller disk.
+    /// @param speed The speed of the aircraft in m/s.
+    /// @param revolutionPerSecond The revolution per second of the propeller.
+    /// @param altitude  The altitude at which the aircraft is operating in meters.
+    /// @param etaProfile The profile efficiency of the propeller, accounting for
+    ///                   blade profile drag and non-ideal flow effects.
+    ///                   Default is 0.80, a conservative estimate suitable for
+    ///                   generic propellers. For modern high-performance four-blade
+    ///                   propellers (e.g. MT MTV-14), values of 0.85-0.87 are more
+    ///                   appropriate.
+    /// @param integratedDesignLiftCoeffcient Since propeller thrust is derived from the lift generated by the propeller blades, the average
+    ///                                       lifting capability of a propeller blade is important. Typically this value ranges form 0.3 to 0.6.
+    ///                                       Default value is 0.45 - Reference Roskam Airplane Aerodynamic and Performance
+    /// @param canard Optional reference to a VSP::Wing object representing a canard surface.
+    PropellerEfficiencyCalculator(const BuildAircraft &builder,
+                                  const VSP::Wing &wing,
+                                  const VSP::Wing &horizontal,
+                                  const VSP::Fuselage &fuselage,
+                                  const VSP::Disk &disk,
+                                  const VSP::Nacelle &nacelle,
+                                  double speed,
+                                  double revolutionPerSecond,
+                                  double altitude,
+                                  double etaProfile = 0.85,
+                                  double integratedDesignLiftCoeffcient = 0.5 * (0.3 + 0.60), // Estimated lift coefficient at which the propeller operates, used for blockage factor estimation. Default is 0.45, a typical value for cruise conditions - Roskam
+                                  const VSP::Wing &canard = VSP::Wing())
+        : builder(builder),
+          wing(wing),
+          horizontal(horizontal),
+          fuselage(fuselage),
+          disk(disk),
+          nacelle(nacelle),
+          speed(speed),
+          revolutionPerSecond(revolutionPerSecond),
+          altitude(altitude),
+          etaProfile(etaProfile),
+          integratedDesignLiftCoeffcient(integratedDesignLiftCoeffcient),
+          canard(canard)
+    {
+    }
+
+    /// @brief Calculates the propeller efficiency (etaP)
+    /// @return etaP - Propeller efficiency
+    double getPropellerEfficiency()
+    {
+
+        airDensity = Atmosphere::ISA::density(altitude);        // Get air density at operating altitude
+        densityRatio = Atmosphere::ISA::densityRatio(altitude); // Density ratio at operating altitude
+
+        // Calculate propeller advance ratio J
+        propellerAdvanceRatio = speed / (revolutionPerSecond * disk.diameter.front());
+
+        // Calculate Propeller Thrust Coeffcient (CT)
+        ConvDensity airDensityConverter(Density::KG_TO_M3, Density::SLUGS_TO_FT3, airDensity);
+        ConvLength lengthConverter(Length::M, Length::FT, disk.diameter.front());
+
+        airDensityToSlugPerFeetCubic = airDensityConverter.getConvertedValues(); // Convert air density to slugs/ft^3 for propeller efficiency calculation
+        dikDiameterToFeet = lengthConverter.getConvertedValues();                // Convert disk diameter to feet for propeller efficiency calculation
+
+        propellerThrustCoefficient = builder.getEngineData().getThrustToPowerRatio() * builder.getEngineData().getBSHP() /
+                                     (airDensityToSlugPerFeetCubic * std::pow(revolutionPerSecond, 2) * std::pow(dikDiameterToFeet, 4));
+
+        // Calculate Propeller Power Coefficient (CP)
+        propellerPowerCoefficient = 550 * builder.getEngineData().getBSHP() /
+                                    (airDensityToSlugPerFeetCubic * std::pow(revolutionPerSecond, 3) * std::pow(dikDiameterToFeet, 5));
+
+        // Calculate propeller torque ceoeffcient
+        propellerTorqueCoeffcient = 2 * M_PI * propellerPowerCoefficient;
+
+        // Calculate Propeller Efficiency (etaP)
+
+        // =========================================================
+        // Induced velocity via Cardano's cubic formula
+        //
+        // Starting from the Rankine-Froude extended system:
+        //   T  = 2·ρ·A·vi·(V + vi)          [actuator disk momentum theory]
+        //   P·η_profile = T·(V + vi)         [shaft power to useful power]
+        //
+        // Substituting T into the power equation:
+        //   P·η_profile = 2·ρ·A·vi·(V + vi)²
+        //
+        // Expanding and dividing by 2·ρ·A yields the depressed cubic in vi:
+        //   vi³ + 2V·vi² + V²·vi - (P·η)/(2·ρ·A) = 0
+        //
+        // Applying Cardano's method:
+        //   1) Substitute vi = t - b/3  to eliminate the quadratic term
+        //      yielding the depressed form:  t³ + p·t + q = 0
+        //   2) Compute discriminant Δ = (q/2)² + (p/3)³
+        //      Δ > 0 → one real root (physically expected in forward flight)
+        //   3) Recover vi = u + v - b/3
+        //      where u = ∛(-q/2 + √Δ),  v = ∛(-q/2 - √Δ)
+        //
+        // The physically meaningful root is the unique positive real solution,
+        // representing the axial induced velocity through the propeller disk.
+        // =========================================================
+
+        diskArea = M_PI * std::pow(disk.diameter.front() / 2.0, 2) * builder.getEngineData().getNumberOfEngines();
+
+        ConvPower powerConverter(Power::HP, Power::WATT, builder.getEngineData().getBSHP());
+
+        powerWatt = builder.getEngineData().getNumberOfEngines() * powerConverter.getConvertedValues();
+
+        // Coefficienti della cubica: c[0] + c[1]*x + c[2]*x^2 + c[3]*x^3 = 0
+        // Eigen::PolynomialSolver vuole ordine crescente di grado
+        cardanoB = 2.0 * speed;
+        cardanoC = speed * speed;
+        cardanoD = -(powerWatt * etaProfile) / (2.0 * airDensity * diskArea);
+
+        cardanoP = cardanoC - (cardanoB * cardanoB) / 3.0;
+        cardanoQ = (2.0 * cardanoB * cardanoB * cardanoB) / 27.0 - (cardanoB * cardanoC) / 3.0 + cardanoD;
+
+        cardanoDiscriminant = std::pow(cardanoQ / 2.0, 2) + std::pow(cardanoP / 3.0, 3);
+
+        cardanoU = std::cbrt(-cardanoQ / 2.0 + std::sqrt(std::max(cardanoDiscriminant, 0.0)));
+        cardanoV = std::cbrt(-cardanoQ / 2.0 - std::sqrt(std::max(cardanoDiscriminant, 0.0)));
+
+        inducedVelocity = cardanoU + cardanoV - cardanoB / 3.0;
+
+        propellerThrustNewton = 2.0 * airDensity * diskArea * inducedVelocity * (speed + inducedVelocity);
+
+        // ================== Calculate Fblockage ==================
+
+        if (builder.getEngineData().getNumberOfEngines() == 1)
+        {
+
+            VSPGEOMTRYEXTRACTOR::GeometryExtractor geomExtractor;
+            geomExtractor.extractAllGeoms(builder.getCommonData().getNameOfAircraft(),
+                                          builder.getCommonData().getNameOfAircraft() + "_AllGeomsToCd0.vspscript");
+
+            VSPGEOMTRYEXTRACTOR::AircraftGeometryData allGeomData = geomExtractor.getGeometryData();
+
+            // VSPGEOMTRYEXTRACTOR::GeomInfo fuselageType;
+
+            VSPGEOMTRYEXTRACTOR::DiametersExtractor fuseExtractor;
+
+            VSPGEOMTRYEXTRACTOR::FuselageDiametersAndXStation fuseData = fuseExtractor.extractFuselageDiameters(
+                builder.getCommonData().getNameOfAircraft(),
+                allGeomData,
+                fuselage.length);
+
+            for (const auto &geomName : allGeomData.nameGeom)
+            {
+
+                if (geomName == "Custom")
+                {
+                    for (const auto &nameOfComponent : allGeomData.nameOfComponentGeom)
+                    {
+                        if (nameOfComponent == fuselage.id)
+                        {
+
+                            double maxFuselageWidth = *std::max_element(fuseData.allFuselageWidth.begin(), fuseData.allFuselageWidth.end());
+
+                            surfaceBodyBehindDisk = M_PI * std::pow(maxFuselageWidth / 2.0, 2);
+                        }
+
+                        break;
+                    }
+                }
+
+                else if (geomName == "Stack" || geomName == "Fuselage")
+                {
+                    for (const auto &nameOfComponent : allGeomData.nameOfComponentGeom)
+                    {
+                        if (nameOfComponent == fuselage.id)
+                        {
+
+                            double maxFuselageWidth = *std::max_element(fuseData.allFuselageWidth.begin(), fuseData.allFuselageWidth.end());
+                            double maxFuselageHeight = *std::max_element(fuseData.allFuselageHeight.begin(), fuseData.allFuselageHeight.end());
+
+                            surfaceBodyBehindDisk = M_PI * maxFuselageWidth * maxFuselageHeight / 4.0; // Approximate as ellipse
+                        }
+
+                        break;
+                    }
+                }
+            }
+        }
+
+        else
+        {
+            VSPGEOMTRYEXTRACTOR::GeometryExtractor geomExtractor;
+            geomExtractor.extractAllGeoms(builder.getCommonData().getNameOfAircraft(),
+                                          builder.getCommonData().getNameOfAircraft() + "_AllGeomsToCd0.vspscript");
+
+            VSPGEOMTRYEXTRACTOR::AircraftGeometryData allGeomData = geomExtractor.getGeometryData();
+
+            VSPGEOMTRYEXTRACTOR::DiametersExtractor nacelleExtractor;
+
+            VSPGEOMTRYEXTRACTOR::NacelleDiametersAndXStation nacelleData = nacelleExtractor.extractNacelleDiameters(
+                builder.getCommonData().getNameOfAircraft(),
+                allGeomData,
+                nacelle.length);
+
+            double maxNacelleWidth = *std::max_element(nacelleData.allNacelleWidth.begin(), nacelleData.allNacelleWidth.end());
+            double maxNacelleHeight = *std::max_element(nacelleData.allNacelleHeights.begin(), nacelleData.allNacelleHeights.end());
+
+            surfaceBodyBehindDisk = M_PI * maxNacelleWidth * maxNacelleHeight / 4.0; // Approximate as ellipse
+        }
+
+        factorToAccountRetardationAirflowTroughPropellerDisk = 0.329 * surfaceBodyBehindDisk / std::pow(disk.diameter.front(), 2);
+
+        // Select appropriate inlet
+
+        if (builder.getEngineData().getTypeOfInlet() == TypeOfInlet::SCOOP_INLET)
+        {
+
+            Interpolant scoopBFInterpolator(scoop_J, scoop_BF, 3, RegressionMethod::POLYNOMIAL);
+
+            bloackageFactor = (1-factorToAccountRetardationAirflowTroughPropellerDisk) * scoopBFInterpolator.getYValueFromRegression(propellerAdvanceRatio);
+        }
+
+        else if (builder.getEngineData().getTypeOfInlet() == TypeOfInlet::ANULAR_INLET)
+        {
+
+            Interpolant annularBFInterpolator(annular_J, annular_BF, 3, RegressionMethod::POLYNOMIAL);
+
+            bloackageFactor = factorToAccountRetardationAirflowTroughPropellerDisk * annularBFInterpolator.getYValueFromRegression(propellerAdvanceRatio);
+        }
+
+        // ================== Calculate Fscrubbling ==================
+
+        double etaWing = 0.0;
+        double etaCanard = 0.0;
+        double etaHorizontal = 0.0;
+        double chordWing = 0.0;
+        double chordCanard = 0.0;
+        double chordHorizontal = 0.0;
+
+        double inbordYStationDisk = 0.0;
+        double outbordYStationDisk = 0.0;
+        double chordWingInboard = 0.0;
+        double chordWingOutboard = 0.0;
+        double chordHorizontalInboard = 0.0;
+        double chordHorizontalOutboard = 0.0;
+        double spanOnWingAffectedBySlipSream = 0.0;
+        double spanOnHorizontalAffectedBySlipSream = 0.0;
+
+        if (builder.getEngineData().getNumberOfEngines() == 1)
+        {
+            if (builder.getCommonData().getTypeOfTail() != TypeOfTail::T_TAIL)
+            {
+                etaWing = disk.diameter.front() / wing.totalProjectedSpan; // Assuming disk.diameter.front() gives the spanwise location of the propeller disk center
+                chordWing = ChordCalculator(wing).getChordAtEtaStation(etaWing, wing.typeOfWing);
+
+                etaHorizontal = disk.diameter.front() / horizontal.totalProjectedSpan; // Assuming same yloc for horizontal tail
+                chordHorizontal = ChordCalculator(horizontal).getChordAtEtaStation(etaHorizontal, horizontal.typeOfWing);
+
+                wettedSurfaceComponentsInTheWake = 2 * (0.5 * disk.diameter.front() * ((wing.croot.front() + chordWing) + (horizontal.croot.front() + chordHorizontal))); // Wetted area
+
+                if (builder.getCommonData().getHasCanard())
+                {
+                    etaCanard = disk.diameter.front() / canard.totalProjectedSpan; // Assuming same yloc for canard
+                    chordCanard = ChordCalculator(canard).getChordAtEtaStation(etaCanard, canard.typeOfWing);
+
+                    wettedSurfaceComponentsInTheWake += 2 * (0.5 * disk.diameter.front() * ((canard.croot.front() + chordCanard))); // Add canard wetted area if present
+                }
+
+                wettedSurfaceComponentsInTheWake *= 2; // Account for both sides of the disk
+
+                parasaiteDragAreaComponentsInTheWake = 0.0040 * wettedSurfaceComponentsInTheWake;
+
+                scrubblingFactor = 1 - 1.558 * (densityRatio * parasaiteDragAreaComponentsInTheWake / std::pow(disk.diameter.front(), 2)); // Scrubbling factor based on parasite drag area in the wake, normalized by disk area
+            }
+
+            else
+            {
+
+                etaWing = disk.diameter.front() / wing.totalProjectedSpan; // Assuming disk.diameter.front() gives the spanwise location of the propeller disk center
+                chordWing = ChordCalculator(wing).getChordAtEtaStation(etaWing, wing.typeOfWing);
+
+                wettedSurfaceComponentsInTheWake = 2 * (0.5 * disk.diameter.front() * (wing.croot.front() + chordWing)); // Wetted area
+
+                if (builder.getCommonData().getHasCanard())
+                {
+                    etaCanard = disk.diameter.front() / canard.totalProjectedSpan; // Assuming same yloc for canard
+                    chordCanard = ChordCalculator(canard).getChordAtEtaStation(etaCanard, canard.typeOfWing);
+
+                    wettedSurfaceComponentsInTheWake += 2 * (0.5 * disk.diameter.front() * ((canard.croot.front() + chordCanard))); // Add canard wetted area if present
+                }
+
+                wettedSurfaceComponentsInTheWake *= 2; // Account for both sides of the disk
+
+                parasaiteDragAreaComponentsInTheWake = 0.0040 * wettedSurfaceComponentsInTheWake;
+
+                scrubblingFactor = 1 - 1.558 * (densityRatio * parasaiteDragAreaComponentsInTheWake / std::pow(disk.diameter.front(), 2)); // Scrubbling factor based on parasite drag area in the wake, normalized by disk area
+            }
+        }
+        else
+        {
+
+            if (builder.getCommonData().getTypeOfTail() != TypeOfTail::T_TAIL)
+            {
+                inbordYStationDisk = disk.yloc.front() - disk.diameter.front() / 2.0;
+                outbordYStationDisk = disk.yloc.front() + disk.diameter.front() / 2.0;
+
+                // Wing
+                chordWingInboard = ChordCalculator(wing).getChordAtEtaStation(2 * inbordYStationDisk / wing.totalProjectedSpan, wing.typeOfWing);
+                chordWingOutboard = ChordCalculator(wing).getChordAtEtaStation(2 * outbordYStationDisk / wing.totalProjectedSpan, wing.typeOfWing);
+
+                spanOnWingAffectedBySlipSream = outbordYStationDisk - inbordYStationDisk;
+
+                // Horizontal
+
+                if (0.5 * horizontal.totalProjectedSpan > outbordYStationDisk)
+                {
+
+                    chordHorizontalInboard = ChordCalculator(horizontal).getChordAtEtaStation(2 * inbordYStationDisk / horizontal.totalProjectedSpan, horizontal.typeOfWing);
+                    chordHorizontalOutboard = ChordCalculator(horizontal).getChordAtEtaStation(2 * outbordYStationDisk / horizontal.totalProjectedSpan, horizontal.typeOfWing);
+
+                    spanOnHorizontalAffectedBySlipSream = outbordYStationDisk - inbordYStationDisk;
+                }
+
+                else
+                {
+
+                    chordHorizontalInboard = ChordCalculator(horizontal).getChordAtEtaStation(2 * inbordYStationDisk / horizontal.totalProjectedSpan, horizontal.typeOfWing);
+                    chordHorizontalOutboard = horizontal.ctip.front();
+
+                    spanOnHorizontalAffectedBySlipSream = 0.5 * horizontal.totalProjectedSpan - inbordYStationDisk;
+                }
+
+                wettedSurfaceComponentsInTheWake = 2 * (0.5 * ((chordWingInboard + chordWingOutboard) * spanOnWingAffectedBySlipSream + (chordHorizontalInboard + chordHorizontalOutboard) * spanOnHorizontalAffectedBySlipSream)); // Wetted area
+
+                parasaiteDragAreaComponentsInTheWake = 0.0040 * wettedSurfaceComponentsInTheWake;
+
+                scrubblingFactor = 1 - 1.558 * (densityRatio * parasaiteDragAreaComponentsInTheWake / std::pow(disk.diameter.front(), 2)); // Scrubbling factor based on parasite drag area in the wake, normalized by disk area
+            }
+
+            else
+            {
+
+                inbordYStationDisk = disk.yloc.front() - disk.diameter.front() / 2.0;
+                outbordYStationDisk = disk.yloc.front() + disk.diameter.front() / 2.0;
+
+                // Wing
+                chordWingInboard = ChordCalculator(wing).getChordAtEtaStation(2 * inbordYStationDisk / wing.totalProjectedSpan, wing.typeOfWing);
+                chordWingOutboard = ChordCalculator(wing).getChordAtEtaStation(2 * outbordYStationDisk / wing.totalProjectedSpan, wing.typeOfWing);
+
+                spanOnWingAffectedBySlipSream = outbordYStationDisk - inbordYStationDisk;
+
+                wettedSurfaceComponentsInTheWake = 2 * (0.5 * ((chordWingInboard + chordWingOutboard)));
+
+                parasaiteDragAreaComponentsInTheWake = 0.0040 * wettedSurfaceComponentsInTheWake;
+
+                scrubblingFactor = 1 - 1.558 * (densityRatio * parasaiteDragAreaComponentsInTheWake / std::pow(disk.diameter.front(), 2)); // Scrubbling factor based on parasite drag area in the wake, normalized by disk area
+            }
+        }
+
+        // ================== Compressibility Factor ==================
+
+        Interpolant effectOfBladeCamberInterpolator(integratedLiftCoeffcientValues, deltaMachValues, 2, RegressionMethod::POLYNOMIAL);
+
+        deltaMachDueToTheBladeCamber = effectOfBladeCamberInterpolator.getYValueFromRegression(integratedDesignLiftCoeffcient);
+
+        effectiveMach = speed/(Atmosphere::ISA::speedOfSound(altitude)) + deltaMachDueToTheBladeCamber; // Effective Mach number at which the propeller operates, accounting for blade camber effects
+
+        if (effectiveMach >= 0.3)
+        {
+            Interpolant2D compressibilityFactorInterpolator(3, RegressionMethod::POLYNOMIAL);
+
+            compressibilityFactorInterpolator.addCurve(0.3, mach03_x, compressibilityFactorAtMach03);
+            compressibilityFactorInterpolator.addCurve(0.4, mach04_x, compressibilityFactorAtMach04);
+            compressibilityFactorInterpolator.addCurve(0.5, mach05_x, compressibilityFactorAtMach05);
+            compressibilityFactorInterpolator.addCurve(0.6, mach06_x, compressibilityFactorAtMach06);
+            compressibilityFactorInterpolator.addCurve(0.7, mach07_x, compressibilityFactorAtMach07);
+
+            compressibilityFactor = compressibilityFactorInterpolator.interpolate(propellerAdvanceRatio, effectiveMach);
+        }
+        else
+        {
+            compressibilityFactor = 1.0; // No compressibility effects at low Mach numbers
+        }
+
+
+        propellerEfficiency = bloackageFactor * scrubblingFactor * compressibilityFactor * propellerThrustNewton * speed / powerWatt;
+
+        return propellerEfficiency;
+    }
+};

@@ -3,6 +3,7 @@
 #include "BUILDAIRCRAFT.h"
 #include "EnumAircraftCategory.h"
 #include "EnumAircraftEngineType.h"
+#include "EnumAircraftEngineCategory.h"
 #include "Interpolant.h"
 #include "RegressionMethod.h"
 #include "ConvMass.h"
@@ -38,6 +39,7 @@ public:
     explicit MomentOfInertia(const BuildAircraft& builder)
         : aircraftCategory  (builder.getCommonData().getAircraftCategory())
         , engineType(builder.getCommonData().getAircraftEngineType())
+        , engineCategory(builder.getCommonData().getAircraftEngineCategory())
         , WTO    (builder.getCommonData().getWTO())
     {}
 
@@ -89,6 +91,7 @@ private:
     // --------------------------------------------------------
     AircraftCategory   aircraftCategory;
     AircraftEngineType engineType;
+    AircraftEngineCategory engineCategory;
     double             WTO;
 
     // --------------------------------------------------------
@@ -118,7 +121,7 @@ private:
         //   Fourth {...} → Rz vector
 
         // --- GUAV single engine ---
-        if (isGAorUAV && engineType == AircraftEngineType::SINGLE_ENGINE)
+        if (isGAorUAV && engineCategory == AircraftEngineCategory::SINGLE_ENGINE)
         {
             return {
                 { 3125, 1127, 1477, 1761, 1885, 2700 },  // weight in lbs
@@ -129,7 +132,7 @@ private:
         }
 
         // --- GUAV twin engine ---
-        if (isGAorUAV && engineType == AircraftEngineType::TWIN_ENGINE)
+        if (isGAorUAV && engineCategory == AircraftEngineCategory::TWIN_ENGINE)
         {
             return {
                 { 4880, 4000, 6500, 9000, 5000, 6200, 4851, 8400, 5642, 9925 },

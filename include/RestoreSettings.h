@@ -34,11 +34,11 @@ class RestoreSettings {
     RestoreSettings() = default;
 
 
-    inline void getSavePrevoiusSettings(VSP::AeroSettings settings) {
+    inline void setSavePrevoiusSettings(VSP::AeroSettings settings) {
         this->settingsToRestore = settings;
     }
 
-    inline void getSavePrevoiusAircraftInfo(VSP::Aircraft aircraftInfo) {
+    inline void setSavePrevoiusAircraftInfo(VSP::Aircraft aircraftInfo) {
         this->aircrfatInfoToRestore = aircraftInfo;
     }
 

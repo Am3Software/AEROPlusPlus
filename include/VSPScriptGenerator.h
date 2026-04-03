@@ -14,6 +14,8 @@
 #include "EnumTypeOfWing.h"
 #include "EQUALSIGNORECASE.h"
 #include "SforzaSweepConversion.h"
+#include "Interpolant.h"
+#include "ODE45.h"
 
 namespace VSP
 {
@@ -78,6 +80,9 @@ namespace VSP
                 double sweepC2 = 0.0;
                 double sweepC4 = 0.0;
                 double finiteSlope = 0.0;
+                double averageThicknessToChordRatio = 0.0;
+                std::vector<double> loacalThicknessInbord;
+                std::vector<double> loacalThicknessOutbord;
 
                 // Rotazione
                 double xrot = 0;
@@ -450,8 +455,6 @@ namespace VSP
                                 writeUpdate();
                         }
 
-                       
-
                         writeUpdate();
                 }
 
@@ -484,7 +487,20 @@ namespace VSP
                                 writeCommand("SetParmVal(" + wing.id + ",\"Span\",\"" + secID + "\"," +
                                              std::to_string(wing.span[idx]) + ");");
 
-                                wing.totalSpan += wing.span[idx];
+                                if (!wing.blending || equalsIgnoreCase(wing.id, "vertical"))
+                                {
+
+                                        wing.totalSpan += wing.span[idx];
+                                }
+
+                                else
+                                {
+
+                                        if (idx < wing.span.size() - 2)
+                                        { // Se ci fosse una winglet, l'ultimo pannello è la winglet e il penultimo è la transition, quindi non vanno sommati alla span totale
+                                                wing.totalSpan += wing.span[idx];
+                                        }
+                                }
                         }
 
                         if (idx < wing.sweep.size())
@@ -560,7 +576,15 @@ namespace VSP
 
                                 // Calcolo della span proiettata sul piano orizzontale
 
-                                wing.totalProjectedSpan = wing.totalSpan * cos(wing.averageDihedral / 57.3); // Proiezione della span totale sul piano orizzontale
+                                if (equalsIgnoreCase(wing.id, "vertical"))
+                                {
+                                        wing.totalProjectedSpan = wing.totalSpan * cos(wing.averageDihedral / 57.3);
+                                }
+                                else
+                                {
+
+                                        wing.totalProjectedSpan = wing.totalSpan * cos(wing.averageDihedral / 57.3); // Proiezione della span totale sul piano orizzontale
+                                }
 
                                 // Calcolo di MAC, yMAC, area e aspect ratio in base al tipo di ala
 
@@ -580,35 +604,60 @@ namespace VSP
                                                 wing.planformArea = 0.5 * wing.totalProjectedSpan * wing.croot.front() * (1 + wing.taperRatio);
                                                 wing.aspectRatio = std::pow(wing.totalProjectedSpan, 2) / wing.planformArea;
 
-                                                for (size_t n = 0; n < wing.panelsArea.size(); n++)
+                                                bool addedLocalThicknessToChordRatioInbord = false;
+
+                                                for (size_t n = 0; n < wing.croot.size() - 2; n++)
                                                 {
                                                         if (n == 0)
                                                         {
 
                                                                 wing.panelsYStation.push_back(0.0);
-                                                                wing.panelsYStation.push_back(wing.span[n] * std::cos(wing.sweep[n] / 57.3)); // Proiezione della lunghezza del pannello sul piano orizzontale, che è la distanza y della stazione del pannello dal centro di proiezione della semiala, che coincide con il centro di proiezione dell'ala intera
+                                                                // wing.panelsYStation.push_back(wing.span[n] * std::cos(wing.sweep[n] / 57.3) * std::cos(wing.dihedral[n] / 57.3)); // Proiezione della lunghezza del pannello sul piano orizzontale, che è la distanza y della stazione del pannello dal centro di proiezione della semiala, che coincide con il centro di proiezione dell'ala intera
 
+                                                                wing.panelsYStation.push_back(wing.span[n]);
                                                                 wing.chordsAtYStation.push_back(wing.croot.front());
                                                                 wing.chordsAtYStation.push_back(wing.ctip.front());
+
+                                                                wing.loacalThicknessInbord.push_back(wing.thickchord[n] * wing.croot.front());
+                                                                wing.loacalThicknessInbord.push_back(wing.thickchord[n + 1] * wing.ctip.front());
                                                         }
 
                                                         else
                                                         {
 
-                                                                wing.panelsYStation.push_back(wing.span[n - 1] + wing.span[n] * std::cos(wing.sweep[n] / 57.3));
+                                                                wing.panelsYStation.push_back(wing.panelsYStation.back() + wing.span[n]);
                                                                 wing.chordsAtYStation.push_back(wing.ctip[n]);
+
+                                                                if (!addedLocalThicknessToChordRatioInbord)
+                                                                {
+                                                                        wing.loacalThicknessOutbord.push_back(wing.loacalThicknessInbord.back());
+
+                                                                        addedLocalThicknessToChordRatioInbord = true;
+                                                                }
+
+                                                                wing.loacalThicknessOutbord.push_back(wing.thickchord[n + 1] * wing.ctip[n]);
                                                         }
                                                 }
                                         }
-                                        else
+                                        else if (!wing.blending || !equalsIgnoreCase(wing.id, "wing"))
                                         {
                                                 wing.taperRatio = wing.ctip.back() / wing.croot.front();
 
                                                 wing.MAC = macCalc.getMAC(wingType, wing.croot[0], wing.taperRatio, wing.totalProjectedSpan);
                                                 wing.yMAC = macCalc.getYMAC(wingType, wing.totalProjectedSpan, wing.taperRatio);
 
-                                                wing.planformArea = 0.5 * wing.totalProjectedSpan * wing.croot.front() * (1 + wing.taperRatio);
+                                                if (!equalsIgnoreCase(wing.id, "vertical") || (!wing.blending && equalsIgnoreCase(wing.id, "vertical"))) // Se è un'ala verticale senza blending o un'ala verticale blended, l'area di riferimento è la somma delle aree dei pannelli, che è più accurata della formula dell'area del trapezio
+                                                {
+                                                        wing.planformArea = 0.5 * wing.totalProjectedSpan * wing.croot.front() * (1 + wing.taperRatio);
+                                                }  
+                                                else if (equalsIgnoreCase(wing.id, "vertical") && wing.blending)
+                                                {
+                                                        wing.planformArea = std::accumulate(wing.panelsArea.begin(), wing.panelsArea.end(), 0.0); // Se è un'ala verticale blended, l'area di riferimento è la somma delle aree dei pannelli, che è più accurata della formula dell'area del trapezio
+                                                }
+                                                
                                                 wing.aspectRatio = std::pow(wing.totalProjectedSpan, 2) / wing.planformArea;
+
+                                                bool addedLocalThicknessToChordRatioInbord = false;
 
                                                 for (size_t n = 0; n < wing.panelsArea.size(); n++)
                                                 {
@@ -616,17 +665,44 @@ namespace VSP
                                                         {
 
                                                                 wing.panelsYStation.push_back(0.0);
-                                                                wing.panelsYStation.push_back(wing.span[n] * std::cos(wing.sweep[n] / 57.3)); // Proiezione della lunghezza del pannello sul piano orizzontale, che è la distanza y della stazione del pannello dal centro di proiezione della semiala, che coincide con il centro di proiezione dell'ala intera
 
+                                                                if (!equalsIgnoreCase(wing.id, "vertical"))
+                                                                {
+                                                                        wing.panelsYStation.push_back(wing.span[n]); // Proiezione della lunghezza del pannello sul piano orizzontale, che è la distanza y della stazione del pannello dal centro di proiezione della semiala, che coincide con il centro di proiezione dell'ala intera
+                                                                }
+                                                                else
+                                                                {
+
+                                                                        wing.panelsYStation.push_back(wing.span[n]);
+                                                                }
                                                                 wing.chordsAtYStation.push_back(wing.croot.front());
                                                                 wing.chordsAtYStation.push_back(wing.ctip.front());
+                                                                wing.loacalThicknessInbord.push_back(wing.thickchord[n] * wing.croot.front());
+                                                                wing.loacalThicknessInbord.push_back(wing.thickchord[n + 1] * wing.ctip.front());
                                                         }
 
                                                         else
                                                         {
 
-                                                                wing.panelsYStation.push_back(wing.panelsYStation.back() + wing.span[n] * std::cos(wing.sweep[n] / 57.3));
+                                                                if (!equalsIgnoreCase(wing.id, "vertical"))
+                                                                {
+                                                                        wing.panelsYStation.push_back(wing.panelsYStation.back() + wing.span[n] );
+                                                                }
+                                                                else
+                                                                {
+                                                                        wing.panelsYStation.push_back(wing.panelsYStation.back() + wing.span[n]);
+                                                                }
+
                                                                 wing.chordsAtYStation.push_back(wing.ctip[n]);
+
+                                                                if (!addedLocalThicknessToChordRatioInbord)
+                                                                {
+                                                                        wing.loacalThicknessOutbord.push_back(wing.loacalThicknessInbord.back());
+
+                                                                        addedLocalThicknessToChordRatioInbord = true;
+                                                                }
+
+                                                                wing.loacalThicknessOutbord.push_back(wing.thickchord[n + 1] * wing.ctip[n]);
                                                         }
                                                 }
                                         }
@@ -648,9 +724,11 @@ namespace VSP
                                                 wing.yMAC = macCalc.getYMAC(wingType, wing.totalProjectedSpan, wing.taperRatio,
                                                                             wing.kinkStation, wing.taperInbord);
 
-                                                wing.planformArea = 0.5 * wing.totalProjectedSpan * wing.croot.front() * ((1 - wing.taperInbord) * 2 * wing.kinkStation / wing.totalProjectedSpan + wing.taperRatio + wing.taperInbord);
+                                                wing.planformArea = 0.5 * wing.totalProjectedSpan * wing.croot.front() * ((1 - wing.taperRatio) * (2 * wing.kinkStation / wing.totalProjectedSpan) + wing.taperRatio + wing.taperInbord);
 
                                                 wing.aspectRatio = std::pow(wing.totalProjectedSpan, 2) / wing.planformArea;
+
+                                                bool addedLocalThicknessToChordRatioInbord = false;
 
                                                 for (size_t n = 0; n < wing.croot.size() - 2; n++)
                                                 {
@@ -658,22 +736,34 @@ namespace VSP
                                                         {
 
                                                                 wing.panelsYStation.push_back(0.0);
-                                                                wing.panelsYStation.push_back(wing.span[n] * std::cos(wing.sweep[n] / 57.3)); // Proiezione della lunghezza del pannello sul piano orizzontale, che è la distanza y della stazione del pannello dal centro di proiezione della semiala, che coincide con il centro di proiezione dell'ala intera
+                                                                wing.panelsYStation.push_back(wing.span[n] ); // Proiezione della lunghezza del pannello sul piano orizzontale, che è la distanza y della stazione del pannello dal centro di proiezione della semiala, che coincide con il centro di proiezione dell'ala intera
 
                                                                 wing.chordsAtYStation.push_back(wing.croot.front());
                                                                 wing.chordsAtYStation.push_back(wing.ctip.front());
+
+                                                                wing.loacalThicknessInbord.push_back(wing.thickchord[n] * wing.croot.front());
+                                                                wing.loacalThicknessInbord.push_back(wing.thickchord[n + 1] * wing.ctip.front());
                                                         }
 
                                                         else
                                                         {
 
-                                                                wing.panelsYStation.push_back(wing.panelsYStation.back() + wing.span[n] * std::cos(wing.sweep[n] / 57.3));
+                                                                wing.panelsYStation.push_back(wing.panelsYStation.back() + wing.span[n]);
                                                                 wing.chordsAtYStation.push_back(wing.ctip[n]);
+
+                                                                if (!addedLocalThicknessToChordRatioInbord)
+                                                                {
+                                                                        wing.loacalThicknessOutbord.push_back(wing.loacalThicknessInbord.back());
+
+                                                                        addedLocalThicknessToChordRatioInbord = true;
+                                                                }
+
+                                                                wing.loacalThicknessOutbord.push_back(wing.thickchord[n + 1] * wing.ctip[n]);
                                                         }
                                                 }
                                         }
 
-                                        else
+                                        else if (!wing.blending || !equalsIgnoreCase(wing.id, "wing"))
                                         {
 
                                                 wing.taperRatio = wing.ctip.back() / wing.croot.front();
@@ -683,11 +773,11 @@ namespace VSP
                                                 wing.yMAC = macCalc.getYMAC(wingType, wing.totalProjectedSpan, wing.taperRatio,
                                                                             wing.kinkStation, wing.taperInbord);
 
-                                                wing.planformArea = 0.5 * wing.totalProjectedSpan * wing.croot.front() * (1 - wing.taperInbord) *
-                                                                        2 * wing.kinkStation / wing.totalProjectedSpan +
-                                                                    (wing.taperRatio) + wing.taperInbord;
+                                                wing.planformArea = 0.5 * wing.totalProjectedSpan * wing.croot.front() * ((1 - wing.taperRatio) * (2 * wing.kinkStation / wing.totalProjectedSpan) + wing.taperRatio + wing.taperInbord);
 
                                                 wing.aspectRatio = std::pow(wing.totalProjectedSpan, 2) / wing.planformArea;
+
+                                                bool addedLocalThicknessToChordRatioInbord = false;
 
                                                 for (size_t n = 0; n < wing.croot.size() - 1; n++)
                                                 {
@@ -695,23 +785,121 @@ namespace VSP
                                                         {
 
                                                                 wing.panelsYStation.push_back(0.0);
-                                                                wing.panelsYStation.push_back(wing.span[n] * std::cos(wing.sweep[n] / 57.3)); // Proiezione della lunghezza del pannello sul piano orizzontale, che è la distanza y della stazione del pannello dal centro di proiezione della semiala, che coincide con il centro di proiezione dell'ala intera
+                                                                wing.panelsYStation.push_back(wing.span[n]); // Proiezione della lunghezza del pannello sul piano orizzontale, che è la distanza y della stazione del pannello dal centro di proiezione della semiala, che coincide con il centro di proiezione dell'ala intera
 
                                                                 wing.chordsAtYStation.push_back(wing.croot.front());
                                                                 wing.chordsAtYStation.push_back(wing.ctip.front());
+                                                                wing.loacalThicknessInbord.push_back(wing.thickchord[n] * wing.croot.front());
+                                                                wing.loacalThicknessInbord.push_back(wing.thickchord[n + 1] * wing.ctip.front());
                                                         }
 
                                                         else
                                                         {
 
-                                                                wing.panelsYStation.push_back(wing.panelsYStation.back() + wing.span[n] * std::cos(wing.sweep[n] / 57.3));
+                                                                wing.panelsYStation.push_back(wing.panelsYStation.back() + wing.span[n]);
                                                                 wing.chordsAtYStation.push_back(wing.ctip[n]);
+
+                                                                if (!addedLocalThicknessToChordRatioInbord)
+                                                                {
+                                                                        wing.loacalThicknessOutbord.push_back(wing.loacalThicknessInbord.back());
+
+                                                                        addedLocalThicknessToChordRatioInbord = true;
+                                                                }
+
+                                                                wing.loacalThicknessOutbord.push_back(wing.thickchord[n + 1] * wing.ctip[n]);
                                                         }
                                                 }
                                         }
 
                                         break;
                                 }
+                                }
+
+                                // Calcolo dello spessore medio
+                                
+                                 std::vector<double> yStationInboardThicknessToChordRatio = {wing.panelsYStation.front(), wing.panelsYStation[1]};
+                                std::vector<double> yStationOutboardThicknessToChordRatio = {wing.panelsYStation[1], wing.panelsYStation.back()};
+
+                                double integretionStepInboard = (yStationInboardThicknessToChordRatio.back() - yStationInboardThicknessToChordRatio.front()) / 100; // Suddivido la semiala in 100 step per l'integrazione numerica
+                                double integretionStepOutboard = (yStationOutboardThicknessToChordRatio.back() - yStationOutboardThicknessToChordRatio.front()) / 100; // Suddivido la semiala in 100 step per l'integrazione numerica
+
+                                if (!wing.loacalThicknessOutbord.empty())
+                                {
+                                        Interpolant thicknessToChordRatioInboard(yStationInboardThicknessToChordRatio, wing.loacalThicknessInbord, 1, RegressionMethod::LINEAR);
+                                        Interpolant thicknessToChordRatioOutboard(yStationOutboardThicknessToChordRatio, {wing.loacalThicknessOutbord.front(), wing.loacalThicknessOutbord.back()}, 1, RegressionMethod::LINEAR);
+
+                                        double slopeCoefficientInboard = thicknessToChordRatioInboard.getCoefficients().front();
+                                        double interceptCoefficientInboard = thicknessToChordRatioInboard.getCoefficients().back();
+
+                                        double slopeCoefficientOutboard = thicknessToChordRatioOutboard.getCoefficients().front();
+                                        double interceptCoefficientOutboard = thicknessToChordRatioOutboard.getCoefficients().back();
+
+                                        auto integrandInboard = [slopeCoefficientInboard, interceptCoefficientInboard](double y, const double &I)
+                                        {
+                                                return slopeCoefficientInboard * y + interceptCoefficientInboard;
+                                        };
+
+                                        auto integrandOutboard = [slopeCoefficientOutboard, interceptCoefficientOutboard](double y, const double &I)
+                                        {
+                                                return slopeCoefficientOutboard * y + interceptCoefficientOutboard;
+                                        };
+
+                                        ODE45 odeSolver45Inboard(integrandInboard,
+                                                                 0.0,
+                                                                 yStationInboardThicknessToChordRatio.back(),
+                                                                 0.0, // intial condition which is 0 becuase inboard start from the yStation = 0.0
+                                                                 integretionStepInboard);
+
+                                        ODE45 odeSolver45Outboard(integrandOutboard,
+                                                                  yStationOutboardThicknessToChordRatio.front(),
+                                                                  yStationOutboardThicknessToChordRatio.back(),
+                                                                  0.0, // Staring from I(yKink) = 0.0, in other words, the first step the intregal is evaluated on a zero range from yKink to y = yKink
+                                                                  integretionStepOutboard);
+
+                                        if (!equalsIgnoreCase(wing.id, "vertical"))
+                                        {
+                                                wing.averageThicknessToChordRatio = 2 / wing.planformArea * (odeSolver45Inboard.getY().back() + odeSolver45Outboard.getY().back());
+                                        }
+                                        else
+                                        {
+                                                if (wing.blending)
+                                                {
+                                                        wing.averageThicknessToChordRatio = 1 /wing.planformArea * (odeSolver45Inboard.getY().back() + odeSolver45Outboard.getY().back());
+                                                }
+                                                else
+                                                {
+                                                        wing.averageThicknessToChordRatio = 1 / wing.planformArea * (odeSolver45Inboard.getY().back() + odeSolver45Outboard.getY().back());
+                                                }
+                                        }
+                                }
+
+                                else
+                                {
+
+                                        Interpolant thicknessToChordRatioInboard(yStationInboardThicknessToChordRatio, wing.loacalThicknessInbord, 1, RegressionMethod::LINEAR);
+
+                                        double slopeCoefficientInboard = thicknessToChordRatioInboard.getCoefficients().front();
+                                        double interceptCoefficientInboard = thicknessToChordRatioInboard.getCoefficients().back();
+
+                                        auto integrandInboard = [slopeCoefficientInboard, interceptCoefficientInboard](double y, const double &I)
+                                        {
+                                                return slopeCoefficientInboard * y + interceptCoefficientInboard;
+                                        };
+
+                                        ODE45 odeSolver45Inboard(integrandInboard,
+                                                                 0.0,
+                                                                 yStationInboardThicknessToChordRatio.back(),
+                                                                 0.0, // intial condition which is 0 becuase inboard start from the yStation = 0.0
+                                                                 integretionStepInboard);
+
+                                          if (!equalsIgnoreCase(wing.id, "vertical"))
+                                        {
+                                                wing.averageThicknessToChordRatio = 2 / wing.planformArea * (odeSolver45Inboard.getY().back());
+                                        }
+                                        else
+                                        {
+                                                wing.averageThicknessToChordRatio = 1 / wing.planformArea * (odeSolver45Inboard.getY().back());
+                                        }
                                 }
 
                                 // Calcolo della freccia al 25% della corda
@@ -1499,8 +1687,6 @@ namespace VSP
 
                         int numSections = wing.span.size();
 
-                       
-                        
                         if (wing.useDetailedPanels)
                         {
                                 for (int i = 1; i <= numSections; i++)
@@ -1554,14 +1740,12 @@ namespace VSP
                                 writeUpdate();
                         }
 
-                         for (int i = 1; i <= numSections + 1; i++)
+                        for (int i = 1; i <= numSections + 1; i++)
                         {
                                 shapeAirfoil(wing, i);
                         }
 
-                         writeUpdate();
-
-                       
+                        writeUpdate();
 
                         writeCommand("SetParmVal(" + wingID + ",\"Tess_W\",\"Shape\"," +
                                      std::to_string(wing.wtess) + ");");
@@ -1801,13 +1985,13 @@ namespace VSP
                                         }
 
                                         // -------- RotateMatchDideralFlag --------
-                                        if (i != nsec-1)
+                                        if (i != nsec - 1)
                                         {
                                                 // era wing.dihedral[i]: sbagliato, il loop è 1-based quindi serve [i-1]
-                                                if (i  < (int)wing.dihedral.size() && wing.dihedral[i] != 0)
+                                                if (i < (int)wing.dihedral.size() && wing.dihedral[i] != 0)
                                                 {
                                                         writeCommand("SetParmVal(" + wingID + ",\"RotateMatchDideralFlag\",\"XSec_" +
-                                                                     std::to_string(i+1) + "\",1);");
+                                                                     std::to_string(i + 1) + "\",1);");
                                                 }
                                                 else
                                                 {

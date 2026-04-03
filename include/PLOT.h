@@ -78,7 +78,7 @@
 ///        - "'#00FF00'" : pure green
 ///        - "'#0000FF'" : pure blue
 ///        (Note: quotes inside the string are required for Gnuplot)
-template <typename Container = std::vector<double>>
+template <typename ContainerX = std::vector<double>, typename ContainerY = std::vector<double>>
 class Plot
 {
 private:
@@ -93,7 +93,7 @@ private:
     };
     
     // Vettore di dataset (x,y), contiene una coppia di vettori per ogni dataset
-    std::vector<std::pair<Container, Container>> datasets;
+    std::vector<std::pair<ContainerX, ContainerY>> datasets;
     std::vector<PlotStyle> styles;
     
     std::string title;
@@ -195,7 +195,7 @@ public:
     // ════════════════════════════════════════════════════════════════
     // COSTRUTTORE 1: Per SINGOLO PLOT 
     // ════════════════════════════════════════════════════════════════
-    Plot(Container x, Container y, 
+    Plot(ContainerX x, ContainerY y, 
          std::string labelX, std::string labelY, std::string title,
          std::string legend, std::string typeOfPlot, 
          std::string lineType, std::string thicknessLine, 
@@ -226,8 +226,9 @@ public:
     {
     }
     
-    // Metodo per aggiungere dati (hold on)
-    void addData(Container x, Container y, 
+    // Metodo per aggiungere dati (hold on) anche in formato Eigen
+    template<typename X, typename Y>
+    void addData(X x, Y y, 
                  std::string legend = "",
                  std::string typeOfPlot = "linespoints",
                  std::string lineType = "1", 
@@ -236,7 +237,11 @@ public:
                  std::string markerDimension = "1.0",
                  std::string color = "#0072BD")
     {
-        datasets.emplace_back(std::move(x), std::move(y));
+
+        ContainerX xContainer(x.begin(), x.end());
+        ContainerY yContainer(y.begin(), y.end());
+
+        datasets.emplace_back(std::move(xContainer), std::move(yContainer));
         
         PlotStyle style;
         style.legend = legend;
@@ -258,13 +263,13 @@ public:
 };
 
 // Guide di deduzione
-template<typename Container>
-Plot(Container, Container, std::string, std::string, std::string, 
+template<typename ContainerX, typename ContainerY>
+Plot(ContainerX, ContainerY, std::string, std::string, std::string, 
      std::string, std::string, std::string, std::string, std::string, 
-     std::string, std::string) -> Plot<Container>;
+     std::string, std::string) -> Plot<ContainerX, ContainerY>;
 
-template<typename Container>
-Plot(std::string, std::string, std::string) -> Plot<Container>;
+template<typename ContainerX, typename ContainerY>
+Plot(std::string, std::string, std::string) -> Plot<ContainerX, ContainerY>;
 
 #endif
 

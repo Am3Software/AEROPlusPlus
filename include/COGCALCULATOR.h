@@ -192,9 +192,11 @@ namespace COG
     private:
         Weight weight;
         BaseAircraftData builderData;
+        const BuildAircraft &buildAircraft;
         WingBaseData wingData;
         FuselageBaseData fuselageData;
         EngineBaseData engineData;
+        VSP::Aircraft aircraftData;
         WETTEDAREA::WettedArea wettedAreaCalculator;
         COG::Weights weights;
         COG::COGDATA centerOfGravityData;
@@ -406,9 +408,11 @@ namespace COG
     public:
         COGCalculator(std::string nameOfAircraft,
                       BaseAircraftData builderData,
+                      const BuildAircraft &buildAircraft,
                       WingBaseData wingData,
                       FuselageBaseData fuselageData,
                       EngineBaseData engineData,
+                      VSP::Aircraft aircraftData,
                       VSP::Wing wing,
                       VSP::Wing horizontalTail,
                       VSP::Wing verticalTail,
@@ -420,9 +424,11 @@ namespace COG
                       VSP::EOIR eoir = VSP::EOIR{})
             : nameOfAircraft(nameOfAircraft),
               builderData(builderData),
+              buildAircraft(buildAircraft),
               wingData(wingData),
               fuselageData(fuselageData),
               engineData(engineData),
+              aircraftData(aircraftData),
               wing(wing),
               horizontalTail(horizontalTail),
               verticalTail(verticalTail),
@@ -432,7 +438,7 @@ namespace COG
               boom(boom),
               pod(pod),
               eoir(eoir),
-              wettedAreaCalculator("GetGeomOfAircraft.vspscript")
+              wettedAreaCalculator(nameOfAircraft + "_GetGeomOfAircraft.vspscript", aircraftData)
         {
         }
 
@@ -447,9 +453,9 @@ namespace COG
 
             if (!builderData.getIsSweptWing())
             {
-                xCGWing = (wing.xloc + 0.5 * (minmumXCGWingChord + maximumXCGWingChord) * wing.croot.front()) / fuselage.length;
+                xCGWing = buildAircraft.getCOGCorrectionFactor().getKXWing() * (wing.xloc + 0.5 * (minmumXCGWingChord + maximumXCGWingChord) * wing.croot.front()) / fuselage.length;
                 yCGWing = 0.0;
-                zCGWing = (wing.zloc + 0.5 * wing.totalSpan * tan(wing.averageDihedral / 57.3)) / fuselage.diameter;
+                zCGWing = buildAircraft.getCOGCorrectionFactor().getKZWing() * (wing.zloc + 0.5 * wing.totalSpan * tan(wing.averageDihedral / 57.3)) / fuselage.diameter;
             }
             else
             {
@@ -457,9 +463,9 @@ namespace COG
                 mainSparPositionWing = builderData.getKMainSparPosition() * wing.croot.front();
                 secondarySparPositionWing = builderData.getKSecondarySparPosition() * wing.croot.front();
 
-                xCGWing = (wing.xloc + mainSparPositionWing + 0.7 * (secondarySparPositionWing - mainSparPositionWing)) / fuselage.length;
+                xCGWing = buildAircraft.getCOGCorrectionFactor().getKXWing() * (wing.xloc + mainSparPositionWing + 0.7 * (secondarySparPositionWing - mainSparPositionWing)) / fuselage.length;
                 yCGWing = 0.0;
-                zCGWing = (wing.zloc + 0.5 * wing.totalSpan * tan(wing.averageDihedral / 57.3)) / fuselage.diameter;
+                zCGWing = buildAircraft.getCOGCorrectionFactor().getKZWing() * (wing.zloc + 0.5 * wing.totalSpan * tan(wing.averageDihedral / 57.3)) / fuselage.diameter;
             }
 
             return {std::make_tuple(xCGWing, yCGWing, zCGWing)};
@@ -472,9 +478,9 @@ namespace COG
 
             if (builderData.getHasCanard()) {
 
-            xCGCanard = (canard.xloc + 0.5 * (minmumXCGWingChord + maximumXCGWingChord) * canard.croot.front()) / fuselage.length;
+            xCGCanard = buildAircraft.getCOGCorrectionFactor().getKXCanard() * (canard.xloc + 0.5 * (minmumXCGWingChord + maximumXCGWingChord) * canard.croot.front()) / fuselage.length;
             yCGCanard = 0.0;
-            zCGCanard = (canard.zloc + 0.5 * canard.totalSpan * tan(canard.averageDihedral / 57.3)) / fuselage.diameter;
+            zCGCanard = buildAircraft.getCOGCorrectionFactor().getKZCanard() * (canard.zloc + 0.5 * canard.totalSpan * tan(canard.averageDihedral / 57.3)) / fuselage.diameter;
 
             }
 
@@ -486,9 +492,9 @@ namespace COG
         std::tuple<double, double, double> inline calculateCOGHorizontalTail()
         {
 
-            xCGHorizontal = (horizontalTail.xloc + maximumXCGWingChord * horizontalTail.croot.front()) / fuselage.length;
+            xCGHorizontal = buildAircraft.getCOGCorrectionFactor().getKXHorizontal() * (horizontalTail.xloc + maximumXCGWingChord * horizontalTail.croot.front()) / fuselage.length;
             yCGHorizontal = 0.0;
-            zCGHorizontal = (horizontalTail.zloc + factorSpanHorizontal * horizontalTail.totalSpan * tan(horizontalTail.averageDihedral / 57.3)) / fuselage.diameter;
+            zCGHorizontal = buildAircraft.getCOGCorrectionFactor().getKZHorizontal() * (horizontalTail.zloc + factorSpanHorizontal * horizontalTail.totalSpan * tan(horizontalTail.averageDihedral / 57.3)) / fuselage.diameter;
 
             return {std::make_tuple(xCGHorizontal, yCGHorizontal, zCGHorizontal)};
         }
@@ -504,7 +510,7 @@ namespace COG
                 verticalTail.totalProjectedSpan = 0.5 * verticalTail.totalProjectedSpan;
             }
 
-            xCGVertical = (verticalTail.xloc + maximumXCGWingChord * verticalTail.croot.front() * cos(verticalTail.zrot / 57.3)) / fuselage.length;
+            xCGVertical = buildAircraft.getCOGCorrectionFactor().getKXVertical() * (verticalTail.xloc + maximumXCGWingChord * verticalTail.croot.front() * cos(verticalTail.zrot / 57.3)) / fuselage.length;
             yCGVertical = 0.0;
 
             possibleZLocOfTheHorizontalTail = {0.0, verticalTail.zloc + verticalTail.totalProjectedSpan * cos(verticalTail.zrot / 57.3) +
@@ -512,7 +518,7 @@ namespace COG
                                                         verticalTail.ctip.back() * sin(verticalTail.zrot / 57.3)};
 
             Interpolant interp1(possibleZLocOfTheHorizontalTail, ratioSpanTovertical, 1, RegressionMethod::LINEAR);
-            zCGVertical = (horizontalTail.zloc + interp1.getYValueFromRegression(horizontalTail.zloc)) / fuselage.diameter;
+            zCGVertical = buildAircraft.getCOGCorrectionFactor().getKZVertical() * (horizontalTail.zloc + interp1.getYValueFromRegression(horizontalTail.zloc)) / fuselage.diameter;
 
             return {std::make_tuple(xCGVertical, yCGVertical, zCGVertical)};
         }
@@ -525,17 +531,17 @@ namespace COG
             if (builderData.getUndercarriagePosition() == UndercarriagePosition::WING_MOUNTED)
             {
 
-                xCGFuselage = 0.5 * (minimumPercentageOfXCGLocationFuselage + maximumPercentageOfXCGLocationFuselage) / fuselage.length;
+                xCGFuselage = buildAircraft.getCOGCorrectionFactor().getKXFuselage() * 0.5 * (minimumPercentageOfXCGLocationFuselage + maximumPercentageOfXCGLocationFuselage);
                 yCGFuselage = 0.0;
-                zCGFuselage = 0.0;
+                zCGFuselage = buildAircraft.getCOGCorrectionFactor().getKZFuselage() + 0.0;
             }
 
             else
             {
 
-                xCGFuselage = percentageOfXCGLocationFuselageNoWingMountedLandingGear * fuselage.length / fuselage.length;
+                xCGFuselage = buildAircraft.getCOGCorrectionFactor().getKXFuselage() * percentageOfXCGLocationFuselageNoWingMountedLandingGear * fuselage.length / fuselage.length;
                 yCGFuselage = 0.0;
-                zCGFuselage = 0.0;
+                zCGFuselage = buildAircraft.getCOGCorrectionFactor().getKZFuselage() + 0.0;
             }
 
             return {std::make_tuple(xCGFuselage, yCGFuselage, zCGFuselage)};
@@ -548,9 +554,9 @@ namespace COG
 
             if (builderData.getHasBoom())
             {
-                xCGBoom = (boom.xloc.front() + 0.5 * (minimumPercentageOfXCGLocationBoom + maximumPercentageOfXCGLocationBoom) * boom.length.front()) / fuselage.length;
+                xCGBoom = buildAircraft.getCOGCorrectionFactor().getKXBoom() * (boom.xloc.front() + 0.5 * (minimumPercentageOfXCGLocationBoom + maximumPercentageOfXCGLocationBoom) * boom.length.front()) / fuselage.length;
                 yCGBoom = 0.0;
-                zCGBoom = (boom.zloc.front() - boom.length.front() * sin(boom.yrot.front() / 57.3)) / fuselage.diameter;
+                zCGBoom = buildAircraft.getCOGCorrectionFactor().getKZBoom() * (boom.zloc.front() - boom.length.front() * sin(boom.yrot.front() / 57.3)) / fuselage.diameter;
             }
 
             return {std::make_tuple(xCGBoom, yCGBoom, zCGBoom)};
@@ -563,9 +569,9 @@ namespace COG
 
             if (builderData.getHasEOIR())
             {
-                xCGEOIR = (eoir.xloc.front() + 0.5 * eoir.diameter * eoir.fineratio.front()) / fuselage.length;
+                xCGEOIR = buildAircraft.getCOGCorrectionFactor().getKXEoir() * (eoir.xloc.front() + 0.5 * eoir.diameter * eoir.fineratio.front()) / fuselage.length;
                 yCGEOIR = 0.0;
-                zCGEOIR = (eoir.zloc.front() + 0.5 * eoir.diameter) / fuselage.diameter;
+                zCGEOIR = buildAircraft.getCOGCorrectionFactor().getKZEoir() * (eoir.zloc.front() + 0.5 * eoir.diameter) / fuselage.diameter;
             }
 
             return {std::make_tuple(xCGEOIR, yCGEOIR, zCGEOIR)};
@@ -583,20 +589,19 @@ namespace COG
             if (builderData.getUndercarriagePosition() == UndercarriagePosition::WING_MOUNTED)
             {
 
-                xCGLandingGear = ((noseLandingGearWeight * percentageOfXCGLocationNoseLandingGear + mainLandingGearWeight * percentageOfXCGLocationMainLandingGear) /
-                                  (noseLandingGearWeight + mainLandingGearWeight)) /
-                                 fuselage.length;
+                xCGLandingGear = buildAircraft.getCOGCorrectionFactor().getKXUnderCarriage() * ((noseLandingGearWeight * percentageOfXCGLocationNoseLandingGear + mainLandingGearWeight * percentageOfXCGLocationMainLandingGear) /
+                                  (noseLandingGearWeight + mainLandingGearWeight));
                 yCGLandingGear = 0.0;
-                zCGLandingGear = -(0.5 * fuselage.diameter + builderData.getStrutLength()) / fuselage.diameter;
+                zCGLandingGear = -buildAircraft.getCOGCorrectionFactor().getKZUnderCarriage() * (0.5 * fuselage.diameter + builderData.getStrutLength()) / fuselage.diameter;
             }
 
             else
             {
 
-                xCGLandingGear = ((noseLandingGearWeight * percentageOfXCGLocationNoseLandingGearNoWingMounted + mainLandingGearWeight * percentageOfXCGLocationMainLandingGearNoWingMounted) /
+                xCGLandingGear = buildAircraft.getCOGCorrectionFactor().getKXUnderCarriage() * ((noseLandingGearWeight * percentageOfXCGLocationNoseLandingGearNoWingMounted + mainLandingGearWeight * percentageOfXCGLocationMainLandingGearNoWingMounted) /
                                   (noseLandingGearWeight + mainLandingGearWeight));
                 yCGLandingGear = 0.0;
-                zCGLandingGear = -(0.5 * fuselage.diameter + builderData.getStrutLength()) / fuselage.diameter;
+                zCGLandingGear = -buildAircraft.getCOGCorrectionFactor().getKZUnderCarriage() * (0.5 * fuselage.diameter + builderData.getStrutLength()) / fuselage.diameter;
 
                 
             }
@@ -611,9 +616,9 @@ namespace COG
             if (builderData.getUndercarriagePosition() == UndercarriagePosition::WING_MOUNTED)
             {
 
-                xCGControlSurfaces = (percentageOfXCGLocationControlSurfaces * fuselage.length) / fuselage.length;
+                xCGControlSurfaces = buildAircraft.getCOGCorrectionFactor().getKXControlSurfaces() * (percentageOfXCGLocationControlSurfaces * fuselage.length) / fuselage.length;
                 yCGControlSurfaces = 0.0;
-                zCGControlSurfaces = ((wing.zloc * wing.planformArea + canard.zloc * canard.planformArea + horizontalTail.zloc * horizontalTail.planformArea + verticalTail.zloc * verticalTail.planformArea) /
+                zCGControlSurfaces = buildAircraft.getCOGCorrectionFactor().getKZControlSurfaces() * ((wing.zloc * wing.planformArea + canard.zloc * canard.planformArea + horizontalTail.zloc * horizontalTail.planformArea + verticalTail.zloc * verticalTail.planformArea) /
                                       (wing.planformArea + canard.planformArea + horizontalTail.planformArea + verticalTail.planformArea)) /
                                      fuselage.diameter;
             }
@@ -621,9 +626,9 @@ namespace COG
             else
             {
 
-                xCGControlSurfaces = (percentageOfXCGLocationControlSurfacesNoWingMounted * fuselage.length) / fuselage.length;
+                xCGControlSurfaces = buildAircraft.getCOGCorrectionFactor().getKXControlSurfaces() * (percentageOfXCGLocationControlSurfacesNoWingMounted * fuselage.length) / fuselage.length;
                 yCGControlSurfaces = 0.0;
-                zCGControlSurfaces = ((wing.zloc * wing.planformArea + canard.zloc * canard.planformArea + horizontalTail.zloc * horizontalTail.planformArea + verticalTail.zloc * verticalTail.planformArea) /
+                zCGControlSurfaces = buildAircraft.getCOGCorrectionFactor().getKZControlSurfaces() * ((wing.zloc * wing.planformArea + canard.zloc * canard.planformArea + horizontalTail.zloc * horizontalTail.planformArea + verticalTail.zloc * verticalTail.planformArea) /
                                       (wing.planformArea + canard.planformArea + horizontalTail.planformArea + verticalTail.planformArea)) /
                                      fuselage.diameter;
 
@@ -638,9 +643,9 @@ namespace COG
         std::tuple<double, double, double> inline calculateCOGPropulsionGroup()
         {
 
-            xCGPropulsionGroup = (nacelle.xloc.front() + percentageOfXCGLocationNacelle * nacelle.length) / fuselage.length;
+            xCGPropulsionGroup = buildAircraft.getCOGCorrectionFactor().getKXPropulsionGroup() * (nacelle.xloc.front() + percentageOfXCGLocationNacelle * nacelle.length) / fuselage.length;
             yCGPropulsionGroup = 0.0;
-            zCGPropulsionGroup = nacelle.zloc.front() / fuselage.diameter;
+            zCGPropulsionGroup = buildAircraft.getCOGCorrectionFactor().getKZPropulsionGroup() * (nacelle.zloc.front() / fuselage.diameter);
 
             return {std::make_tuple(xCGPropulsionGroup, yCGPropulsionGroup, zCGPropulsionGroup)};
         }
@@ -653,9 +658,9 @@ namespace COG
             if (builderData.getHasAPU())
             {
 
-                xCGAPU = (percentageOfXCGLocationAPU * fuselage.length) / fuselage.length;
+                xCGAPU = buildAircraft.getCOGCorrectionFactor().getKXAPU() * (percentageOfXCGLocationAPU * fuselage.length) / fuselage.length;
                 yCGAPU = 0.0;
-                zCGAPU = 0.0 / fuselage.diameter;
+                zCGAPU = buildAircraft.getCOGCorrectionFactor().getKZAPU() + (0.0 / fuselage.diameter);
             }
 
             return {std::make_tuple(xCGAPU, yCGAPU, zCGAPU)};
@@ -666,9 +671,9 @@ namespace COG
         std::tuple<double, double, double> inline calculateCOGInstruments()
         {
 
-            xCGInstruments = (percentageOfXCGLocationInstruments * fuselage.length) / fuselage.length;
+            xCGInstruments = buildAircraft.getCOGCorrectionFactor().getKXInstruments() * (percentageOfXCGLocationInstruments * fuselage.length) / fuselage.length;
             yCGInstruments = 0.0;
-            zCGInstruments = (percentageOfZCGLocationInstruments * fuselage.diameter) / fuselage.diameter;
+            zCGInstruments = buildAircraft.getCOGCorrectionFactor().getKZInstruments() * (percentageOfZCGLocationInstruments * fuselage.diameter) / fuselage.diameter;
 
             return {std::make_tuple(xCGInstruments, yCGInstruments, zCGInstruments)};
         }
@@ -678,9 +683,9 @@ namespace COG
         std::tuple<double, double, double> inline calculateCOGHydraulicAndPneumatic()
         {
 
-            xCGHydraulicAndPneumatic = (percentageOfXCGLocationHydraulicAndPneumatic * fuselage.length) / fuselage.length;
+            xCGHydraulicAndPneumatic = buildAircraft.getCOGCorrectionFactor().getKXHydraulicAndPneumatic() * (percentageOfXCGLocationHydraulicAndPneumatic * fuselage.length) / fuselage.length;
             yCGHydraulicAndPneumatic = 0.0;
-            zCGHydraulicAndPneumatic = ((wing.zloc * wing.planformArea + horizontalTail.zloc * horizontalTail.planformArea) /
+            zCGHydraulicAndPneumatic = buildAircraft.getCOGCorrectionFactor().getKZHydraulicAndPneumatic() * ((wing.zloc * wing.planformArea + horizontalTail.zloc * horizontalTail.planformArea) /
                                         (wing.planformArea + horizontalTail.planformArea)) /
                                        fuselage.diameter;
 
@@ -692,9 +697,9 @@ namespace COG
         std::tuple<double, double, double> inline calculateCOGElectricalGroup()
         {
 
-            xCGElectricalGroup = (percentageOfXCGLocationElectricalGroup * fuselage.length) / fuselage.length;
+            xCGElectricalGroup = buildAircraft.getCOGCorrectionFactor().getKXElectricalGroup() * (percentageOfXCGLocationElectricalGroup * fuselage.length) / fuselage.length;
             yCGElectricalGroup = 0.0;
-            zCGElectricalGroup = 0.0 / fuselage.diameter;
+            zCGElectricalGroup = buildAircraft.getCOGCorrectionFactor().getKZElectricalGroup() + (0.0 / fuselage.diameter);
 
             return {std::make_tuple(xCGElectricalGroup, yCGElectricalGroup, zCGElectricalGroup)};
         }
@@ -704,9 +709,9 @@ namespace COG
         std::tuple<double, double, double> inline calculateCOGAvionicGroup()
         {
 
-            xCGAvionicGroup = (percentageOfXCGLocationAvionicGroup * fuselage.length) / fuselage.length;
+            xCGAvionicGroup = buildAircraft.getCOGCorrectionFactor().getKXAvionic() * (percentageOfXCGLocationAvionicGroup * fuselage.length) / fuselage.length;
             yCGAvionicGroup = 0.0;
-            zCGAvionicGroup = 0.0 / fuselage.diameter;
+            zCGAvionicGroup = buildAircraft.getCOGCorrectionFactor().getKZAvionic() + (0.0 / fuselage.diameter);
 
             return {std::make_tuple(xCGAvionicGroup, yCGAvionicGroup, zCGAvionicGroup)};
         }
@@ -718,9 +723,9 @@ namespace COG
 
             if (builderData.getHasFurnishinghAndEquipment())
             {
-                xCGFurnishingsAndEquipment = (percentageOfXCGLocationFurnishingsAndEquipment * fuselage.length) / fuselage.length;
+                xCGFurnishingsAndEquipment = buildAircraft.getCOGCorrectionFactor().getKXFurnishingAndEquipment() * (percentageOfXCGLocationFurnishingsAndEquipment * fuselage.length) / fuselage.length;
                 yCGFurnishingsAndEquipment = 0.0;
-                zCGFurnishingsAndEquipment = 0.0 / fuselage.diameter;
+                zCGFurnishingsAndEquipment = buildAircraft.getCOGCorrectionFactor().getKZFurnishingAndEquipment() + (0.0 / fuselage.diameter);
             }
 
             return {std::make_tuple(xCGFurnishingsAndEquipment, yCGFurnishingsAndEquipment, zCGFurnishingsAndEquipment)};
@@ -733,9 +738,9 @@ namespace COG
 
             if (builderData.getHasAirConditioningAndAntiIce())
             {
-                xCGAirConditioningAndAntiIce = (percentageOfXCGLocationAirConditioningAndAntiIce * fuselage.length) / fuselage.length;
+                xCGAirConditioningAndAntiIce = buildAircraft.getCOGCorrectionFactor().getKXAntiIcingAndConditioning() * (percentageOfXCGLocationAirConditioningAndAntiIce * fuselage.length) / fuselage.length;
                 yCGAirConditioningAndAntiIce = 0.0;
-                zCGAirConditioningAndAntiIce = (percentageOfZCGLocationAirConditioningAndAntiIce * fuselage.diameter) / fuselage.diameter;
+                zCGAirConditioningAndAntiIce = buildAircraft.getCOGCorrectionFactor().getKZAntiIcingAndConditioning() * (percentageOfZCGLocationAirConditioningAndAntiIce * fuselage.diameter) / fuselage.diameter;
             }
 
             return {std::make_tuple(xCGAirConditioningAndAntiIce, yCGAirConditioningAndAntiIce, zCGAirConditioningAndAntiIce)};
@@ -746,9 +751,9 @@ namespace COG
         std::tuple<double, double, double> inline calculateCOGOperatingItems()
         {
 
-            xCGOperatingItems = (percentageOfXCGLocationOperatingItems * fuselage.length) / fuselage.length;
+            xCGOperatingItems = buildAircraft.getCOGCorrectionFactor().getKXOperatingItems() * (percentageOfXCGLocationOperatingItems * fuselage.length) / fuselage.length;
             yCGOperatingItems = 0.0;
-            zCGOperatingItems = 0.0 / fuselage.diameter;
+            zCGOperatingItems = buildAircraft.getCOGCorrectionFactor().getKZOperatingItems() + (0.0 / fuselage.diameter);
 
             return {std::make_tuple(xCGOperatingItems, yCGOperatingItems, zCGOperatingItems)};
         }
@@ -758,9 +763,9 @@ namespace COG
         std::tuple<double, double, double> inline calculateCOGPayload()
         {
 
-            xCGPayload = (percentageOfXCGLocationPayload * fuselage.length) / fuselage.length;
+            xCGPayload = buildAircraft.getCOGCorrectionFactor().getKXPayload() * (percentageOfXCGLocationPayload * fuselage.length) / fuselage.length;
             yCGPayload = 0.0;
-            zCGPayload = 0.0 / fuselage.diameter;
+            zCGPayload = buildAircraft.getCOGCorrectionFactor().getKZPayload() + (0.0 / fuselage.diameter);
 
             return {std::make_tuple(xCGPayload, yCGPayload, zCGPayload)};
         }
@@ -770,9 +775,9 @@ namespace COG
         std::tuple<double, double, double> inline calculateCOGCrew()
         {
 
-            xCGCrew = (percentageOfXCGLocationCrew * fuselage.length) / fuselage.length;
+            xCGCrew = buildAircraft.getCOGCorrectionFactor().getKXCrew() * (percentageOfXCGLocationCrew * fuselage.length) / fuselage.length;
             yCGCrew = 0.0;
-            zCGCrew = 0.0 / fuselage.diameter;
+            zCGCrew = buildAircraft.getCOGCorrectionFactor().getKZCrew() + (0.0 / fuselage.diameter);
 
             return {std::make_tuple(xCGCrew, yCGCrew, zCGCrew)};
         }
@@ -785,9 +790,9 @@ namespace COG
             if (wing.averageLeadingEdgeSweep == 0.0)
             {
 
-                xCGFuel = (wing.xloc + percentageOfMACLocationFuel * wing.MAC) / fuselage.length;
+                xCGFuel = buildAircraft.getCOGCorrectionFactor().getKXFuel() * (wing.xloc + percentageOfMACLocationFuel * wing.MAC) / fuselage.length;
                 yCGFuel = 0.0;
-                zCGFuel = 0.0 / fuselage.diameter;
+                zCGFuel = buildAircraft.getCOGCorrectionFactor().getKZFuel() * (wing.zloc +  wing.yMAC * std::tan(wing.averageDihedral / 57.3)) / fuselage.diameter;
             }
 
             else
@@ -796,9 +801,9 @@ namespace COG
                 mainSparPositionWing = builderData.getKMainSparPosition() * wing.croot.front();
                 secondarySparPositionWing = builderData.getKSecondarySparPosition() * wing.croot.front();
 
-                xCGFuel = (wing.xloc + (mainSparPositionWing + (secondarySparPositionWing - mainSparPositionWing) * tan(wing.averageLeadingEdgeSweep / 57.3)) + 0.5 * wing.MAC) / fuselage.length;
+                xCGFuel = buildAircraft.getCOGCorrectionFactor().getKXFuel() * (wing.xloc + (mainSparPositionWing + (secondarySparPositionWing - mainSparPositionWing) * tan(wing.averageLeadingEdgeSweep / 57.3)) + 0.5 * wing.MAC) / fuselage.length;
                 yCGFuel = 0.0;
-                zCGFuel = 0.0 / fuselage.diameter;
+                zCGFuel = buildAircraft.getCOGCorrectionFactor().getKZFuel() * (wing.zloc +  wing.yMAC * std::tan(wing.averageDihedral / 57.3)) / fuselage.diameter;
             }
 
             return {std::make_tuple(xCGFuel, yCGFuel, zCGFuel)};
@@ -810,7 +815,7 @@ namespace COG
 
 
             // Calculate wetted area for all components (fuselage, nacelles, boom if present)
-            wettedAreaCalculator.getAllGeoms(nameOfAircraft, "GetGeomOfAircraft.vspscript");
+            wettedAreaCalculator.getAllGeoms(nameOfAircraft);
 
             // Access and display results
             const auto &results = wettedAreaCalculator.getWettedAreaResults();
@@ -823,11 +828,11 @@ namespace COG
 
             {
 
-                wingWeight = weight.wingWeightTorenbeek(wingData,
-                                                        wing.totalProjectedSpan,
-                                                        wing.sweepC2,
-                                                        wing.croot.front(),
-                                                        wing.planformArea);
+                wingWeight = buildAircraft.getWeightCorrectionFactor().getKWing() * weight.wingWeightTorenbeek(wingData,
+                                                                                                               wing.totalProjectedSpan,
+                                                                                                               wing.sweepC2,
+                                                                                                               wing.croot.front(),
+                                                                                                               wing.planformArea);
             }
             break;
 
@@ -835,26 +840,24 @@ namespace COG
 
             {
 
-                
-                wingWeight = weight.wingWeightSadraey(wingData,
-                                                      wing.planformArea,
-                                                      wing.MAC,
-                                                      wing.aspectRatio,
-                                                      wing.taperRatio,
-                                                      wing.sweepC4);
+                wingWeight = buildAircraft.getWeightCorrectionFactor().getKWing() * weight.wingWeightSadraey(wingData,
+                                                                                                             wing.planformArea,
+                                                                                                             wing.MAC,
+                                                                                                             wing.aspectRatio,
+                                                                                                             wing.taperRatio,
+                                                                                                             wing.sweepC4);
             }
             break;
 
             case WeightMethod::WING_CHIOZZOTTO:
 
             {
-                
 
-                wingWeight = weight.wingWeightChiozzotto(wingData,
-                                                         wing.planformArea,
-                                                         wing.aspectRatio,
-                                                         wing.taperRatio,
-                                                         wing.sweepC2);
+                wingWeight = buildAircraft.getWeightCorrectionFactor().getKWing() * weight.wingWeightChiozzotto(wingData,
+                                                                                                                wing.planformArea,
+                                                                                                                wing.aspectRatio,
+                                                                                                                wing.taperRatio,
+                                                                                                                wing.sweepC2);
             }
 
             break;
@@ -865,27 +868,26 @@ namespace COG
             if (builderData.getHasCanard())
             {
 
-                canardWeight = weight.canardWeightTorenbeek(builderData,
-                                                            canard.totalProjectedSpan,
-                                                            canard.planformArea,
-                                                            canard.sweepC2);
+                canardWeight = buildAircraft.getWeightCorrectionFactor().getKCanard() * weight.canardWeightTorenbeek(builderData,
+                                                                                                                     canard.totalProjectedSpan,
+                                                                                                                     canard.planformArea,
+                                                                                                                     canard.sweepC2);
             }
 
             // =========== HORIZONTAL TAIL WEIGHT ===========
 
-
-            horizontalWeight = weight.horizontalTailWeightTorenbeek(wingData,
-                                                                    horizontalTail.planformArea,
-                                                                    horizontalTail.sweepC2);
+            horizontalWeight = buildAircraft.getWeightCorrectionFactor().getKHorizontal() * weight.horizontalTailWeightTorenbeek(wingData,
+                                                                                                                                     horizontalTail.planformArea,
+                                                                                                                                     horizontalTail.sweepC2);
 
             // =========== VERTICAL TAIL WEIGHT ===========
 
-            verticalWeight = weight.verticalTailWeightTorenbeek(wingData,
-                                                                verticalTail.totalProjectedSpan,
-                                                                verticalTail.planformArea,
-                                                                verticalTail.sweepC2,
-                                                                horizontalTail.zloc,
-                                                                horizontalTail.planformArea);
+            verticalWeight = buildAircraft.getWeightCorrectionFactor().getKVertical() * weight.verticalTailWeightTorenbeek(wingData,
+                                                                                                                           verticalTail.totalProjectedSpan,
+                                                                                                                           verticalTail.planformArea,
+                                                                                                                           verticalTail.sweepC2,
+                                                                                                                           horizontalTail.zloc,
+                                                                                                                           horizontalTail.planformArea);
 
             // =========== FUSELAGE WEIGHT ===========
 
@@ -896,7 +898,7 @@ namespace COG
 
             {
 
-                fuselageWeight = weight.fuselageWeightTorenbeek(fuselageData,
+                fuselageWeight = buildAircraft.getWeightCorrectionFactor().getKFuselage() * weight.fuselageWeightTorenbeek(fuselageData,
                                                                 fuselage.tailArm,
                                                                 fuselage.width,
                                                                 fuselage.diameter,
@@ -909,11 +911,11 @@ namespace COG
 
             {
 
-                fuselageWeight = weight.fuselgeWeightTorenbeekMaterial(fuselageData,
-                                                                       fuselage.tailArm,
-                                                                       fuselage.width,
-                                                                       fuselage.diameter,
-                                                                       results.WET_FUSE_AREA);
+                fuselageWeight = buildAircraft.getWeightCorrectionFactor().getKFuselage() * weight.fuselgeWeightTorenbeekMaterial(fuselageData,
+                                                                                                                                  fuselage.tailArm,
+                                                                                                                                  fuselage.width,
+                                                                                                                                  fuselage.diameter,
+                                                                                                                                  results.WET_FUSE_AREA);
             }
             break;
             }
@@ -921,82 +923,81 @@ namespace COG
             // =========== TAIL BOOM WEIGHT ===========
 
             if (builderData.getHasBoom())  {
-            boomWeight = weight.tailBoomWeightRoskam(builderData,
-                                                     boom.width,
-                                                     boom.height,
-                                                     results.WET_BOOM_AREA,
-                                                     fuselage.tailArm);
-
+                boomWeight = buildAircraft.getWeightCorrectionFactor().getKBoom() * weight.tailBoomWeightRoskam(builderData,
+                                                                                                                boom.width,
+                                                                                                                boom.height,
+                                                                                                                results.WET_BOOM_AREA,
+                                                                                                                fuselage.tailArm);
             }
 
             // =========== EO/IR WEIGHT ===========
 
             if (builderData.getHasEOIR())
             {
-                eoirWeight = weight.eoirWeightGundlach(builderData,
-                                                       eoir.diameter,
-                                                       eoir.fineratio.front());
+                eoirWeight = buildAircraft.getWeightCorrectionFactor().getKEoir() * weight.eoirWeightGundlach(builderData,
+                                                                                                              eoir.diameter,
+                                                                                                              eoir.fineratio.front());
             }
 
             // =========== LANDING GEAR WEIGHT ===========
 
-            landingGearWeight = weight.landingGearWeightTorenbeek(builderData);
+            landingGearWeight = buildAircraft.getWeightCorrectionFactor().getKUnderCarriage() * weight.landingGearWeightTorenbeek(builderData);
 
             // =========== CONTROL SURFACES WEIGHT ===========
 
-            controlSurfacesWeight = weight.contrsolSurfaceWeightTorenbeek(builderData);
+            controlSurfacesWeight = buildAircraft.getWeightCorrectionFactor().getKControlSurfaces() * weight.contrsolSurfaceWeightTorenbeek(builderData);
 
             // =========== PROPULSION GROUP WEIGHT ===========
 
-            propulsionGroupWeight = weight.propulsionGroupWeight(engineData);
+            propulsionGroupWeight = buildAircraft.getWeightCorrectionFactor().getKPropulsionGroup() * weight.propulsionGroupWeight(engineData);
 
             // =========== NACELLE WEIGHT ===========
 
-            nacelleWeight = weight.nacelleWeight(engineData, results.WET_NAC_AREA);
+            nacelleWeight = buildAircraft.getWeightCorrectionFactor().getKPropulsionGroup() * weight.nacelleWeight(engineData, results.WET_NAC_AREA);
 
             // =========== APU WEIGHT ===========
 
-            apuWeight = weight.apuWeight(builderData);
+            apuWeight =  buildAircraft.getWeightCorrectionFactor().getKAPU() * weight.apuWeight(builderData);
 
             // =========== INSTRUMENTS WEIGHT ===========
 
-            instrumentsWeight = weight.instrumentWeight(builderData);
+            instrumentsWeight = buildAircraft.getWeightCorrectionFactor().getKInstruments() * weight.instrumentWeight(builderData);
 
             // =========== HYDRAULIC AND PNEUMATIC SYSTEM WEIGHT ===========
 
-            hydraulicAndPneumaticWeight = weight.hydraulicSystemWeight(builderData);
+            hydraulicAndPneumaticWeight = buildAircraft.getWeightCorrectionFactor().getKHydraulicAndPneumatic() * weight.hydraulicSystemWeight(builderData);
 
             // =========== ELECTRICAL GROUP WEIGHT ===========
 
-            electricalGroupWeight = weight.electricalGroupWeight(builderData);
+            electricalGroupWeight = buildAircraft.getWeightCorrectionFactor().getKElectricalGroup() * weight.electricalGroupWeight(builderData);
 
             // =========== AVIONICS GROUP WEIGHT ===========
 
-            avionicGroupWeight = weight.avionicsWeight(builderData);
+            avionicGroupWeight = buildAircraft.getWeightCorrectionFactor().getKAvionic() * weight.avionicsWeight(builderData);
 
             // =========== FURNISHINGS AND EQUIPMENT WEIGHT ===========
 
-            furnishingsAndEquipmentWeight = weight.furnishingsAndEquipmentWeight(builderData);
+            furnishingsAndEquipmentWeight = buildAircraft.getWeightCorrectionFactor().getKFurnishingAndEquipment() * weight.furnishingsAndEquipmentWeight(builderData);
 
             // =========== AIR CONDITIONING AND ANTI-ICE WEIGHT ===========
 
-            airConditioningAndAntiIceWeight = weight.airConditioningAndAntiIceWeight(builderData);
+            airConditioningAndAntiIceWeight = buildAircraft.getWeightCorrectionFactor().getKAntiIcingAndConditioning() * weight.airConditioningAndAntiIceWeight(builderData);
 
             // =========== OPERATING ITEMS WEIGHT ===========
 
-            operatingItemsWeight = weight.operatingItemsWeight(builderData);
+            operatingItemsWeight = buildAircraft.getWeightCorrectionFactor().getKOperatingItems() * weight.operatingItemsWeight(builderData);
 
             // =========== PAYLOAD WEIGHT ===========
 
-            payloadWeight = builderData.getPayloadWeight();
+            payloadWeight = buildAircraft.getWeightCorrectionFactor().getKPayload() * builderData.getPayloadWeight();
 
             // =========== CREW WEIGHT ===========
 
-            crewWeight = builderData.getCrewWeight();
+            crewWeight = buildAircraft.getWeightCorrectionFactor().getKCrew() * builderData.getNumberOfCrewMembers() * builderData.getCrewWeight();
 
             // =========== FUEL WEIGHT ===========
 
-            fuelWeight = builderData.getFuelWeight();
+            fuelWeight =  buildAircraft.getWeightCorrectionFactor().getKFuel() * builderData.getFuelWeight();
 
             weights = {
                 .wingWeight = wingWeight,
@@ -1101,70 +1102,6 @@ namespace COG
             auto [xCGFuel, yCGFuel, zCGFuel] = calculateCOGFuel();
 
 
-            centerOfGravityComponents = {.xCGWing = xCGWing,
-                                        .yCGWing = yCGWing,
-                                        .zCGWing = zCGWing,
-                                        .xCGCanard = xCGCanard,
-                                        .yCGCanard = yCGCanard,
-                                        .zCGCanard = zCGCanard,
-                                        .xCGHorizontal = xCGHorizontal,
-                                        .yCGHorizontal = yCGHorizontal,
-                                        .zCGHorizontal = zCGHorizontal,
-                                        .xCGVertical = xCGVertical,
-                                        .yCGVertical = yCGVertical,
-                                        .zCGVertical = zCGVertical,
-                                        .xCGFuselage = xCGFuselage,
-                                        .yCGFuselage = yCGFuselage,
-                                        .zCGFuselage = zCGFuselage,
-                                        .xCGBoom = xCGBoom,
-                                        .yCGBoom = yCGBoom,
-                                        .zCGBoom = zCGBoom,
-                                        .xCGEOIR = xCGEOIR,
-                                        .yCGEOIR = yCGEOIR,
-                                        .zCGEOIR = zCGEOIR,
-                                        .xCGLandingGear = xCGLandingGear,
-                                        .yCGLandingGear = yCGLandingGear,
-                                        .zCGLandingGear = zCGLandingGear,
-                                        .xCGControlSurfaces = xCGControlSurfaces,
-                                        .yCGControlSurfaces = yCGControlSurfaces,
-                                        .zCGControlSurfaces = zCGControlSurfaces,
-                                        .xCGPropulsionGroup = xCGPropulsionGroup,
-                                        .yCGPropulsionGroup = yCGPropulsionGroup,
-                                        .zCGPropulsionGroup = zCGPropulsionGroup,
-                                        .xCGAPU = xCGAPU,
-                                        .yCGAPU = yCGAPU,
-                                        .zCGAPU = zCGAPU,
-                                        .xCGInstruments = xCGInstruments,
-                                        .yCGInstruments = yCGInstruments,
-                                        .zCGInstruments = zCGInstruments,
-                                        .xCGHydraulicAndPneumatic = xCGHydraulicAndPneumatic,
-                                        .yCGHydraulicAndPneumatic = yCGHydraulicAndPneumatic,
-                                        .zCGHydraulicAndPneumatic = zCGHydraulicAndPneumatic,
-                                        .xCGElectricalGroup = xCGElectricalGroup,
-                                        .yCGElectricalGroup = yCGElectricalGroup,
-                                        .zCGElectricalGroup = zCGElectricalGroup,
-                                        .xCGAvionicGroup = xCGAvionicGroup,
-                                        .yCGAvionicGroup = yCGAvionicGroup,
-                                        .zCGAvionicGroup = zCGAvionicGroup,
-                                        .xCGFurnishingsAndEquipment = xCGFurnishingsAndEquipment,
-                                        .yCGFurnishingsAndEquipment = yCGFurnishingsAndEquipment,
-                                        .zCGFurnishingsAndEquipment = zCGFurnishingsAndEquipment,
-                                        .xCGAirConditioningAndAntiIce = xCGAirConditioningAndAntiIce,
-                                        .yCGAirConditioningAndAntiIce = yCGAirConditioningAndAntiIce,
-                                        .zCGAirConditioningAndAntiIce = zCGAirConditioningAndAntiIce,
-                                        .xCGOperatingItems = xCGOperatingItems,
-                                        .yCGOperatingItems = yCGOperatingItems,
-                                        .zCGOperatingItems = zCGOperatingItems,
-                                        .xCGPayload = xCGPayload,
-                                        .yCGPayload = yCGPayload,
-                                        .zCGPayload = zCGPayload,
-                                        .xCGCrew = xCGCrew,
-                                        .yCGCrew = yCGCrew,
-                                        .zCGCrew = zCGCrew,
-                                        .xCGFuel = xCGFuel,
-                                        .yCGFuel = yCGFuel,
-                                        .zCGFuel = zCGFuel};
-
             xCGTotalAircraft = fuselage.length * (wingWeight * xCGWing + canardWeight * xCGCanard + horizontalWeight * xCGHorizontal + verticalWeight * xCGVertical + fuselageWeight * xCGFuselage + boomWeight * xCGBoom + eoirWeight * xCGEOIR + landingGearWeight * xCGLandingGear + controlSurfacesWeight * xCGControlSurfaces + (propulsionGroupWeight + nacelleWeight) * xCGPropulsionGroup + apuWeight * xCGAPU + instrumentsWeight * xCGInstruments + hydraulicAndPneumaticWeight * xCGHydraulicAndPneumatic + electricalGroupWeight * xCGElectricalGroup + avionicGroupWeight * xCGAvionicGroup + furnishingsAndEquipmentWeight * xCGFurnishingsAndEquipment + airConditioningAndAntiIceWeight * xCGAirConditioningAndAntiIce + operatingItemsWeight * xCGOperatingItems + payloadWeight * xCGPayload + crewWeight * xCGCrew + fuelWeight * xCGFuel) / totalAircraftWeight;
 
             yCGTotalAircraft = 0.0;
@@ -1174,6 +1111,73 @@ namespace COG
             centerOfGravityData = {.xCG = xCGTotalAircraft,
                                    .yCG = yCGTotalAircraft,
                                    .zCG = zCGTotalAircraft};
+
+            centerOfGravityComponents = {.xCG = xCGTotalAircraft / fuselage.length,
+                                         .yCG = yCGTotalAircraft,
+                                         .zCG = zCGTotalAircraft / fuselage.diameter,
+                                         .xCGWing = xCGWing,
+                                         .yCGWing = yCGWing,
+                                         .zCGWing = zCGWing,
+                                         .xCGCanard = xCGCanard,
+                                         .yCGCanard = yCGCanard,
+                                         .zCGCanard = zCGCanard,
+                                         .xCGHorizontal = xCGHorizontal,
+                                         .yCGHorizontal = yCGHorizontal,
+                                         .zCGHorizontal = zCGHorizontal,
+                                         .xCGVertical = xCGVertical,
+                                         .yCGVertical = yCGVertical,
+                                         .zCGVertical = zCGVertical,
+                                         .xCGFuselage = xCGFuselage,
+                                         .yCGFuselage = yCGFuselage,
+                                         .zCGFuselage = zCGFuselage,
+                                         .xCGBoom = xCGBoom,
+                                         .yCGBoom = yCGBoom,
+                                         .zCGBoom = zCGBoom,
+                                         .xCGEOIR = xCGEOIR,
+                                         .yCGEOIR = yCGEOIR,
+                                         .zCGEOIR = zCGEOIR,
+                                         .xCGLandingGear = xCGLandingGear,
+                                         .yCGLandingGear = yCGLandingGear,
+                                         .zCGLandingGear = zCGLandingGear,
+                                         .xCGControlSurfaces = xCGControlSurfaces,
+                                         .yCGControlSurfaces = yCGControlSurfaces,
+                                         .zCGControlSurfaces = zCGControlSurfaces,
+                                         .xCGPropulsionGroup = xCGPropulsionGroup,
+                                         .yCGPropulsionGroup = yCGPropulsionGroup,
+                                         .zCGPropulsionGroup = zCGPropulsionGroup,
+                                         .xCGAPU = xCGAPU,
+                                         .yCGAPU = yCGAPU,
+                                         .zCGAPU = zCGAPU,
+                                         .xCGInstruments = xCGInstruments,
+                                         .yCGInstruments = yCGInstruments,
+                                         .zCGInstruments = zCGInstruments,
+                                         .xCGHydraulicAndPneumatic = xCGHydraulicAndPneumatic,
+                                         .yCGHydraulicAndPneumatic = yCGHydraulicAndPneumatic,
+                                         .zCGHydraulicAndPneumatic = zCGHydraulicAndPneumatic,
+                                         .xCGElectricalGroup = xCGElectricalGroup,
+                                         .yCGElectricalGroup = yCGElectricalGroup,
+                                         .zCGElectricalGroup = zCGElectricalGroup,
+                                         .xCGAvionicGroup = xCGAvionicGroup,
+                                         .yCGAvionicGroup = yCGAvionicGroup,
+                                         .zCGAvionicGroup = zCGAvionicGroup,
+                                         .xCGFurnishingsAndEquipment = xCGFurnishingsAndEquipment,
+                                         .yCGFurnishingsAndEquipment = yCGFurnishingsAndEquipment,
+                                         .zCGFurnishingsAndEquipment = zCGFurnishingsAndEquipment,
+                                         .xCGAirConditioningAndAntiIce = xCGAirConditioningAndAntiIce,
+                                         .yCGAirConditioningAndAntiIce = yCGAirConditioningAndAntiIce,
+                                         .zCGAirConditioningAndAntiIce = zCGAirConditioningAndAntiIce,
+                                         .xCGOperatingItems = xCGOperatingItems,
+                                         .yCGOperatingItems = yCGOperatingItems,
+                                         .zCGOperatingItems = zCGOperatingItems,
+                                         .xCGPayload = xCGPayload,
+                                         .yCGPayload = yCGPayload,
+                                         .zCGPayload = zCGPayload,
+                                         .xCGCrew = xCGCrew,
+                                         .yCGCrew = yCGCrew,
+                                         .zCGCrew = zCGCrew,
+                                         .xCGFuel = xCGFuel,
+                                         .yCGFuel = yCGFuel,
+                                         .zCGFuel = zCGFuel};
 
             return {std::make_tuple(xCGTotalAircraft, yCGTotalAircraft, zCGTotalAircraft)};
         }

@@ -5,6 +5,7 @@ enum class Speed {
     M_TO_S,
     FT_TO_S,
     FT_TO_MIN,
+    KM_TO_H,
     KTS
     
 };

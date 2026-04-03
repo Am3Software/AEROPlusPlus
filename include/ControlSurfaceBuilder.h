@@ -34,6 +34,43 @@ struct Aircraft {
         bool isSplittedDeflection = false;
         std::vector<int> activatedRudder;
     } ver;
+
+    struct FuselageData {
+        std::string id = "fuselage";
+        double length = 0.0;
+        double diameter = 0.0;
+        double width = 0.0;
+    } fus;
+
+    struct BoomData {
+        std::string id = "boom";
+        double length = 0.0;
+        double diameter = 0.0;
+        double width = 0.0;
+        double radius = 0.5*diameter;
+        std::vector<double> xloc;
+        std::vector<double> yloc;
+        std::vector<double> zloc;
+    } boom;
+
+    struct NacelleData {
+        std::string id = "nacelle";
+        double length = 0.0;
+        double diameter = 0.0;
+        std::vector<double> xloc;
+        std::vector<double> yloc;
+        std::vector<double> zloc;
+    } nac;
+
+    struct DiskData {
+        std::string id = "disk";
+        double diameter = 0.0;
+        double radius = 0.5*diameter;
+        std::vector<double> xloc;
+        std::vector<double> yloc;
+        std::vector<double> zloc;
+
+    } disk;
     
     std::string movables = "none";
     std::string config = "";

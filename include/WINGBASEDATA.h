@@ -27,6 +27,10 @@ private:
     double wingStrutPosition = 0.0;
     double strutToWingChordRatio = 0.0;
     double percentageComposite = 0.0; 
+    double maximumFalpDeflection = 0.0;
+    double maximumCanardFlapDeflection = 0.0;
+    double maximumElevatorDeflection = 0.0;
+    double maximumRudderDeflection = 0.0;
     bool isBracedWing = false;
     bool hasSpoilers = false;
     bool hasFowlerFlap = false;
@@ -123,6 +127,30 @@ public:
         return *this;
     }
 
+    WingBaseData &setMaximumRudderDeflection(double value)
+    {
+        this->maximumRudderDeflection = value;
+        return *this;
+    }
+
+    WingBaseData &setMaximumFalpDeflection(double value)
+    {
+        this->maximumFalpDeflection = value;
+        return *this;
+    }
+
+    WingBaseData &setMaximumCanardFlapDeflection(double value)
+    {
+        this->maximumCanardFlapDeflection = value;
+        return *this;
+    }
+
+    WingBaseData &setMaximumElevatorDeflection(double value)
+    {
+        this->maximumElevatorDeflection = value;
+        return *this;
+    }
+
     // Getters
     double getThicknessToRootChordRatioWing() const { return thicknessToRootChordRatioWing; }
     double getPercentageComposite() const { return percentageComposite; }
@@ -131,6 +159,10 @@ public:
     double getMaxOperatingEAS() const { return maxOperatingEAS; }
     double getWingStrutPosition() const { return wingStrutPosition; }
     double getStrutToWingChordRatio() const { return strutToWingChordRatio; }
+    double getMaximumRudderDeflection() const { return maximumRudderDeflection; }
+    double getMaximumFalpDeflection() const { return maximumFalpDeflection; }
+    double getMaximumCanardFlapDeflection() const { return maximumCanardFlapDeflection; }
+    double getMaximumElevatorDeflection() const { return maximumElevatorDeflection; }
     bool getIsBracedWing() const { return isBracedWing; }
     bool getHasSpoilers() const { return hasSpoilers; }
     bool getHasFowlerFlap() const { return hasFowlerFlap; }

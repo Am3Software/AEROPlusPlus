@@ -112,27 +112,55 @@ public:
     }
 
     /// @brief Riesegue l'integrazione (es. dopo aver cambiato parametri).
+    // void solve() {
+    //     tVec.clear();
+    //     yVec.clear();
+
+    //     double t = t0;
+    //     State  y = y0;
+
+    //     for (; t <= tf; t += dt) {
+    //         tVec.push_back(t);
+    //         yVec.push_back(y);
+
+    //         State k1 = f(t,        y);
+    //         State k2 = f(t + dt/2, add(y, scale(dt/2, k1)));
+    //         State k3 = f(t + dt/2, add(y, scale(dt/2, k2)));
+    //         State k4 = f(t + dt,   add(y, scale(dt,   k3)));
+
+    //         y = add(y, scale(dt/6.0,
+    //                 add(add(k1, scale(2.0, k2)),
+    //                     add(scale(2.0, k3), k4))));
+    //     }
+    // }
+
     void solve() {
-        tVec.clear();
-        yVec.clear();
+    tVec.clear();
+    yVec.clear();
 
-        double t = t0;
-        State  y = y0;
+    double t = t0;
+    State  y = y0;
 
-        for (; t <= tf; t += dt) {
-            tVec.push_back(t);
-            yVec.push_back(y);
+    // Salva la condizione iniziale
+    tVec.push_back(t);
+    yVec.push_back(y);
 
-            State k1 = f(t,        y);
-            State k2 = f(t + dt/2, add(y, scale(dt/2, k1)));
-            State k3 = f(t + dt/2, add(y, scale(dt/2, k2)));
-            State k4 = f(t + dt,   add(y, scale(dt,   k3)));
+    while (t < tf - dt * 1e-9) {
+        State k1 = f(t,        y);
+        State k2 = f(t + dt/2, add(y, scale(dt/2, k1)));
+        State k3 = f(t + dt/2, add(y, scale(dt/2, k2)));
+        State k4 = f(t + dt,   add(y, scale(dt,   k3)));
 
-            y = add(y, scale(dt/6.0,
-                    add(add(k1, scale(2.0, k2)),
-                        add(scale(2.0, k3), k4))));
-        }
+        y = add(y, scale(dt/6.0,
+                add(add(k1, scale(2.0, k2)),
+                    add(scale(2.0, k3), k4))));
+        t += dt;
+
+        // Salva DOPO l'aggiornamento
+        tVec.push_back(t);
+        yVec.push_back(y);  // ← ora getY().back() = y(tf) ✓
     }
+}
 
     const std::vector<double>& getT() const { return tVec; }
     const std::vector<State>&  getY() const { return yVec; }

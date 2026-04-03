@@ -1026,8 +1026,8 @@ namespace LATERAL_STABILITY
 
             RestoreSettings restoreSettings;
 
-            restoreSettings.getSavePrevoiusSettings(settings);
-            restoreSettings.getSavePrevoiusAircraftInfo(aircraftInfo);
+            restoreSettings.setSavePrevoiusSettings(settings);
+            restoreSettings.setSavePrevoiusAircraftInfo(aircraftInfo);
 
             if (settings.AoA.size() > 1)
             {

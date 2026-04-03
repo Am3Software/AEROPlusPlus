@@ -12,6 +12,7 @@
 #include "EnumAircraftCategory.h"
 #include "EnumTypeOfComposite.h"
 #include "EnumAircraftEngineType.h"
+#include "EnumAircraftEngineCategory.h"
 #include "EnumTypeOfStabilizer.h"
 #include "EnumTypeOfTail.h"
 #include "EnumEnginePosition.h"
@@ -1037,17 +1038,16 @@ public:
     double horizontalTailWeightTorenbeek(WingBaseData horizontalData, double planformArea, double sweepC2)
     {
 
-        switch (horizontalData.getAircraftEngineType())
+        switch (horizontalData.getAircraftEngineCategory())
         {
-        case AircraftEngineType::SINGLE_ENGINE:
-        case AircraftEngineType::TWIN_ENGINE:
+        case AircraftEngineCategory::SINGLE_ENGINE:
+        case AircraftEngineCategory::TWIN_ENGINE:
 
             horizontalTailWeight = (0.64 * std::pow(horizontalData.getNUltimateLoad() * std::pow(planformArea, 2), 0.75));
 
             break;
 
-        case AircraftEngineType::JET_TURBOFAN:
-        case AircraftEngineType::MULTI_PROPELLER_ENGINE:
+        case AircraftEngineCategory::MULTI_PROPELLER_ENGINE:
 
             if (horizontalData.getTypeOfStabilizer() == TypeOfStabilizer::FIXED)
             {
@@ -1104,18 +1104,17 @@ public:
                                        double sweepC2, double zHorPosition, double horSurface)
     {
 
-        switch (verticalData.getAircraftEngineType())
+        switch (verticalData.getAircraftEngineCategory())
         {
 
-        case AircraftEngineType::SINGLE_ENGINE:
-        case AircraftEngineType::TWIN_ENGINE:
+        case AircraftEngineCategory::SINGLE_ENGINE:
+        case AircraftEngineCategory::TWIN_ENGINE:
 
             verticalTailWeight = (0.64 * std::pow((verticalData.getNUltimateLoad() * std::pow(planformArea, 2)), 0.75));
 
             break;
 
-        case AircraftEngineType::JET_TURBOFAN:
-        case AircraftEngineType::MULTI_PROPELLER_ENGINE:
+        case AircraftEngineCategory::MULTI_PROPELLER_ENGINE:
 
             if (verticalData.getTypeOfTail() == TypeOfTail::CONVENTIONAL_TAIL)
             {
@@ -1563,9 +1562,9 @@ public:
             }
         }
 
-        else if (engineData.getAircraftEngineType() == AircraftEngineType::TWIN_ENGINE ||
-                 engineData.getAircraftEngineType() == AircraftEngineType::SINGLE_ENGINE ||
-                 engineData.getAircraftEngineType() == AircraftEngineType::MULTI_PROPELLER_ENGINE)
+        else if (engineData.getAircraftEngineType() == AircraftEngineType::TURBOPROP ||
+                 engineData.getAircraftEngineType() == AircraftEngineType::PISTON_PROPELLER ||
+                 engineData.getAircraftEngineType() == AircraftEngineType::TURBOCHARGED)
         {
 
             engineData.setThrustLbf(engineData.getThrustToPowerRatio() * engineData.getBSHP());
@@ -1612,9 +1611,9 @@ public:
 
         }
 
-        else if (engineData.getAircraftEngineType() == AircraftEngineType::TWIN_ENGINE ||
-                 engineData.getAircraftEngineType() == AircraftEngineType::SINGLE_ENGINE ||
-                 engineData.getAircraftEngineType() == AircraftEngineType::MULTI_PROPELLER_ENGINE)
+        else if (engineData.getAircraftEngineType() == AircraftEngineType::TURBOPROP ||
+                 engineData.getAircraftEngineType() == AircraftEngineType::PISTON_PROPELLER ||
+                 engineData.getAircraftEngineType() == AircraftEngineType::TURBOCHARGED)
         {
 
             engineData.setThrustLbf(engineData.getThrustToPowerRatio() * engineData.getBSHP());

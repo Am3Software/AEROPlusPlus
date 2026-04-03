@@ -52,7 +52,7 @@ enum class CameraView
 class AircraftPlotter
 {
 private:
-    std::string            aircraftName;
+    std::string aircraftName;
     std::string logoFilePath = std::filesystem::current_path().string() + "/logo/AeroPlusPLus_logo.png";
     std::vector<DegenSurf> components;
     double colorR = 0.0, colorG = 0.4470, colorB = 0.7410;

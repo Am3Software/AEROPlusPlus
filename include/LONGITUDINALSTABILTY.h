@@ -641,10 +641,12 @@ namespace LONGITUDINAL_STABILITY
                 //                                 (1.0 + (57.3 * factorRToHorizontalTail * builder.getCommonData().getMeanAirfoilSlopeHorizontalTail()) /
                 //                                            (M_PI * horizontalTail.aspectRatio));
 
-                kFactorHorizontal = liftSlope2DCorrectedCompressibilityWing/(2*M_PI);
-
-                finiteHorizontalTailLiftSlope = 2*M_PI*horizontalTail.aspectRatio /(2 + std::sqrt(std::pow(horizontalTail.aspectRatio,2) * std::pow(beta,2) / 
-                                                      (std::pow(kFactorHorizontal,2))*(1+std::pow(std::tan(horizontalTail.sweepC2/57.3),2)/std::pow(beta,2))+4));
+                kFactorHorizontal = (liftSlope2DCorrectedCompressibilityHorizontal * 57.3) / (2 * M_PI);
+                finiteHorizontalTailLiftSlope = (2 * M_PI * horizontalTail.aspectRatio) /
+                                        (2 + std::sqrt(4 +
+                                                       std::pow(horizontalTail.aspectRatio, 2) * std::pow(beta, 2) /
+                                                           std::pow(kFactorHorizontal, 2) *
+                                                           (1 + std::pow(std::tan(horizontalTail.sweepC2 / 57.3), 2) / std::pow(beta, 2)))) /57.3;
 
                 horizontalTail.finiteSlope = finiteHorizontalTailLiftSlope;
                                                                  
@@ -661,13 +663,13 @@ namespace LONGITUDINAL_STABILITY
                 //                                 (1.0 + (57.3 * factorRToHorizontalTail * builder.getCommonData().getMeanAirfoilSlopeHorizontalTail()) /
                 //                                            (M_PI * horizontalTail.aspectRatio));
 
-                kFactorHorizontal = liftSlope2DCorrectedCompressibilityWing / (2 * M_PI);
-
-                finiteHorizontalTailLiftSlope = 2 * M_PI * horizontalTail.aspectRatio / 
-                                                (2 + std::sqrt(std::pow(horizontalTail.aspectRatio, 2) * std::pow(beta, 2) / 
-                                                (std::pow(kFactorHorizontal, 2)) * (1 + std::pow(std::tan(horizontalTail.sweepC2/57.3), 2) / std::pow(beta, 2)) + 4));
-
-                 horizontalTail.finiteSlope = finiteHorizontalTailLiftSlope;
+                kFactorHorizontal = (liftSlope2DCorrectedCompressibilityHorizontal * 57.3) / (2 * M_PI);
+                finiteHorizontalTailLiftSlope = (2 * M_PI * horizontalTail.aspectRatio) /
+                                                (2 + std::sqrt(4 +
+                                                               std::pow(horizontalTail.aspectRatio, 2) * std::pow(beta, 2) /
+                                                                   std::pow(kFactorHorizontal, 2) *
+                                                                   (1 + std::pow(std::tan(horizontalTail.sweepC2 / 57.3), 2) / std::pow(beta, 2)))) /57.3;
+                horizontalTail.finiteSlope = finiteHorizontalTailLiftSlope;
             }
 
             // Calculate finite wing lift slope considering finite aspect ratio effects
@@ -676,17 +678,32 @@ namespace LONGITUDINAL_STABILITY
             //                       (1.0 + (57.3 * builder.getCommonData().getMeanAirfoilSlopeWing()) /
             //                                  (M_PI * wing.aspectRatio));
 
-            kFactorWing = liftSlope2DCorrectedCompressibilityWing / (2 * M_PI);
+            kFactorWing = (liftSlope2DCorrectedCompressibilityWing * 57.3) / (2 * M_PI);
 
-            finiteWingLiftSlope = 2 * M_PI * wing.aspectRatio / 
-                                   (2 + std::sqrt(std::pow(wing.aspectRatio, 2) * std::pow(beta, 2) / 
-                                   (std::pow(kFactorWing, 2)) * (1 + std::pow(std::tan(wing.sweepC2/57.3), 2) / std::pow(beta, 2)) + 4));
+            finiteWingLiftSlope = (2 * M_PI * wing.aspectRatio) /
+                                  (2 + std::sqrt(4 +
+                                                 std::pow(wing.aspectRatio, 2) * std::pow(beta, 2) /
+                                                     std::pow(kFactorWing, 2) *
+                                                     (1 + std::pow(std::tan(wing.sweepC2 / 57.3), 2) / std::pow(beta, 2)))) /57.3;
 
             wing.finiteSlope = finiteWingLiftSlope;
             // STEP 2.5: Calculate downwash gradient (dε/dα)
             // This represents how much the downwash angle changes with angle of attack
             // Formula: dε/dα = (2 * CLα_h) / (π * AR_h) * (180/π) = 114.6 * CLα_w / (π * AR_w)
-            downWashGradient = 114.6 * finiteWingLiftSlope / (M_PI * wing.aspectRatio);
+            // downWashGradient = 114.6 * finiteWingLiftSlope / (M_PI * wing.aspectRatio);
+
+            double r = horizontalTail.xloc / wing.totalProjectedSpan; // distanza longitudinale normalizzata
+            double m = horizontalTail.zloc / wing.totalProjectedSpan; // altezza normalizzata
+
+            double KA = (1.0 / wing.aspectRatio) - (1.0 / (1.0 + std::pow(wing.aspectRatio, 1.7)));
+
+            double Klambda = (10.0 - 3.0 * wing.taperRatio) / 7.0;
+
+            double Kh = (1.0 - std::abs(m)) / std::pow(r, 0.33);
+
+            downWashGradient = 4.44 * std::pow(
+                                          KA * Klambda * Kh * std::sqrt(std::cos(wing.sweepC2 / 57.3)),
+                                          1.19);
 
             // ========================================================================
             // STEP 3: Calculate Wing Finite Lift Slope
@@ -834,6 +851,8 @@ namespace LONGITUDINAL_STABILITY
             case TypeOfTail::CONVENTIONAL_TAIL:
             case TypeOfTail::H_TAIL:
             case TypeOfTail::U_TAIL:
+            case TypeOfTail::TRIPLE_TAIL:
+            case TypeOfTail::CRUCIFORM_TAIL:
                 // For conventional and similar tail configurations:
                 // Apply dynamic pressure ratio efficiency factor (average of min and max)
                 // dCm/dCL_h = -(CLα_h / CLα_w) * V_h * η * (1 - dε/dα)
@@ -1659,9 +1678,9 @@ namespace LONGITUDINAL_STABILITY
 
             RestoreSettings settingsRestore;
 
-            settingsRestore.getSavePrevoiusSettings(settings);
+            settingsRestore.setSavePrevoiusSettings(settings);
 
-            settingsRestore.getSavePrevoiusAircraftInfo(aircraftInfo);
+            settingsRestore.setSavePrevoiusAircraftInfo(aircraftInfo);
 
             SILENTORCOMPONENT::SilentorComponent silentor(builder.getCommonData().getNameOfAircraft(),
                                                          "Silent_components.vspscript");

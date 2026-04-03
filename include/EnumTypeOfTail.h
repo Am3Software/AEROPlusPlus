@@ -10,6 +10,8 @@ enum class TypeOfTail
     U_TAIL,
     V_TAIL,
     V_REV_TAIL,
+    CRUCIFORM_TAIL,
+    TRIPLE_TAIL,
     UNKNOWN
 };
 
@@ -50,5 +52,16 @@ TypeOfTail stringToTypeOfTail(const std::string &comp)
     {
         return TypeOfTail::U_TAIL;
     }
+
+    if (comp == "cruciform_tail" || comp == "Cruciform_Tail")
+    {
+        return TypeOfTail::CRUCIFORM_TAIL;
+    }
+
+    if (comp == "triple_tail" || comp == "Triple_Tail")
+    {
+        return TypeOfTail::TRIPLE_TAIL;
+    }
+    
     return TypeOfTail::UNKNOWN;
 }

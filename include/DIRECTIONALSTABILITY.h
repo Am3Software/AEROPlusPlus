@@ -21,6 +21,7 @@ constexpr double M_PI = 3.14159265358979323846;
 #include "DELTAXANDDIAMETERS.h"
 #include "Interpolant.h"
 #include "Interpolant2D.h"
+#include "Interpolant3D.h"
 #include "PLOT.h"
 #include "ODE45.h"
 #include "BASEAIRCRAFTDATA.h"
@@ -50,8 +51,8 @@ namespace DIRECTIONAL_STABILITY
      */
     struct DirectionalStabilityDerivatives
     {
-        double deltaCnDeltaBetaAircraft = 0.0; ///< Yaw moment coefficient derivative with respect to sideslip angle
-        double deltaCyDeltaBetaAircraft = 0.0; ///< Side force coefficient derivative with respect to sideslip angle
+        double deltaCnDeltaBetaAircraft = 0.0;     ///< Yaw moment coefficient derivative with respect to sideslip angle
+        double deltaCyDeltaBetaAircraft = 0.0;     ///< Side force coefficient derivative with respect to sideslip angle
         double deltaCnDeltaRudderDeflection = 0.0; ///< Power rudder control
     };
 
@@ -81,7 +82,7 @@ namespace DIRECTIONAL_STABILITY
         double deltaCyDeltaBetaVerticalTailContribution = 0.0;   ///< Vertical tail contribution to side force derivative
         double deltaCyDeltaBetaFuselageContribution = 0.0;       ///< Fuselage contribution to side force derivative
         double deltaCyDeltaBetaNacelleContribution = 0.0;        ///< Nacelle contribution to side force derivative
-        double deltaCyDeltaBetaWindMillingPropeller = 0.0;        ///< Windmilling propeller contribution to side force derivative
+        double deltaCyDeltaBetaWindMillingPropeller = 0.0;       ///< Windmilling propeller contribution to side force derivative
     };
 
     /**
@@ -135,16 +136,15 @@ namespace DIRECTIONAL_STABILITY
         double deltaCyDeltaBetaFuselageContribution = 0.0;       ///< Fuselage contribution to side force derivative
         double deltaCyDeltaBetaNacelleContribution = 0.0;        ///< Nacelle contribution to side force derivative
 
-
         // Total aircraft derivatives
         double deltaCnDeltaBetaAircraft = 0.0;          ///< Total aircraft yaw moment derivative wrt sideslip
-        double deltaCyDeltaBetaAircraft = 0.0; ///< Side force coefficient derivative with respect to sideslip angle
+        double deltaCyDeltaBetaAircraft = 0.0;          ///< Side force coefficient derivative with respect to sideslip angle
         double deltaCnDeltaClAircraft = 0.0;            ///< Yaw moment derivative wrt roll rate
         double deltaCnDeltaBetaDueToWingPosition = 0.0; ///< Wing position correction factor
-         double deltaCnDeltaRudderDeflection = 0.0; ///< Power rudder control
+        double deltaCnDeltaRudderDeflection = 0.0;      ///< Power rudder control
 
         // Propeller contributions
-        double deltaCnDeltaBetaPropeller = 0.0;                     ///< Propeller yaw moment derivative
+        double deltaCnDeltaBetaPropeller = 0.0;            ///< Propeller yaw moment derivative
         double deltaCyDeltaBetaWindMillingPropeller = 0.0; ///< Side force derivative for windmilling propeller
 
         // Wing geometric parameters
@@ -165,28 +165,28 @@ namespace DIRECTIONAL_STABILITY
         std::vector<double> xStationTailConeFuselage; ///< Diameters along the fuselage [m]
 
         // Fuselage discretization arrays (Perkins and Roskam methods)
-        std::vector<double> xCoordinatePerkinsFront;                        ///< X-coordinates for fuselage front sections [m]
-        std::vector<double> xCoordinatePerkinsRear;                         ///< X-coordinates for fuselage rear sections [m]
-        std::vector<double> diametersFront;                                 ///< Front diameters of the fuselage, ordered from nose to LE wing [m]
-        std::vector<double> diametersRear;                                  ///< Rear diameters of the fuselage, ordered from TE wing to tail end [m]
-        std::vector<double> x1CentroidDistancesFront;                       ///< Centroid distances for front sections [m]
-        std::vector<double> x1CentroidDistancesRear;                        ///< Centroid distances for rear sections [m]
-        std::vector<double> deltaXFromXPointWhereFlowCasesToBePotential;    ///< X-stations from the point where flow becomes potential  [m]
-        std::vector<double> diametersFromXPointWhereFlowCasesToBePotential; ///< Diameters from the point where flow becomes potential  [m]
-        std::vector <double> widthsFromXPointWhereFlowCasesToBePotential; ///< Widths from the point where flow becomes potential  [m]
+        std::vector<double> xCoordinatePerkinsFront;                                 ///< X-coordinates for fuselage front sections [m]
+        std::vector<double> xCoordinatePerkinsRear;                                  ///< X-coordinates for fuselage rear sections [m]
+        std::vector<double> diametersFront;                                          ///< Front diameters of the fuselage, ordered from nose to LE wing [m]
+        std::vector<double> diametersRear;                                           ///< Rear diameters of the fuselage, ordered from TE wing to tail end [m]
+        std::vector<double> x1CentroidDistancesFront;                                ///< Centroid distances for front sections [m]
+        std::vector<double> x1CentroidDistancesRear;                                 ///< Centroid distances for rear sections [m]
+        std::vector<double> deltaXFromXPointWhereFlowCasesToBePotential;             ///< X-stations from the point where flow becomes potential  [m]
+        std::vector<double> diametersFromXPointWhereFlowCasesToBePotential;          ///< Diameters from the point where flow becomes potential  [m]
+        std::vector<double> widthsFromXPointWhereFlowCasesToBePotential;             ///< Widths from the point where flow becomes potential  [m]
         std::vector<double> xStationToInterpolateDiamterWhereFlowCasesToBePotential; ///< X-stations for interpolation of diameter at the point where flow becomes potential [m]
-        int indexFoundWhereFlowCasesToBePotential = 0;                      ///< Index of the fuselage section where flow becomes potential
-        int numSubdivisionsFront = 6;                                       ///< Number of subdivisions for front fuselage section
-        int numSubdivisionsRear = 6;                                        ///< Number of subdivisions for rear fuselage section
-        double distanceNoseToWing = 0.0;                                    ///< Distance from nose end to wing LE [m]
-        double stepFront = 0.0;                                             ///< Step size for front subdivisions [m]
-        double distanceWingToTail = 0.0;                                    ///< Distance from wing TE to tail start [m]
-        double stepRear = 0.0;                                              ///< Step size for rear subdivisions [m]
+        int indexFoundWhereFlowCasesToBePotential = 0;                               ///< Index of the fuselage section where flow becomes potential
+        int numSubdivisionsFront = 6;                                                ///< Number of subdivisions for front fuselage section
+        int numSubdivisionsRear = 6;                                                 ///< Number of subdivisions for rear fuselage section
+        double distanceNoseToWing = 0.0;                                             ///< Distance from nose end to wing LE [m]
+        double stepFront = 0.0;                                                      ///< Step size for front subdivisions [m]
+        double distanceWingToTail = 0.0;                                             ///< Distance from wing TE to tail start [m]
+        double stepRear = 0.0;                                                       ///< Step size for rear subdivisions [m]
         double xPointWhereFlowCasesToBePotentialToFuselageLengthRatio = 0.0;
         double xPointWhereFlowCasesToBePotential = 0.0;
         double averageXPointWhereFuselageReachesMaximumNegativeSlope = 0.65;
         double crossSectionAreaFromXPointWhereFlowCasesToBePotential = 0.0; ///< Cross-sectional area from the point where flow becomes potential [m²]
-        double diameterAtXPointWhereFlowCasesToBePotential = 0.0;              ///< Fuselage diameter at the point where flow becomes potential [m]
+        double diameterAtXPointWhereFlowCasesToBePotential = 0.0;           ///< Fuselage diameter at the point where flow becomes potential [m]
         double factorKiToSideForceFuselageContirbution = 0.0;
 
         // Aerodynamic and dimensional parameters
@@ -292,7 +292,7 @@ namespace DIRECTIONAL_STABILITY
         double factorKbOuter = 0.0;
         double thetaFactor = 0.0;
         double twoDimensionalFlapEffectivness = 0.0; // alphaCl - DATCOM -Roskam method
-        double tauFlap = 0.0;
+        double tauRudder = 0.0;
         std::vector<double> flapSpanFactorKb;
         std::vector<double> ratioEffectivnessFactorKc;
 
@@ -842,7 +842,6 @@ namespace DIRECTIONAL_STABILITY
             1.11355, 1.09426, 1.07747, 1.06148, 1.05131,
             1.04534, 1.03683, 1.03168, 1.02231};
 
-
         // DeltaCn_beta versus wing position to maximum fuselage diameter ratio
 
         // Wing position to maximum fuselage diameter ratio
@@ -858,6 +857,49 @@ namespace DIRECTIONAL_STABILITY
             -4.20949e-05, 4.68170e-06, 5.31830e-05, 8.40474e-05, 0.000125218,
             0.000165217, 0.000203544, 0.000243834, 0.000291375, 0.000333363,
             0.000370888, 0.000405228, 0.000429447, 0.000444584};
+
+        // ============================================================
+        // Rudder Effectiveness Data
+        // Source: Plot Digitizer 2.6.8 - 17/03/2026
+        // x = deflection angle [deg]
+        // y = rudder effectiveness [-]
+        // ============================================================
+
+        // --- AR = 1.5 | cr/c = 0.30 ---
+        std::vector<double> x_rudder_AR1_5_cr_c_0_30 = {
+            4.77487, 9.54973, 14.2305, 18.9113, 24.0625, 28.4375};
+        std::vector<double> y_rudder_AR1_5_cr_c_0_30 = {
+            0.548023, 0.559322, 0.566586, 0.527845, 0.462470, 0.404358};
+
+        // --- AR = 1.5 | cr/c = 0.37 ---
+        std::vector<double> x_rudder_AR1_5_cr_c_0_37 = {
+            4.51613, 9.73790, 14.7715, 20.3461, 25.3091, 30.8367};
+        std::vector<double> y_rudder_AR1_5_cr_c_0_37 = {
+            0.598870, 0.619855, 0.610977, 0.598870, 0.556901, 0.488297};
+
+        // --- AR = 1.5 | cr/c = 0.45 ---
+        std::vector<double> x_rudder_AR1_5_cr_c_0_45 = {
+            5.17473, 9.97312, 14.7480, 21.0282, 25.4973, 30.6956};
+        std::vector<double> y_rudder_AR1_5_cr_c_0_45 = {
+            0.621469, 0.636804, 0.645682, 0.661017, 0.635997, 0.535109};
+
+        // --- AR = 2.0 | cr/c = 0.30 ---
+        std::vector<double> x_rudder_AR2_0_cr_c_0_30 = {
+            4.79312, 9.54171, 14.3840, 18.9431, 24.0875, 28.4107};
+        std::vector<double> y_rudder_AR2_0_cr_c_0_30 = {
+            0.547725, 0.558788, 0.561788, 0.535793, 0.450946, 0.402399};
+
+        // --- AR = 2.0 | cr/c = 0.37 ---
+        std::vector<double> x_rudder_AR2_0_cr_c_0_37 = {
+            4.48941, 9.70801, 14.8555, 20.2604, 25.3363, 30.8098};
+        std::vector<double> y_rudder_AR2_0_cr_c_0_37 = {
+            0.595282, 0.603905, 0.596416, 0.560712, 0.525829, 0.441773};
+
+        // --- AR = 2.0 | cr/c = 0.45 ---
+        std::vector<double> x_rudder_AR2_0_cr_c_0_45 = {
+            5.19597, 10.0869, 14.7397, 20.9693, 25.4786, 30.7888};
+        std::vector<double> y_rudder_AR2_0_cr_c_0_45 = {
+            0.630705, 0.674799, 0.641546, 0.655764, 0.560472, 0.506238};
 
     public:
         /**
@@ -915,7 +957,6 @@ namespace DIRECTIONAL_STABILITY
         void calculateDirectionalStabilityDerivatives()
         {
 
-           
             // ========================================================================
             // STEP 1: Calculate Wing Contribution to Directional Stability Derivative
             // ========================================================================
@@ -1401,8 +1442,6 @@ namespace DIRECTIONAL_STABILITY
                             }
                         }
                     }
-
-                   
                 }
 
                 else if (fuseData.xStation[j] / fuselage.length == xPointWhereFlowCasesToBePotentialToFuselageLengthRatio)
@@ -1435,8 +1474,7 @@ namespace DIRECTIONAL_STABILITY
                         }
                     }
 
-                 break;
-
+                    break;
                 }
             }
 
@@ -2418,19 +2456,13 @@ namespace DIRECTIONAL_STABILITY
                 effectiveSideForceWRTBetaVerticalTwin = effectiveSideForceWRTBetaInterpolator.interpolate(equivalentVerticalTailAspectRatio, verticalTail.averageLeadingEdgeSweep);
 
                 // Calculate dCy/dBeta
-                deltaCyDeltaBetaVerticalTailContribution = -(2 * ratioSideForceWithResepectToBeta * effectiveSideForceWRTBetaVerticalTwin * verticalTail.planformArea / wing.planformArea)/57.3;
-
+                deltaCyDeltaBetaVerticalTailContribution = -(2 * ratioSideForceWithResepectToBeta * effectiveSideForceWRTBetaVerticalTwin * verticalTail.planformArea / wing.planformArea) / 57.3;
 
                 // Calculate dCn/dBeta
 
                 zCoordinatesOfVerticalTailAerodynamicCenter = verticalTail.zloc + verticalTail.yMAC;
 
-                deltaCnDeltaBetaVerticalTailContribution = - deltaCyDeltaBetaVerticalTailContribution * (tailArmVerticalTail * std::cos(settings.AoA.front()/57.3) + 
-                                                                     zCoordinatesOfVerticalTailAerodynamicCenter * std::sin(settings.AoA.front()/57.3)) / wing.totalSpan;
-
-
-
-
+                deltaCnDeltaBetaVerticalTailContribution = -deltaCyDeltaBetaVerticalTailContribution * (tailArmVerticalTail * std::cos(settings.AoA.front() / 57.3) + zCoordinatesOfVerticalTailAerodynamicCenter * std::sin(settings.AoA.front() / 57.3)) / wing.totalSpan;
             }
 
             break;
@@ -2440,13 +2472,12 @@ namespace DIRECTIONAL_STABILITY
             deltaCnDeltaBetaAircraft = deltaCnDeltaBetaWingContribution + deltaCnDeltaBetaDueToWingPosition + deltaCnDeltaBetaCanardContribution + deltaCnDeltaBetaHorizontalTailContribution +
                                        deltaCnDeltaBetaFuselageContribution + deltaCnDeltaBetaNacelleContribution + deltaCnDeltaBetaPropeller + deltaCnDeltaBetaVerticalTailContribution;
 
-
             // Calculate total dCy/dBeta - Total aircraft
-            deltaCyDeltaBetaAircraft = deltaCyDeltaBetaWingContribution +  deltaCyDeltaBetaCanardContribution + deltaCyDeltaBetaHorizontalTailContribution +
-                                       deltaCyDeltaBetaFuselageContribution + deltaCyDeltaBetaNacelleContribution  + deltaCyDeltaBetaWindMillingPropeller + deltaCyDeltaBetaVerticalTailContribution;
+            deltaCyDeltaBetaAircraft = deltaCyDeltaBetaWingContribution + deltaCyDeltaBetaCanardContribution + deltaCyDeltaBetaHorizontalTailContribution +
+                                       deltaCyDeltaBetaFuselageContribution + deltaCyDeltaBetaNacelleContribution + deltaCyDeltaBetaWindMillingPropeller + deltaCyDeltaBetaVerticalTailContribution;
 
             // ========================================================================
-            // STEP 8: Calculate Flap Effectivness
+            // STEP 8: Calculate Flap Effectivness - From : Experimental analysis of aircrfat directional control effectivness - Nicolosi F., Ciliberti D., Della Vecchia P., Corcione S., Elsevir
             // ========================================================================
 
             for (size_t n = 0; n < verticalTail.mov.type.size(); n++)
@@ -2468,55 +2499,68 @@ namespace DIRECTIONAL_STABILITY
 
             averageChordRatio = numeratorAverageChordRatio / weightsOfWeightedAverageChordRatio;
 
-            for (size_t i = 0; i < verticalTail.mov.type.size(); i++)
-            {
+            // for (size_t i = 0; i < verticalTail.mov.type.size(); i++)
+            // {
 
-                if (verticalTail.mov.type[i] == 'r')
-                {
+            //     if (verticalTail.mov.type[i] == 'r')
+            //     {
 
-                    etaInner = verticalTail.mov.eta_inner[i];
-                    etaOuter = verticalTail.mov.eta_outer[i];
+            //         etaInner = verticalTail.mov.eta_inner[i];
+            //         etaOuter = verticalTail.mov.eta_outer[i];
 
-                    Interpolant2D kbFactorInterpolator(3, RegressionMethod::POLYNOMIAL);
+            //         Interpolant2D kbFactorInterpolator(3, RegressionMethod::POLYNOMIAL);
 
-                    kbFactorInterpolator.addCurve(0.0, x_Kb_taper0, y_Kb_taper0);
-                    kbFactorInterpolator.addCurve(0.5, x_Kb_taper05, y_Kb_taper05);
-                    kbFactorInterpolator.addCurve(1.0, x_Kb_taper1, y_Kb_taper1);
+            //         kbFactorInterpolator.addCurve(0.0, x_Kb_taper0, y_Kb_taper0);
+            //         kbFactorInterpolator.addCurve(0.5, x_Kb_taper05, y_Kb_taper05);
+            //         kbFactorInterpolator.addCurve(1.0, x_Kb_taper1, y_Kb_taper1);
 
-                    factorKbInner = kbFactorInterpolator.interpolate(etaInner, verticalTail.taperRatio);
-                    factorKbOuter = kbFactorInterpolator.interpolate(etaOuter, verticalTail.taperRatio);
+            //         factorKbInner = kbFactorInterpolator.interpolate(etaInner, verticalTail.taperRatio);
+            //         factorKbOuter = kbFactorInterpolator.interpolate(etaOuter, verticalTail.taperRatio);
 
-                    thetaFactor = std::acos(2 * averageChordRatio - 1);
+            //         thetaFactor = std::acos(2 * averageChordRatio - 1);
 
-                    twoDimensionalFlapEffectivness = 1 - ((thetaFactor - std::sin(thetaFactor)) / M_PI);
+            //         twoDimensionalFlapEffectivness = 1 - ((thetaFactor - std::sin(thetaFactor)) / M_PI);
 
-                    flapSpanFactorKb.push_back(factorKbOuter - factorKbInner);
+            //         flapSpanFactorKb.push_back(factorKbOuter - factorKbInner);
 
-                    Interpolant2D ratioFlapEffectivnessInterpolator(1, RegressionMethod::POWER);
+            //         Interpolant2D ratioFlapEffectivnessInterpolator(1, RegressionMethod::POWER);
 
-                    ratioFlapEffectivnessInterpolator.addCurve(0.1, x_RatioFlapEff_cf01, y_RatioFlapEff_cf01);
-                    ratioFlapEffectivnessInterpolator.addCurve(0.2, x_RatioFlapEff_cf02, y_RatioFlapEff_cf02);
-                    ratioFlapEffectivnessInterpolator.addCurve(0.3, x_RatioFlapEff_cf03, y_RatioFlapEff_cf03);
-                    ratioFlapEffectivnessInterpolator.addCurve(0.4, x_RatioFlapEff_cf04, y_RatioFlapEff_cf04);
-                    ratioFlapEffectivnessInterpolator.addCurve(0.5, x_RatioFlapEff_cf05, y_RatioFlapEff_cf05);
-                    ratioFlapEffectivnessInterpolator.addCurve(0.6, x_RatioFlapEff_cf06, y_RatioFlapEff_cf06);
-                    ratioFlapEffectivnessInterpolator.addCurve(0.7, x_RatioFlapEff_cf07, y_RatioFlapEff_cf07);
-                    ratioFlapEffectivnessInterpolator.addCurve(0.8, x_RatioFlapEff_cf08, y_RatioFlapEff_cf08);
-                    ratioFlapEffectivnessInterpolator.addCurve(0.9, x_RatioFlapEff_cf09, y_RatioFlapEff_cf09);
+            //         ratioFlapEffectivnessInterpolator.addCurve(0.1, x_RatioFlapEff_cf01, y_RatioFlapEff_cf01);
+            //         ratioFlapEffectivnessInterpolator.addCurve(0.2, x_RatioFlapEff_cf02, y_RatioFlapEff_cf02);
+            //         ratioFlapEffectivnessInterpolator.addCurve(0.3, x_RatioFlapEff_cf03, y_RatioFlapEff_cf03);
+            //         ratioFlapEffectivnessInterpolator.addCurve(0.4, x_RatioFlapEff_cf04, y_RatioFlapEff_cf04);
+            //         ratioFlapEffectivnessInterpolator.addCurve(0.5, x_RatioFlapEff_cf05, y_RatioFlapEff_cf05);
+            //         ratioFlapEffectivnessInterpolator.addCurve(0.6, x_RatioFlapEff_cf06, y_RatioFlapEff_cf06);
+            //         ratioFlapEffectivnessInterpolator.addCurve(0.7, x_RatioFlapEff_cf07, y_RatioFlapEff_cf07);
+            //         ratioFlapEffectivnessInterpolator.addCurve(0.8, x_RatioFlapEff_cf08, y_RatioFlapEff_cf08);
+            //         ratioFlapEffectivnessInterpolator.addCurve(0.9, x_RatioFlapEff_cf09, y_RatioFlapEff_cf09);
 
-                    ratioEffectivnessFactorKc.push_back(ratioFlapEffectivnessInterpolator.interpolate(verticalTail.aspectRatio, twoDimensionalFlapEffectivness));
+            //         ratioEffectivnessFactorKc.push_back(ratioFlapEffectivnessInterpolator.interpolate(verticalTail.aspectRatio, twoDimensionalFlapEffectivness));
 
-                    tauFlap += flapSpanFactorKb.back() * ratioEffectivnessFactorKc.back() * twoDimensionalFlapEffectivness * verticalTailLiftSlope / builder.getCommonData().getMeanAirfoilSlopeVerticalTail();
-                }
-            }
+            //         tauRudder += flapSpanFactorKb.back() * ratioEffectivnessFactorKc.back() * twoDimensionalFlapEffectivness * verticalTailLiftSlope / builder.getCommonData().getMeanAirfoilSlopeVerticalTail();
+            //     }
+            // }
 
-            Interpolant deltaCnBetaDueToVerticalSurfaceInterpolator (wingToMaximumFuselageDiameterRatio, deltaCnBetaDueToVerticalTailSurface, 2, RegressionMethod::POLYNOMIAL);
+            Interpolant3D flapEffectivnessInterpolator(5, RegressionMethod::POLYNOMIAL);
+
+            flapEffectivnessInterpolator.addCurve(1.5,0.3, x_rudder_AR1_5_cr_c_0_30, y_rudder_AR1_5_cr_c_0_30);
+            flapEffectivnessInterpolator.addCurve(1.5,0.37, x_rudder_AR1_5_cr_c_0_37, y_rudder_AR1_5_cr_c_0_37);
+            flapEffectivnessInterpolator.addCurve(1.5,0.45, x_rudder_AR1_5_cr_c_0_45, y_rudder_AR1_5_cr_c_0_45);
+            flapEffectivnessInterpolator.addCurve(2.0,0.3, x_rudder_AR2_0_cr_c_0_30, y_rudder_AR2_0_cr_c_0_30);
+            flapEffectivnessInterpolator.addCurve(2.0,0.37, x_rudder_AR2_0_cr_c_0_37, y_rudder_AR2_0_cr_c_0_37);
+            flapEffectivnessInterpolator.addCurve(2.0,0.45, x_rudder_AR2_0_cr_c_0_45, y_rudder_AR2_0_cr_c_0_45);
+
+
+            tauRudder = flapEffectivnessInterpolator.interpolate(builder.getWingData().getMaximumRudderDeflection(),averageChordRatio, verticalTail.aspectRatio);
+
+
+            Interpolant deltaCnBetaDueToVerticalSurfaceInterpolator(wingToMaximumFuselageDiameterRatio, deltaCnBetaDueToVerticalTailSurface, 2, RegressionMethod::POLYNOMIAL);
 
             deltaCnDeltaBetaDueToVerticalTailSurface = deltaCnBetaDueToVerticalSurfaceInterpolator.getYValueFromRegression(std::abs(wing.zloc) / fuselage.diameter);
 
-            dynamicPressureRatioAtVerticalTail = (deltaCnDeltaBetaVerticalTailContribution - deltaCnDeltaBetaDueToVerticalTailSurface)/(verticalTailLiftSlope * (verticalTail.planformArea / wing.planformArea) * (tailArmVerticalTail / wing.totalSpan));
+            dynamicPressureRatioAtVerticalTail = (deltaCnDeltaBetaVerticalTailContribution - deltaCnDeltaBetaDueToVerticalTailSurface) / (verticalTailLiftSlope * (verticalTail.planformArea / wing.planformArea) * (tailArmVerticalTail / wing.totalSpan));
 
-            deltaCnDeltaRudderDeflection = - tauFlap * verticalTailLiftSlope * (verticalTail.planformArea / wing.planformArea) * (tailArmVerticalTail / wing.totalSpan)*dynamicPressureRatioAtVerticalTail;
+            deltaCnDeltaRudderDeflection = -tauRudder * verticalTailLiftSlope * (verticalTail.planformArea / wing.planformArea) * (tailArmVerticalTail / wing.totalSpan) * dynamicPressureRatioAtVerticalTail;
 
             // ========================================================================
             // STEP 9: Saving results
@@ -2540,12 +2584,11 @@ namespace DIRECTIONAL_STABILITY
             aircraftDirectionalDerivatives = {.deltaCnDeltaBetaAircraft = deltaCnDeltaBetaAircraft,
                                               .deltaCyDeltaBetaAircraft = deltaCyDeltaBetaAircraft,
                                               .deltaCnDeltaRudderDeflection = deltaCnDeltaRudderDeflection
-                                              
-                                              
-                                              };
+
+            };
         }
 
-        //Getters for the results
+        // Getters for the results
 
         DIRECTIONAL_STABILITY::DirectionalStabilityDerivativesYawToSingleComponent getSingleComponentsDerivativesYaw() const
         {
@@ -2561,6 +2604,5 @@ namespace DIRECTIONAL_STABILITY
         {
             return aircraftDirectionalDerivatives;
         }
-
     };
 };

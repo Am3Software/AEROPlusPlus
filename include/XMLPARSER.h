@@ -115,6 +115,17 @@ namespace XMLUtil
                 {
                     return std::stod(str);
                 }
+                else if constexpr (std::is_same_v<T, std::vector<double>>)
+                {
+                    std::vector<double> result;
+                    std::stringstream ss(str);
+                    std::string token;
+                    while (std::getline(ss, token, ','))
+                    {
+                        result.push_back(std::stod(token));
+                    }
+                    return result;
+                }
                 else if constexpr (std::is_same_v<T, bool>)
                 {
                     std::string lower = str;

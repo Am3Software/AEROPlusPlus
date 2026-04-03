@@ -13,12 +13,17 @@
 #include "EnumUndercarriagePosition.h"
 #include "EnumWeightMethod.h"
 #include "EnumWingPosition.h"
+#include "EnumAircraftCategory.h"
+#include "EnumAircraftEngineCategory.h"
+#include "EnumSkinRoughnessType.h"
+#include "EnumWingFairingType.h"
+#include "EnumTypeOfFlap.h"
+#include "EnumWindScreenType.h"
 
 class BaseAircraftData
 {
 
 protected:
-
     std::string nameOfAircraft;
 
     double WTO = 0.0;
@@ -30,14 +35,12 @@ protected:
     double nUltimateLoad = 0.0;
     double adimAerodynamicCenter = 0.0;
     double diveSpeed = 0.0;
-    bool   isSweptWing = false;
+    bool isSweptWing = false;
     double kMainSparPosition = 0.25;
     double kSecondarySparPosition = 0.55;
     double meanAirfoilSlopeWing = 0.0;
     double meanAirfoilSlopeHorizontalTail = 0.0;
     double meanAirfoilSlopeVerticalTail = 0.0;
-
-    
 
     // Canard variables related
     bool hasCanard = false;
@@ -74,9 +77,13 @@ protected:
     bool hasAirConditioningAndAntiIce = true;
     bool hasAPU = false;
 
+    // CRew weight related variables
+    int numberOfCrewMembers = 0;
+
     // Enumeration data
     AircraftCategory aircraftCategory;
     AircraftEngineType aircraftEngineType;
+    AircraftEngineCategory aircraftEngineCategory;
     UndercarriagePosition undercarriagePosition;
     EnginePosition enginePosition;
     Material frameMaterial;
@@ -89,10 +96,21 @@ protected:
     WeightMethod weightMethodWing;
     WeightMethod weightMethodFuselage;
     WingPosition wingPosition;
+    WingPosition canardPosition;
+    SkinRoughnessType skinRoughnessTypeWing;
+    SkinRoughnessType skinRoughnessTypeCanard;
+    SkinRoughnessType skinRoughnessTypeHorizontalTail;
+    SkinRoughnessType skinRoughnessTypeVerticalTail;
+    SkinRoughnessType skinRoughnessTypeFuselage;
+    SkinRoughnessType skinRoughnessTypeNacelle;
+    SkinRoughnessType skinRoughnessTypeBoom;
+    WingFairingType wingFairingType;
+    WingFairingType canardFairingType;
+    TypeOfFlap typeOfFlap;
+    WindScreenType windScreenType;
 
 public:
     BaseAircraftData() = default;
-
 
     BaseAircraftData &setNameOfAircraft(const std::string &nameOfAircraft)
     {
@@ -111,6 +129,13 @@ public:
     {
 
         this->payloadWeight = payloadWeight;
+        return *this;
+    }
+
+    BaseAircraftData &setNumberOfCrewMembers(int numberOfCrewMembers)
+    {
+
+        this->numberOfCrewMembers = numberOfCrewMembers;
         return *this;
     }
 
@@ -142,7 +167,6 @@ public:
         return *this;
     }
 
-    
     BaseAircraftData &setAdimAerodynamicCenter(double adimAerodynamicCenter)
     {
 
@@ -363,7 +387,8 @@ public:
         return *this;
     }
 
-    BaseAircraftData &setNumberOfBlades(int numberOfBBlades) {
+    BaseAircraftData &setNumberOfBlades(int numberOfBBlades)
+    {
 
         this->numberOfBlades = numberOfBBlades;
         return *this;
@@ -375,11 +400,90 @@ public:
         return *this;
     }
 
+    BaseAircraftData &setAircraftEngineCategory(AircraftEngineCategory engineCategory)
+    {
+        this->aircraftEngineCategory = engineCategory;
+        return *this;
+    }
+
+    BaseAircraftData &setSkinRoughnessTypeWing(SkinRoughnessType skinRoughnessTypeWing)
+    {
+        this->skinRoughnessTypeWing = skinRoughnessTypeWing;
+        return *this;
+    }
+
+    BaseAircraftData &setSkinRoughnessTypeCanard(SkinRoughnessType skinRoughnessTypeCanard)
+    {
+        this->skinRoughnessTypeCanard = skinRoughnessTypeCanard;
+        return *this;
+    }
+
+    BaseAircraftData &setSkinRoughnessTypeHorizontalTail(SkinRoughnessType skinRoughnessTypeHorizontalTail)
+    {
+        this->skinRoughnessTypeHorizontalTail = skinRoughnessTypeHorizontalTail;
+        return *this;
+    }
+
+    BaseAircraftData &setSkinRoughnessTypeVerticalTail(SkinRoughnessType skinRoughnessTypeVerticalTail)
+    {
+        this->skinRoughnessTypeVerticalTail = skinRoughnessTypeVerticalTail;
+        return *this;
+    }
+
+    BaseAircraftData &setSkinRoughnessTypeFuselage(SkinRoughnessType skinRoughnessTypeFuselage)
+    {
+        this->skinRoughnessTypeFuselage = skinRoughnessTypeFuselage;
+        return *this;
+    }
+
+    BaseAircraftData &setSkinRoughnessTypeNacelle(SkinRoughnessType skinRoughnessTypeNacelle)
+    {
+        this->skinRoughnessTypeNacelle = skinRoughnessTypeNacelle;
+        return *this;
+    }
+
+    BaseAircraftData &setSkinRoughnessTypeBoom(SkinRoughnessType skinRoughnessTypeBoom)
+    {
+        this->skinRoughnessTypeBoom = skinRoughnessTypeBoom;
+        return *this;
+    }
+
+    BaseAircraftData &setWingFairingType(WingFairingType wingFairingType)
+    {
+        this->wingFairingType = wingFairingType;
+        return *this;
+    }
+
+    BaseAircraftData &setTypeOfFlap(TypeOfFlap typeOfFlap)
+    {
+        this->typeOfFlap = typeOfFlap;
+        return *this;
+    }
+
+    BaseAircraftData &setCanardPosition(WingPosition canardPosition)
+    {
+        this->canardPosition = canardPosition;
+        return *this;
+    }
+
+    BaseAircraftData &setCanardFairingType(WingFairingType canardFairingType)
+    {
+        this->canardFairingType = canardFairingType;
+        return *this;
+    }
+
+    BaseAircraftData &setWindScreenType(WindScreenType windScreenType)
+    {
+        this->windScreenType = windScreenType;
+        return *this;
+    }
+
     // ========== GETTERS ==========
 
     std::string getNameOfAircraft() const { return nameOfAircraft; }
     double getWTO() const { return WTO; }
     double getPayloadWeight() const { return payloadWeight; }
+    int getNumberOfCrewMembers() const { return numberOfCrewMembers; }
     double getCrewWeight() const { return crewWeight; }
     double getFuelWeight() const { return fuelWeight; }
 
@@ -391,6 +495,7 @@ public:
     double getKMainSparPosition() const { return kMainSparPosition; }
     double getKSecondarySparPosition() const { return kSecondarySparPosition; }
     bool getIsSweptWing() const { return isSweptWing; }
+   
 
     // Canard getters
     bool getHasCanard() const { return hasCanard; }
@@ -430,6 +535,8 @@ public:
     // Aircraft engine type getter
     AircraftEngineType getAircraftEngineType() const { return aircraftEngineType; }
 
+    AircraftEngineCategory getAircraftEngineCategory() const { return aircraftEngineCategory; }
+
     // Undercarriage position getter
     UndercarriagePosition getUndercarriagePosition() const { return undercarriagePosition; }
 
@@ -463,4 +570,28 @@ public:
 
     // Wing position getter
     WingPosition getWingPosition() const { return wingPosition; }
+
+    // Canard position getter
+    WingPosition getCanardPosition() const { return canardPosition; }
+
+    //Skin roughness type getter
+    SkinRoughnessType getSkinRoughnessTypeWing() const { return skinRoughnessTypeWing; }
+    SkinRoughnessType getSkinRoughnessTypeCanard() const { return skinRoughnessTypeCanard; }
+    SkinRoughnessType getSkinRoughnessTypeHorizontalTail() const { return skinRoughnessTypeHorizontalTail; }
+    SkinRoughnessType getSkinRoughnessTypeVerticalTail() const { return skinRoughnessTypeVerticalTail; }
+    SkinRoughnessType getSkinRoughnessTypeFuselage() const { return skinRoughnessTypeFuselage; }
+    SkinRoughnessType getSkinRoughnessTypeNacelle() const { return skinRoughnessTypeNacelle; }
+    SkinRoughnessType getSkinRoughnessTypeBoom() const { return skinRoughnessTypeBoom; }
+
+    // Wing fairing type getter
+    WingFairingType getWingFairingType() const { return wingFairingType; }
+
+    // Canard fairing type getter
+    WingFairingType getCanardFairingType() const { return canardFairingType; }
+
+    // Type of flap getter
+    TypeOfFlap getTypeOfFlap() const { return typeOfFlap; }
+
+    // Wind screen type getter
+    WindScreenType getWindScreenType() const { return windScreenType; }
 };

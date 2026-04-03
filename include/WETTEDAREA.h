@@ -37,7 +37,11 @@ namespace WETTEDAREA
     class WettedArea
     {
 
+    protected:
+        VSP::Aircraft ac;
+
     private:
+        std::string filename;
         std::string nameOfAircrfat;
         std::filesystem::path baseDir = std::filesystem::current_path();
         std::string typeOfGeom;
@@ -123,7 +127,7 @@ namespace WETTEDAREA
         }
 
         // Funzione per parsare l'output e popolare la struttura
-        inline void parseGeomOutput(const std::string &output)
+        void parseGeomOutput(const std::string &output)
         {
             geometryData = AircrfatIDGeom(); // Reset
 
@@ -171,7 +175,7 @@ namespace WETTEDAREA
         }
 
         // Funzione per parsare i risultati della wetted area
-        inline void parseWettedAreaResults(const std::string &output)
+        void parseWettedAreaResults(const std::string &output)
         {
             wettedResults = WettedAreaResults(); // Reset a 0
 
@@ -263,14 +267,13 @@ namespace WETTEDAREA
     public:
         /// @brief Constructor for WettedArea class.
         /// @param filename The name of the file to open with the exstension .vspscript.
+        /// @param ac The VSP::Aircraft object containing the aircraft data.
         /// @param parentFolderPath The path to the parent folder (optional).
-        inline WettedArea(const std::string &filename, const std::string &parentFolderPath = "")
+        WettedArea(std::string filename, VSP::Aircraft ac, const std::string &parentFolderPath = "")
+        :
+        filename(filename),
+        ac(ac)
         {
-            file.open(filename);
-            if (!file.is_open())
-            {
-                throw std::runtime_error("Cannot open file: " + filename);
-            }
 
             if (parentFolderPath.empty())
             {
@@ -280,10 +283,10 @@ namespace WETTEDAREA
             {
                 parentFolder = parentFolderPath;
             }
-            file << "void main(){\r\n";
+            
         }
 
-        inline ~WettedArea()
+        ~WettedArea()
         {
             if (file.is_open())
             {
@@ -297,8 +300,8 @@ namespace WETTEDAREA
         /// @param nameOfAircraft The name of the aircraft.
         /// @param filename The name of the file with the exstension .vspscript.
         /// @param parentFolderPath The path to the parent folder (optional).
-        inline void getAllGeoms(std::string nameOfAircraft, const std::string &filename,
-                                bool isDefaultCase = true, const std::string &parentFolderPath = "")
+        void getAllGeoms(std::string nameOfAircraft,
+                         bool isDefaultCase = true, const std::string &parentFolderPath = "")
         {
             if (file.is_open())
             {
@@ -358,7 +361,7 @@ namespace WETTEDAREA
             if (isDefaultCase)
             {
                 // Executes the script and captures the geometry data
-                WETTEDAREA::WettedArea::executeAndCaptureGeomIds(filename);
+                WETTEDAREA::WettedArea::executeAndCaptureGeomIds();
 
                 // Calculate Wetted Area
                 WETTEDAREA::WettedArea::CalculateWettedArea(nameOfAircraft, nameOfAircraft + "_WettedArea.vspscript");
@@ -373,11 +376,10 @@ namespace WETTEDAREA
         /// @brief Executes the script and automatically captures the geometry data from the terminal output.
         /// @param nameOfTheFile The name of the script file to execute.
         /// @param vspExecutable The VSP executable to use (mandatory is "vspscript.exe").
-        inline void executeAndCaptureGeomIds(const std::string &nameOfTheFile,
-                                             const std::string &vspExecutable = "vspscript.exe")
+        inline void executeAndCaptureGeomIds(const std::string &vspExecutable = "vspscript.exe")
         {
             // Costruisci il comando
-            std::string command = vspExecutable + " -script \"" + nameOfTheFile + "\"";
+            std::string command = vspExecutable + " -script \"" + filename + "\"";
 
             // Esegui e cattura l'output
             std::string output = executeCommand(command);
@@ -410,7 +412,7 @@ namespace WETTEDAREA
         /// @param aircrfatName The name of the aircraft.
         /// @param filename The name of the file with the exstension .vspscript.
         /// @param parentFolderPath The path to the parent folder (optional).
-        inline void CalculateWettedArea(const std::string &aircrfatName, const std::string &filename,
+         void CalculateWettedArea(const std::string &aircrfatName, const std::string &filename,
                                         const std::string &nameOfComponent = "", const std::string &parentFolderPath = "")
         {
             this->nameOfAircrfat = aircrfatName;
@@ -456,8 +458,8 @@ namespace WETTEDAREA
                 for (const auto &geom : geometryData.allGeoms)
                 {
 
-                    if (geom.nameOfComponent != "fuselage" && geom.nameOfComponent != "TransportFuse" &&
-                        geom.nameOfComponent.substr(0, 3) != "nac" && geom.nameOfComponent.substr(0, 4) != "boom")
+                    if (geom.nameOfComponent !=ac.fus.id  && geom.nameOfComponent.substr(0, 3) != ac.nac.id.substr(0,3) && 
+                           geom.nameOfComponent.substr(0, 4) != ac.boom.id.substr(0,4))
                     {
                         writeCommand("SetSetFlag (\"" + geom.id + "\", SET_SHOWN, false);");
                     }
@@ -478,19 +480,19 @@ namespace WETTEDAREA
 
                 for (const auto &geom : geometryData.allGeoms)
                 {
-                    if (geom.nameOfComponent == "fuselage" || geom.nameOfComponent == "TransportFuse")
+                    if (geom.nameOfComponent == ac.fus.id)
                     {
                         if (fuseIndex == -1)
                             fuseIndex = currentIndex;
                         currentIndex++;
                     }
-                    else if (geom.nameOfComponent.substr(0, 3) == "nac")
+                    else if (geom.nameOfComponent.substr(0, 3) == ac.nac.id.substr(0,3))
                     {
                         if (nacIndex == -1)
                             nacIndex = currentIndex;
                         currentIndex++;
                     }
-                    else if (geom.nameOfComponent.substr(0, 4) == "boom")
+                    else if (geom.nameOfComponent.substr(0, 4) == ac.boom.id.substr(0,4))
                     {
                         if (boomIndex == -1)
                             boomIndex = currentIndex;
@@ -528,6 +530,7 @@ namespace WETTEDAREA
                         writeCommand("SetSetFlag (\"" + geom.id + "\", SET_SHOWN, false);");
                         file << "\r\n";
                     }
+
                 }
 
                 writeCommand("string mesh_id = ComputeCompGeom( SET_SHOWN, false, 0 );");

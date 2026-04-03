@@ -24,14 +24,14 @@ class ChordCalculator
 {
 
 protected:
-    VSP::Wing &wing;
+   const VSP::Wing &wing;
 
 private:
-    inline static VSP::Wing *wingPtr = nullptr; // Static pointer to hold the reference to the wing
+    inline static const VSP::Wing *wingPtr = nullptr; // Static pointer to hold the reference to the wing
     constexpr static double eps = 1e-9;
 
 public:
-    ChordCalculator(VSP::Wing &wing) : wing(wing)
+    ChordCalculator(const VSP::Wing &wing) : wing(wing)
     {
 
         wingPtr = &wing; // Initialize the static pointer with the reference to the wing
@@ -105,9 +105,9 @@ public:
                 double outboardMidMax = etaStationMid.back();
                 double outboardMax = etaStationOutboard.back();
 
-                bool foundInboard = (etaStation >= inboardMin - eps && etaStation <= inboardMax - eps);
-                bool foundMid     = (etaStation >= inboardMidMin - eps && etaStation <= outboardMidMax - eps);
-                bool foundOutboard = (etaStation >= outboardMin - eps && etaStation <= outboardMax - eps);
+                bool foundInboard = (etaStation >= inboardMin - eps && etaStation <= inboardMax + eps);
+                bool foundMid     = (etaStation >= inboardMidMin - eps && etaStation <= outboardMidMax + eps);
+                bool foundOutboard = (etaStation >= outboardMin - eps && etaStation <= outboardMax + eps);
 
                 if (foundInboard)
                 {
@@ -162,10 +162,10 @@ public:
                     }
                 }
 
-                double etaStationVecMin = etaStationInboard.front();
-                double etaStationVecMax = etaStationInboard.back();
+                double etaStationVecMin = etaStationVec.front();
+                double etaStationVecMax = etaStationVec.back();
 
-                bool foundEta = (etaStation >= etaStationVecMin - eps && etaStation <= etaStationVecMax - eps);
+                bool foundEta = (etaStation >= etaStationVecMin - eps && etaStation <= etaStationVecMax + eps);
                
 
                 Interpolant chordInterp(etaStationVec, chords, 1, RegressionMethod::LINEAR);
@@ -196,13 +196,22 @@ public:
                         etaStationInboard.push_back(2 * wingPtr->panelsYStation[i] / wingPtr->totalProjectedSpan);
                         j += 1;
                         chordInboard.push_back(wingPtr->croot[j - 1]);
+
+                        if (2 * wingPtr->panelsYStation[i] / wingPtr->totalProjectedSpan == 2* wingPtr->kinkStation/ wingPtr->totalProjectedSpan)
+                        {
+                            addedKinkStation = true;
+                        }
                     }
 
                     else if ((2 * wingPtr->panelsYStation[i] / wingPtr->totalProjectedSpan > 2* wingPtr->kinkStation/ wingPtr->totalProjectedSpan))
                     {
+
+                        etaStationOutboard.push_back(etaStationInboard.back());
+                        chordOutboard.push_back(chordInboard.back());
+
                         if (!addedKinkStation)
                         {
-                            etaStationOutboard.push_back(2 * wingPtr->kinkStation / wingPtr->totalProjectedSpan);
+                            etaStationOutboard.push_back(2 * wingPtr->kinkStation/ wingPtr->totalProjectedSpan);
                             chordOutboard.push_back(wingPtr->taperInbord * wingPtr->croot.front());
 
                             addedKinkStation = true;
@@ -228,8 +237,8 @@ public:
                 double outboardMin = etaStationOutboard.front();
                 double outboardMax = etaStationOutboard.back();
 
-                bool foundInboard = (etaStation >= inboardMin - eps && etaStation <= inboardMax - eps);
-                bool foundOutboard = (etaStation >= outboardMin - eps && etaStation <= outboardMax - eps);
+                bool foundInboard = (etaStation >= inboardMin - eps && etaStation <= inboardMax + eps);
+                bool foundOutboard = (etaStation >= outboardMin - eps && etaStation <= outboardMax + eps);
 
                 if (foundInboard)
                 {

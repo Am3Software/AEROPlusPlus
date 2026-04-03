@@ -145,6 +145,7 @@ namespace SILENTORCOMPONENT
     public:
         /// @brief Constructor for SilentorComponent class.
         /// @param nameOfAircraft The name of the aircrfat
+        /// @param filename The name of the .vspscript file to generate and execute.
         /// @param parentFolderPath The path to the parent folder (optional).
         SilentorComponent(const std::string &nameOfAircraft,
                           const std::string &filename,
@@ -233,32 +234,30 @@ namespace SILENTORCOMPONENT
         /// @param aircrfatName The name of the aircraft.
         /// @param filename The name of the file with the exstension .vspscript.
         /// @param parentFolderPath The path to the parent folder (optional).
-        void GetGeometryWithThisComponent(VSP::Aircraft ac, VSPGEOMTRYEXTRACTOR::AircraftGeometryData geometryData,
+        void GetGeometryWithThisComponent( const VSP::Aircraft &ac,  VSPGEOMTRYEXTRACTOR::AircraftGeometryData &geometryData,
                                           const std::vector<std::string> &nameOfComponent = {}, const std::string &parentFolderPath = "")
         {
-
-            if (file.is_open())
-            {
-                file.close();
-            }
-
-            file.open(filenameVspScript);
-            if (!file.is_open())
-            {
-                throw std::runtime_error("Cannot open file: " + filenameVspScript);
-            }
-
-            if (parentFolderPath.empty())
-            {
+            if (parentFolderPath.empty()) {
                 parentFolder = std::filesystem::current_path().string();
             }
-            else
-            {
+            else {
                 parentFolder = parentFolderPath;
             }
 
+            // 2. Poi chiudi eventuale file aperto
+            if (file.is_open()){
+                file.close();
+            }
+
+            // 3. Poi apri con path ASSOLUTO
+            std::filesystem::path scriptPath = std::filesystem::path(parentFolder) / filenameVspScript;
+            file.open(scriptPath);
+            if (!file.is_open()) {
+                throw std::runtime_error("Cannot open: " + scriptPath.string());
+            }
+
             file << "void main(){\r\n";
-            writeComment("Calculate Wetted Area");
+            writeComment("Calculate Silentor Component Geometry");
 
             // Carica il file aircraft
             std::string aircrfatLoaded = parentFolder + "\\" + nameOfAircrfat + "_copy.vsp3";
@@ -329,9 +328,19 @@ namespace SILENTORCOMPONENT
                 }
                 else
                 {
-                    writeCommand("SetSetFlag (\"" + geom.id + "\", SET_SHOWN, false);");
-                    file << "\r\n";
-                    componentVisibility[geom.nameOfComponent] = false;
+
+                    if (geom.id.size() > nameOfComponent.size())
+                    {
+                        writeCommand("SetSetFlag (\"" + geom.id + "\", SET_SHOWN, false);");
+                        file << "\r\n";
+                        componentVisibility[geom.nameOfComponent] = false;
+                    }
+
+                    else
+                    {
+
+                        continue;
+                    }
                 }
             }
 
