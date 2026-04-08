@@ -24,9 +24,31 @@ struct WingSection {
     double Cx, Cy, Cz;
     double Cmx, Cmy, Cmz;
     
-    // Costruttore default: inizializza tutti i membri ai valori di default del tipo (0 per numerici)
+    /**
+     * @brief Default constructor.
+     */
     WingSection() = default;
     
+    /**
+     * @brief Constructs a wing-section record with all parsed aerodynamic values.
+     * @param wid Surface identifier.
+     * @param sid Section identifier.
+     * @param s Section area.
+     * @param x X-average coordinate.
+     * @param y Y-average coordinate.
+     * @param z Z-average coordinate.
+     * @param c Local chord.
+     * @param v Local velocity ratio over reference velocity.
+     * @param cl Lift coefficient.
+     * @param cd Drag coefficient.
+     * @param cs Side-force coefficient.
+     * @param cx_ Force coefficient along X.
+     * @param cy_ Force coefficient along Y.
+     * @param cz_ Force coefficient along Z.
+     * @param cmx_ Moment coefficient around X.
+     * @param cmy_ Moment coefficient around Y.
+     * @param cmz_ Moment coefficient around Z.
+     */
     WingSection(int wid, int sid, double s, double x, double y, double z, double c, double v,
                 double cl, double cd, double cs, double cx_, double cy_, double cz_,
                 double cmx_, double cmy_, double cmz_)
@@ -75,7 +97,11 @@ class LODLoader {
 private:
     std::string filename_;
     
-    // Helper: Converte stringa in double gestendo nan/inf
+    /**
+     * @brief Converts a string to double while handling NaN/Inf-like tokens.
+     * @param s Input numeric string.
+     * @return Parsed value, or 0.0 for invalid/non-finite tokens.
+     */
     inline double safeStod(const std::string& s) const {
         try {
             std::string lower = s;
@@ -91,7 +117,11 @@ private:
         }
     }
     
-    // Helper: Estrae AoA dalla riga (gestisce sia "AoA =" che "AoA_")
+    /**
+     * @brief Extracts AoA from a text line.
+     * @param line Input line.
+     * @return Extracted AoA value, or 0.0 if not found.
+     */
     inline double extractAoA(const std::string& line) const {
         std::regex re1(R"(AoA\s*=\s*([-+]?[0-9]*\.?[0-9]+))");
         std::smatch match;
@@ -107,7 +137,11 @@ private:
         return 0.0;
     }
     
-    // Helper: Estrae Beta dalla riga
+    /**
+     * @brief Extracts Beta from a text line.
+     * @param line Input line.
+     * @return Extracted Beta value, or 0.0 if not found.
+     */
     inline double extractBeta(const std::string& line) const {
         std::regex re1(R"(Beta\s*=\s*([-+]?[0-9]*\.?[0-9]+))");
         std::smatch match;
@@ -123,7 +157,12 @@ private:
         return 0.0;
     }
     
-    // Helper: Estrae valore numerico generico
+    /**
+     * @brief Extracts a numeric value associated with a key.
+     * @param line Input line.
+     * @param key Key used to build the extraction pattern.
+     * @return Extracted value, or 0.0 if not found.
+     */
     inline double extractValue(const std::string& line, const std::string& key) const {
         std::regex re(key + R"(\s*[=:_]\s*([-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?))");
         std::smatch match;
@@ -133,7 +172,11 @@ private:
         return 0.0;
     }
     
-    // Helper: Rimuove spazi iniziali/finali
+    /**
+     * @brief Trims leading and trailing whitespace.
+     * @param str Input string.
+     * @return Trimmed string.
+     */
     inline std::string trim(const std::string& str) const {
         size_t first = str.find_first_not_of(" \t\r\n");
         if (first == std::string::npos) return "";
@@ -141,21 +184,33 @@ private:
         return str.substr(first, last - first + 1);
     }
     
-    // Helper: Controlla se la riga contiene le intestazioni della tabella Wing
+    /**
+     * @brief Checks whether a line matches the Wing table header.
+     * @param line Input line.
+     * @return true if the line looks like a Wing table header.
+     */
     inline bool isWingTableHeader(const std::string& line) const {
         return (line.find("Wing") != std::string::npos &&
                 line.find("S") != std::string::npos &&
                 line.find("Xavg") != std::string::npos);
     }
     
-    // Helper: Controlla se la riga contiene le intestazioni della tabella Component
+    /**
+     * @brief Checks whether a line matches the Component table header.
+     * @param line Input line.
+     * @return true if the line looks like a Component table header.
+     */
     inline bool isComponentTableHeader(const std::string& line) const {
         return (line.find("Comp") != std::string::npos &&
                 line.find("S") != std::string::npos &&
                 line.find("Xavg") != std::string::npos);
     }
     
-    // Helper: Controlla se una riga è una riga di dati (inizia con un numero)
+    /**
+     * @brief Checks whether a line starts with numeric data.
+     * @param line Input line.
+     * @return true if the first token can be parsed as a number.
+     */
 inline bool isDataLine(const std::string& line) const {
     if (line.empty()) return false;
     std::istringstream iss(line);
@@ -164,12 +219,20 @@ inline bool isDataLine(const std::string& line) const {
 }
     
 public:
+    /**
+     * @brief Constructs a loader for a specific LOD file.
+     * @param filename Input file path.
+     */
     inline LODLoader(const std::string& filename) 
     : filename_(filename) {
         
     }
     
-    // ==================== CARICA TUTTI I CASI ====================
+    /**
+     * @brief Loads and parses all cases available in the file.
+     * @return Vector containing all parsed cases.
+     * @throws std::runtime_error If the file cannot be opened.
+     */
     inline std::vector<CaseData> loadAll() const {
         std::ifstream file(filename_);
         if (!file.is_open()) {
@@ -407,7 +470,14 @@ public:
         return cases;
     }
     
-    // ==================== CARICA CASO SPECIFICO ====================
+    /**
+     * @brief Loads a specific case matching AoA and Beta within tolerance.
+     * @param targetAoA Target angle of attack.
+     * @param targetBeta Target sideslip angle.
+     * @param tolerance Matching tolerance for both values.
+     * @return Matching case.
+     * @throws std::runtime_error If no matching case is found.
+     */
     inline CaseData loadCase(double targetAoA, double targetBeta = 0.0, double tolerance = 0.01) const {
         auto cases = loadAll();
         
@@ -422,7 +492,9 @@ public:
                                  ", Beta=" + std::to_string(targetBeta));
     }
     
-    // ==================== STAMPA SOMMARIO ====================
+    /**
+     * @brief Prints a summary of parsed cases to standard output.
+     */
     inline void printSummary() const {
         auto cases = loadAll();
         

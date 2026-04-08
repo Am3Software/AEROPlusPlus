@@ -36,7 +36,12 @@ class ConvSweep {
 
     public:
 
-    
+    /// @brief Constructor for ConvSweep class that initializes the parameters and calculates the converted sweep angle.
+    /// @param inputKnownSweep The known sweep angle in degrees that serves as the basis for conversion.
+    /// @param taperRatio The taper ratio of the wing.
+    /// @param aspectRatio The aspect ratio of the wing.
+    /// @param knwonSweepInPercentofTheChord The known sweep in percent of the chord.
+    /// @param unknownSweepInPercentofTheChord The unknown sweep in percent of the chord.
     ConvSweep(double inputKnownSweep, double taperRatio, double aspectRatio, double knwonSweepInPercentofTheChord, double unknownSweepInPercentofTheChord) {
 
         this->inputKnownSweep = inputKnownSweep;

@@ -554,6 +554,20 @@ namespace LONGITUDINAL_STABILITY
         double veeTailFiniteSlope = 0.0;
 
     public:
+        /**
+         * @brief Builds the longitudinal stability calculator with aircraft geometry and analysis settings.
+         * @param builder Aircraft builder reference.
+         * @param cogData Center-of-gravity data used for stability calculations.
+         * @param aircraftInfo Aircraft geometry/configuration container.
+         * @param settings Aerodynamic analysis settings.
+         * @param wing Reference to the main wing.
+         * @param horizontalTail Reference to the horizontal tail.
+         * @param fuselage Fuselage geometry data.
+         * @param nacelle Nacelle geometry data.
+         * @param disk Propeller disk data.
+         * @param canard Optional canard pointer.
+         * @param verticalTail Optional vertical tail pointer.
+         */
         LongitudinalStabilityCalculator(
             BuildAircraft &builder,
             COG::COGDATA cogData,
@@ -582,8 +596,14 @@ namespace LONGITUDINAL_STABILITY
         {
         }
 
+        /**
+         * @brief Default destructor.
+         */
         ~LongitudinalStabilityCalculator() = default;
 
+        /**
+         * @brief Computes longitudinal static/dynamic derivatives and aerodynamic coefficients.
+         */
         void calculateLongitudinalStability()
         {
 
@@ -1830,10 +1850,28 @@ namespace LONGITUDINAL_STABILITY
             // "lines","1","1","","","blue");
         }
 
-        // Getters for the results
+        /**
+         * @brief Returns total longitudinal static derivatives for the aircraft.
+         * @return Aggregated static longitudinal derivatives.
+         */
         LONGITUDINAL_STABILITY::LongitudinalStabilityDerivatives getTotalAircrfatLongitudinalDerivatives() const { return aircraftLongitudinalDerivatives; }
+
+        /**
+         * @brief Returns total longitudinal dynamic derivatives for the aircraft.
+         * @return Aggregated dynamic longitudinal derivatives.
+         */
         LONGITUDINAL_STABILITY::LongitudinalDynamicDerivatives getTotalAircrfatLongitudinalDynamicDerivatives() const { return aircraftLongitudinalDynamicDerivatives; }
+
+        /**
+         * @brief Returns per-component contributions to longitudinal stability derivatives.
+         * @return Longitudinal derivative contributions split by component.
+         */
         LONGITUDINAL_STABILITY::LongitudinalStabilityDerivativesToSingleComponent getLongitudinalStabilityDerivativesToSingleComponent() const { return singleComponentsDerivatives; }
+
+        /**
+         * @brief Returns aerodynamic coefficients at zero angle of attack.
+         * @return Longitudinal aerodynamic coefficients at zero AoA.
+         */
         LONGITUDINAL_STABILITY::LongitudinalAerodynamicCoefficients getLongitudinalAerodynamicCoefficients() const { return longitudinalAerodynamicCoefficients;}
     };
 };

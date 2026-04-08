@@ -25,8 +25,27 @@ struct StateTraits; // dichiarazione base — non istanziabile
 // ── Specializzazione SCALARE ─────────────────────────────────────────────────
 template <>
 struct StateTraits<double> {
+    /**
+     * @brief Returns the additive zero for scalar states.
+     * @param Reference scalar value (unused).
+     * @return Scalar zero.
+     */
     static double zero (const double&)              { return 0.0;    }
+
+    /**
+     * @brief Adds two scalar states.
+     * @param a First scalar.
+     * @param b Second scalar.
+     * @return Sum of a and b.
+     */
     static double add  (const double& a, const double& b) { return a + b; }
+
+    /**
+     * @brief Scales a scalar state.
+     * @param s Scale factor.
+     * @param v Scalar state.
+     * @return Scaled scalar value.
+     */
     static double scale(double s,        const double& v) { return s * v; }
 };
 
@@ -35,8 +54,20 @@ template <>
 struct StateTraits<std::vector<double>> {
     using State = std::vector<double>;
 
+    /**
+     * @brief Returns a zero vector with the same size as the reference.
+     * @param ref Reference vector used only for sizing.
+     * @return Zero vector.
+     */
     static State zero(const State& ref) { return State(ref.size(), 0.0); }
 
+    /**
+     * @brief Adds two vectors element-wise.
+     * @param a First vector.
+     * @param b Second vector.
+     * @return Element-wise sum.
+     * @throws std::runtime_error If vector sizes do not match.
+     */
     static State add(const State& a, const State& b) {
         if (a.size() != b.size())
             throw std::runtime_error("ODE45: dimensioni vettore incompatibili");
@@ -45,6 +76,12 @@ struct StateTraits<std::vector<double>> {
         return res;
     }
 
+    /**
+     * @brief Multiplies each vector component by a scalar.
+     * @param s Scale factor.
+     * @param v Input vector.
+     * @return Scaled vector.
+     */
     static State scale(double s, const State& v) {
         State res(v.size());
         for (size_t i = 0; i < v.size(); i++) res[i] = s * v[i];
@@ -91,17 +128,30 @@ private:
     std::vector<State>  yVec;
 
     // ── aritmetica interna ───────────────────────────────────────────────────
+    /**
+     * @brief Adds two states through StateTraits.
+     * @param a First state.
+     * @param b Second state.
+     * @return Sum state.
+     */
     State add  (const State& a, const State& b) const { return Traits::add(a, b);   }
+
+    /**
+     * @brief Scales a state through StateTraits.
+     * @param s Scale factor.
+     * @param v Input state.
+     * @return Scaled state.
+     */
     State scale(double s, const State& v)       const { return Traits::scale(s, v); }
 
 public:
-    /// @brief Costruisce il solutore accettando qualsiasi callable compatibile.
-    /// @tparam Func  Tipo del callable (lambda, funzione, functor, std::function)
+    /// @brief Builds the solver from any compatible callable.
+    /// @tparam Func  Callable type (lambda, function, functor, std::function)
     /// @param  func  dy/dt = func(t, y)
-    /// @param  t0    Tempo iniziale
-    /// @param  tf    Tempo finale
-    /// @param  y0    Condizione iniziale
-    /// @param  dt    Passo di integrazione (default 0.01)
+    /// @param  t0    Initial time
+    /// @param  tf    Final time
+    /// @param  y0    Initial condition
+    /// @param  dt    Integration step (default 0.01)
     template <typename Func>
     ODE45(Func&& func, double t0, double tf, const State& y0, double dt = 0.01)
         : f(std::forward<Func>(func)), t0(t0), tf(tf), y0(y0), dt(dt)
@@ -134,6 +184,9 @@ public:
     //     }
     // }
 
+    /**
+     * @brief Runs RK4 integration from t0 to tf.
+     */
     void solve() {
     tVec.clear();
     yVec.clear();
@@ -162,8 +215,22 @@ public:
     }
 }
 
+    /**
+     * @brief Returns sampled time values.
+     * @return Constant reference to the time vector.
+     */
     const std::vector<double>& getT() const { return tVec; }
+
+    /**
+     * @brief Returns sampled state values.
+     * @return Constant reference to the state vector.
+     */
     const std::vector<State>&  getY() const { return yVec; }
+
+    /**
+     * @brief Returns the number of stored samples.
+     * @return Sample count.
+     */
     size_t size()                     const { return tVec.size(); }
 };
 

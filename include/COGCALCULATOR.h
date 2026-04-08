@@ -406,6 +406,25 @@ namespace COG
         VSP::EOIR eoir;
 
     public:
+        /**
+         * @brief Constructs the COG calculator with aircraft data, geometry, and subsystem models.
+         * @param nameOfAircraft Aircraft name.
+         * @param builderData Base aircraft data.
+         * @param buildAircraft Aircraft builder reference.
+         * @param wingData Wing base data.
+         * @param fuselageData Fuselage base data.
+         * @param engineData Engine base data.
+         * @param aircraftData Aircraft geometry container.
+         * @param wing Main wing geometry.
+         * @param horizontalTail Horizontal tail geometry.
+         * @param verticalTail Vertical tail geometry.
+         * @param fuselage Fuselage geometry.
+         * @param nacelle Nacelle geometry.
+         * @param canard Optional canard geometry.
+         * @param boom Optional boom geometry.
+         * @param pod Optional pod geometry.
+         * @param eoir Optional EO/IR geometry.
+         */
         COGCalculator(std::string nameOfAircraft,
                       BaseAircraftData builderData,
                       const BuildAircraft &buildAircraft,
@@ -442,12 +461,18 @@ namespace COG
         {
         }
 
-        // Disrtuctor
+        /**
+         * @brief Default destructor.
+         */
         ~COGCalculator() = default;
 
         // ======================= COG functions =======================
 
         // WING COG
+        /**
+         * @brief Computes wing center-of-gravity contribution.
+         * @return Tuple containing normalized wing COG coordinates (x, y, z).
+         */
         std::tuple<double, double, double> inline calculateCOGWing()
         {
 
@@ -473,6 +498,10 @@ namespace COG
 
         // CANARD COG
 
+        /**
+         * @brief Computes canard center-of-gravity contribution when present.
+         * @return Tuple containing normalized canard COG coordinates (x, y, z).
+         */
         std::tuple<double, double, double> inline calculateCOGCanard()
         {
 
@@ -489,6 +518,10 @@ namespace COG
 
         // HORIZONTAL TAIL COG
 
+        /**
+         * @brief Computes horizontal-tail center-of-gravity contribution.
+         * @return Tuple containing normalized horizontal-tail COG coordinates (x, y, z).
+         */
         std::tuple<double, double, double> inline calculateCOGHorizontalTail()
         {
 
@@ -501,6 +534,10 @@ namespace COG
 
         // VERTICAL TAIL COG
 
+        /**
+         * @brief Computes vertical-tail center-of-gravity contribution.
+         * @return Tuple containing normalized vertical-tail COG coordinates (x, y, z).
+         */
         std::tuple<double, double, double> inline calculateCOGVerticalTail()
         {
 
@@ -525,6 +562,10 @@ namespace COG
 
         // FUSELAGE COG
 
+        /**
+         * @brief Computes fuselage center-of-gravity contribution.
+         * @return Tuple containing normalized fuselage COG coordinates (x, y, z).
+         */
         std::tuple<double, double, double> inline calculateCOGFuselage()
         {
 
@@ -549,6 +590,10 @@ namespace COG
 
         // BOOM COG
 
+        /**
+         * @brief Computes boom center-of-gravity contribution when present.
+         * @return Tuple containing normalized boom COG coordinates (x, y, z).
+         */
         std::tuple<double, double, double> inline calculateCOGBoom()
         {
 
@@ -564,6 +609,10 @@ namespace COG
 
         // EOIR COG
 
+        /**
+         * @brief Computes EO/IR center-of-gravity contribution when present.
+         * @return Tuple containing normalized EO/IR COG coordinates (x, y, z).
+         */
         std::tuple<double, double, double> inline calculateCOGEOIR()
         {
 
@@ -579,6 +628,10 @@ namespace COG
 
         // LANDING GEAR COG
 
+        /**
+         * @brief Computes landing-gear center-of-gravity contribution.
+         * @return Tuple containing normalized landing-gear COG coordinates (x, y, z).
+         */
         std::tuple<double, double, double> calculateCOGLandingGear()
         {
 
@@ -610,6 +663,10 @@ namespace COG
 
         // CONTROL SURFACES COG
 
+        /**
+         * @brief Computes control-surfaces center-of-gravity contribution.
+         * @return Tuple containing normalized control-surfaces COG coordinates (x, y, z).
+         */
         std::tuple<double, double, double> inline calculateCOGControlSurfaces()
         {
 
@@ -640,6 +697,10 @@ namespace COG
 
         // PROPULSION GROUP COG
 
+        /**
+         * @brief Computes propulsion-group center-of-gravity contribution.
+         * @return Tuple containing normalized propulsion-group COG coordinates (x, y, z).
+         */
         std::tuple<double, double, double> inline calculateCOGPropulsionGroup()
         {
 
@@ -652,6 +713,10 @@ namespace COG
 
         // APU COG
 
+        /**
+         * @brief Computes APU center-of-gravity contribution when present.
+         * @return Tuple containing normalized APU COG coordinates (x, y, z).
+         */
         std::tuple<double, double, double> inline calculateCOGAPU()
         {
 
@@ -668,6 +733,10 @@ namespace COG
 
         // INSTRUMENTS COG
 
+        /**
+         * @brief Computes instruments center-of-gravity contribution.
+         * @return Tuple containing normalized instruments COG coordinates (x, y, z).
+         */
         std::tuple<double, double, double> inline calculateCOGInstruments()
         {
 
@@ -680,6 +749,10 @@ namespace COG
 
         // HYDRAULIC AND PNEUMATIC SYSTEMS COG
 
+        /**
+         * @brief Computes hydraulic and pneumatic systems center-of-gravity contribution.
+         * @return Tuple containing normalized hydraulic/pneumatic COG coordinates (x, y, z).
+         */
         std::tuple<double, double, double> inline calculateCOGHydraulicAndPneumatic()
         {
 
@@ -694,6 +767,10 @@ namespace COG
 
         // ELECTRICAL GROUP COG
 
+        /**
+         * @brief Computes electrical-group center-of-gravity contribution.
+         * @return Tuple containing normalized electrical-group COG coordinates (x, y, z).
+         */
         std::tuple<double, double, double> inline calculateCOGElectricalGroup()
         {
 
@@ -706,6 +783,10 @@ namespace COG
 
         // AVIONIC GROUP COG
 
+        /**
+         * @brief Computes avionic-group center-of-gravity contribution.
+         * @return Tuple containing normalized avionic-group COG coordinates (x, y, z).
+         */
         std::tuple<double, double, double> inline calculateCOGAvionicGroup()
         {
 
@@ -718,6 +799,10 @@ namespace COG
 
         // FURNISHINGS AND EQUIPMENT COG
 
+        /**
+         * @brief Computes furnishings and equipment center-of-gravity contribution.
+         * @return Tuple containing normalized furnishings/equipment COG coordinates (x, y, z).
+         */
         std::tuple<double, double, double> inline calculateCOGFurnishingsAndEquipment()
         {
 
@@ -733,6 +818,10 @@ namespace COG
 
         // AIR CONDITIONING AND ANTI-ICE COG
 
+        /**
+         * @brief Computes air-conditioning and anti-ice center-of-gravity contribution.
+         * @return Tuple containing normalized air-conditioning/anti-ice COG coordinates (x, y, z).
+         */
         std::tuple<double, double, double> inline calculateCOGAirConditioningAndAntiIce()
         {
 
@@ -748,6 +837,10 @@ namespace COG
 
         // OPERATING ITEMS COG
 
+        /**
+         * @brief Computes operating-items center-of-gravity contribution.
+         * @return Tuple containing normalized operating-items COG coordinates (x, y, z).
+         */
         std::tuple<double, double, double> inline calculateCOGOperatingItems()
         {
 
@@ -760,6 +853,10 @@ namespace COG
 
         // PAYLOAD COG
 
+        /**
+         * @brief Computes payload center-of-gravity contribution.
+         * @return Tuple containing normalized payload COG coordinates (x, y, z).
+         */
         std::tuple<double, double, double> inline calculateCOGPayload()
         {
 
@@ -772,6 +869,10 @@ namespace COG
 
         // CREW COG
 
+        /**
+         * @brief Computes crew center-of-gravity contribution.
+         * @return Tuple containing normalized crew COG coordinates (x, y, z).
+         */
         std::tuple<double, double, double> inline calculateCOGCrew()
         {
 
@@ -784,6 +885,10 @@ namespace COG
 
         // FUEL COG
 
+        /**
+         * @brief Computes fuel center-of-gravity contribution.
+         * @return Tuple containing normalized fuel COG coordinates (x, y, z).
+         */
         std::tuple<double, double, double> inline calculateCOGFuel()
         {
 
@@ -810,6 +915,9 @@ namespace COG
         }
 
         // ======================= Weights function =======================
+        /**
+         * @brief Computes and stores all component weights and total aircraft weight.
+         */
         void getWeights()
         {
 
@@ -1032,6 +1140,10 @@ namespace COG
                                        operatingItemsWeight + payloadWeight + crewWeight + fuelWeight};
         }
 
+                        /**
+                         * @brief Computes the total aircraft center of gravity from component COGs and weights.
+                         * @return Tuple containing absolute aircraft COG coordinates (x, y, z).
+                         */
         std::tuple<double, double, double> calculateCOGAircraft()
         {
 
@@ -1183,8 +1295,22 @@ namespace COG
         }
 
         // In COGCalculator, sezione public:
+        /**
+         * @brief Returns the latest computed weights data.
+         * @return Component and total aircraft weights.
+         */
         COG::Weights getWeightsData() const { return weights; }
+
+        /**
+         * @brief Returns the latest computed total aircraft COG.
+         * @return Total aircraft COG data.
+         */
         COG::COGDATA getCOGData() const { return centerOfGravityData; }
+
+        /**
+         * @brief Returns the latest computed component-level COG breakdown.
+         * @return Component-level COG data.
+         */
         COG::COGDATA getCOGComponentsData() const { return centerOfGravityComponents; }
     };
 }

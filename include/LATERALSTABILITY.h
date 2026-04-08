@@ -963,16 +963,19 @@ namespace LATERAL_STABILITY
 
     public:
         /**
-         * @brief Constructor for DirectionalStabilityCalculator
+         * @brief Constructs the lateral stability calculator.
          * @param builder Reference to aircraft builder containing all aircraft data
+         * @param aircraftInfo Aircraft geometry and configuration data
          * @param cogData Center of gravity data
          * @param settings Aerodynamic analysis settings
          * @param wing Main wing geometry
          * @param horizontalTail Horizontal tail geometry
+         * @param verticalTail Vertical tail geometry
          * @param fuselage Fuselage geometry
          * @param nacelle Nacelle geometry
-         * @param verticalTail Vertical tail geometry (optional)
+         * @param directionalDerivatives Directional stability side-force derivatives used by lateral model
          * @param canard Canard geometry (optional)
+         * @param disk Propeller disk geometry (optional)
          */
         LateralStabilityCalculator(
             BuildAircraft &builder,
@@ -1003,12 +1006,12 @@ namespace LATERAL_STABILITY
         }
 
         /**
-         * @brief Destructor
+         * @brief Default destructor.
          */
         ~LateralStabilityCalculator() = default;
 
         /**
-         * @brief Main method to calculate all lateral stability derivatives
+         * @brief Computes lateral stability derivatives and stores final results.
          *
          * This method computes contributions from:
          * - Wing (swept wing effects and position)
@@ -1446,11 +1449,19 @@ namespace LATERAL_STABILITY
 
         // Getters for results
 
+        /**
+         * @brief Returns component-level lateral stability derivatives for roll moment.
+         * @return Per-component roll derivative contributions.
+         */
         LATERAL_STABILITY::LateralStabilityDerivativesRollToSingleComponent getComponentsLateralStabilityDerivativesRoll() const
         {
             return singleComponentsDerivativesRoll;
         }
 
+        /**
+         * @brief Returns total aircraft lateral stability derivatives for roll moment.
+         * @return Total aircraft roll derivatives.
+         */
         LATERAL_STABILITY::LateralStabilityDerivatives getAircraftLateralStabilityDerivativesRoll() const
         {
             return aircraftDerivativesRoll;

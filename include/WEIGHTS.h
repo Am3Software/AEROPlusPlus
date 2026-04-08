@@ -133,19 +133,13 @@ public:
     // ================= WING WEIGHT METHODS =================
 
     /// @brief Wing weight according to Torenbeek method.
-    /// @param WTO Maximum take-off weight
-    /// @param nUlt Ultimate load factor
+    /// @param wingData The data related to the wing configuration of the aircraft
     /// @param span Wing span
     /// @param sweepC2 Sweep at 50% chord (in degrees)
     /// @param cRoot Root chord
     /// @param thicknessToRootChordRatio Thickness-to-root-chord ratio (t/c)
-    /// @param planformArea Planform area
-    /// @param nWingMountedEngines Number of wing-mounted engines
-    /// @param undercarriageType Type of undercarriage
-    /// @param hasSpoilers Indicates if the wing has spoilers
-    /// @param isBracedWing Indicates if the wing is braced
-    /// @param hasFowlerFlap Indicates if the wing has Fowler flaps
-    /// @return The calculated wing weight
+    /// @param planformArea Planform area (m^2)
+    /// @return The calculated wing weight in kg
     double wingWeightTorenbeek(WingBaseData wingData, double span, double sweepC2,
                                double cRoot, double planformArea)
 
@@ -232,19 +226,13 @@ public:
     }
 
     /// @brief Wing weight according to Sadraey method.
+    /// @param wingData The data related to the wing configuration of the aircraft
     /// @param planformArea Planform area (m^2)
     /// @param MAC Mean Aerodynamic Chord (m)
-    /// @param thicknessToChordRatio Thickness-to-chord ratio (t/c)
-    /// @param aspectRatio Aspect ratio
-    /// @param nUlt Ultimate load factor
-    /// @param taperRatio Taper ratio
+    /// @param aspectRatio Wing aspect ratio
+    /// @param taperRatio Ratio between tip chord and root chord
     /// @param sweepC4 Sweep at 25% chord (in degrees)
-    /// @param percentageComposite Percentage of composite material
-    /// @param typeComposite Type of composite material
-    /// @param aircraftCategory Category of the aircraft
-    /// @param isEngineInstallatedOnWing Indicates if the engine is installed on the wing
-    /// @param isFueklTankInstallatedOnWing Indicates if the fuel tank is installed on the wing
-    /// @return The calculated wing weight
+    /// @return The calculated wing weight in kg
     double wingWeightSadraey(WingBaseData wingData, double planformArea, double MAC,
                              double aspectRatio, double taperRatio, double sweepC4)
     {
@@ -324,15 +312,7 @@ public:
     }
 
     /// @brief Wing weight according to Chiozzotto method.
-    /// @param WTO Maximum take-off weight (kg)
-    /// @param positiveLimitLoadFactor Positive limit load factor
-    /// @param maxOperatingEAS Maximum operating EAS at sea level (m/s)
-    /// @param nWingMountedEngines Number of wing-mounted engines
-    /// @param isSimplifiedFlapSystem Boolean flag for simple flap systems
-    /// @param isWingStrutBraced Boolean flag for wing struts presence
-    /// @param wingStrutPosition Relative position of strut as fraction of wing span
-    /// @param strutToWingChordRatio Ratio of strut chord to wing chord
-    /// @param isCompositeWing Boolean flag for CFRP usage
+    /// @param wingData The data related to the wing configuration of the aircraft
     /// @param wingPlanformArea Wing planform area (m^2)
     /// @param wingAspectRatio Wing aspect ratio
     /// @param wingTaperRatio Ratio between tip chord and root chord
@@ -1028,12 +1008,9 @@ public:
     // ================= HORIZONTAL WEIGHT METHODS =================
 
     /// @brief Calculates the horizontal tail weight using Torenbeek method (in kg)
-    /// @param aircraftEngineType The type of engine configuration of the aircraft
-    /// @param nUltimateLoadFactor The positive ultimate load factor
-    /// @param diveSpeed The dive speed of the aircraft (in m/s)
+    /// @param horizontalData The data related to the horizontal tail configuration of the aircraft
     /// @param planformArea The planform area of the horizontal tail (in m²)
     /// @param sweepC2 The sweep angle at the 50% chord line (in degrees)
-    /// @param typeStabilizer The type of stabilizer (fixed or unfixed)
     /// @return The estimated weight of the horizontal tail (in kg)
     double horizontalTailWeightTorenbeek(WingBaseData horizontalData, double planformArea, double sweepC2)
     {
@@ -1090,10 +1067,9 @@ public:
     // ================= VERTICAL WEIGHT METHODS =================
 
     /// @brief Calculates the vertical tail weight using Torenbeek method (in kg)
-    /// @param aircraftEngineType The type of engine configuration of the aircraft
-    /// @param typeTail The type of tail configuration (CONVENTIONAL_TAIL, T_TAIL, V_TAIL, V_REV_TAIL, H_TAIL, U_TAIL)
-    /// @param nUltimateLoadFactor The positive ultimate load factor
-    /// @param diveSpeed The dive speed of the aircraft (in m/s)
+    /// @param verticalData The data related to the vertical tail configuration of the aircraft
+    /// @param span The span of the vertical tail (in m)
+    /// @param planformArea The planform area of the vertical tail (in m²)
     /// @param sweepC2 The sweep angle at the 50% chord line (in degrees)
     /// @param span The span of the vertical tail (in m)
     /// @param planformArea The planform area of the vertical tail (in m²)
@@ -1154,14 +1130,11 @@ public:
     // ================= FUSELAGE WEIGHT METHODS =================
 
     /// @brief Calculates the fuselage weight using Torenbeek method (in kg)
-    /// @param diveSpeed Dive speed (in m/s)
+    /// @param fuselageData The data related to the fuselage configuration of the aircraft
     /// @param tailArm Distance between quarter chord points of wing root and horizontal tail root (m)
     /// @param maxFuseWidth Maximum fuselage width (in m)
     /// @param maxFuseDia Maximum fuselage diameter (in m)
     /// @param fuseWettedArea Fuselage wetted area (in m²)
-    /// @param isPressurized Whether the fuselage is pressurized
-    /// @param enginePosition Engine position configuration
-    /// @param undercarriagePosition Undercarriage position configuration
     /// @return The estimated fuselage weight (in kg)
     double fuselageWeightTorenbeek(FuselageBaseData fuselageData, double tailArm, double maxFuseWidth, double maxFuseDia,
                                    double fuseWettedArea)
@@ -1197,19 +1170,11 @@ public:
     }
 
     /// @brief Calculates the fuselage weight using Torenbeek method, using materials (in kg)
-    /// @param diveSpeed Dive speed (in m/s)
+    /// @param fuselageData The data related to the fuselage configuration of the aircraft
     /// @param tailArm Distance between quarter chord points of wing root and horizontal tail root (m)
     /// @param maxFuseWidth Maximum fuselage width (in m)
     /// @param maxFuseDia Maximum fuselage diameter (in m)
     /// @param fuseWettedArea Fuselage wetted area (in m²)
-    /// @param isPressurized Whether the fuselage is pressurized
-    /// @param enginePosition Engine position configuration
-    /// @param undercarriagePosition Undercarriage position configuration
-    /// @param nUltimateLoadFactor The positive ultimate load factor
-    /// @param isCargo Whether the aircraft is a cargo configuration
-    /// @param framesMaterial Material of the fuselage frames
-    /// @param stringersMaterial Material of the fuselage stringers
-    /// @param skinMaterial Material of the fuselage skin
     /// @return The estimated fuselage weight (in kg)
     double fuselgeWeightTorenbeekMaterial(FuselageBaseData fuselageData, double tailArm, double maxFuseWidth, double maxFuseDia,
                                           double fuseWettedArea)
@@ -1361,6 +1326,13 @@ public:
 
     // ================= TAIL BOOM WEIGHT METHODS =================
 
+    /// @brief Calculates the tail boom weight using Roskam method (in kg)
+    /// @param boomData The data related to the tail boom configuration of the aircraft
+    /// @param boomWidth The width of the tail boom (in m)
+    /// @param boomHeight The height of the tail boom (in m)
+    /// @param boomWettedArea The wetted area of the tail boom (in m²)
+    /// @param tailArm Distance between quarter chord points of wing root and horizontal tail root (m)
+    /// @return The estimated weight of the tail boom (in kg)
     double tailBoomWeightRoskam(BaseAircraftData boomData, double boomWidth, double boomHeight, double boomWettedArea, double tailArm)
     {
 
@@ -1414,10 +1386,7 @@ public:
     // ================= LANDING GEAR WEIGHT METHODS =================
 
     /// @brief Calculates the landing gear weight using Torenbeek method (in kg)
-    /// @param WTO Maximum take-off weight (in kg)
-    /// @param aircraftCategory Aircraft category (TRANSPORT_JET, GENERAL_AVIATION, UAV)
-    /// @param wingPosition Z-Position of the wing (LOW_WING, MID_WING, HIGH_WING)
-    /// @param isRetractableGerar Whether the landing gear is retractable
+    /// @param landingGearData The data related to the landing gear configuration of the aircraft
     /// @return The estimated landing gear weight (in kg)
     double landingGearWeightTorenbeek(BaseAircraftData landingGearData)
     {
@@ -1522,8 +1491,8 @@ public:
     // ================= CONTROL SURFACES WEIGHT METHODS =================
 
     /// @brief Calculates the control surface weight using Torenbeek method (in kg)
-    /// @param WTO Maximum take-off weight (in kg)
-    /// @param kSC Control surface factor (Ksc = 0.23 to flight airplanes without duplicated system controls - Ksc = 0.44 to transport airplanes, manually controlled - Ksc = 0.64 to transport airplanes, with powered controls and TED high-lift devices)
+    /// @param controlSurfaceData The data related to the control surface configuration of the aircraft
+    /// @return The estimated control surface weight (in kg)
     double contrsolSurfaceWeightTorenbeek(BaseAircraftData controlSurfaceData)
     {
 
@@ -1535,11 +1504,7 @@ public:
     // ================= PROPULSION GROUP WEIGHT METHODS =================
 
     /// @brief Calculates the propulsion group weight using Torenbeek method (in kg)
-    /// @param aircraftCategory The category of the aircraft
-    /// @param numberOfEngines The number of engines
-    /// @param thrustToPowerRatio The thrust to power ratio
-    /// @param thrustLbf The thrust in pounds-force
-    /// @param BSHP Brake shaft horsepower (Hp)
+    /// @param engineData The data related to the engine configuration of the aircraft
     /// @return The estimated propulsion group weight (in kg)
     double propulsionGroupWeight(EngineBaseData engineData)
     {
@@ -1590,9 +1555,8 @@ public:
     // ================= NACELLE WEIGHT METHODS =================
 
     /// @brief Claculates the nacelle weight (in kg)
-    /// @param numberOfEngines The number of engines
+    /// @param engineData The data related to the engine configuration of the aircraft
     /// @param nacWettedSurface The nacelle wetted surface area (in square meters)
-    /// @param thrustLbf The thrust in pounds-force
     /// @return Calculated nacelle weight (in kg)
     double nacelleWeight(EngineBaseData engineData, double nacWettedSurface)
     {

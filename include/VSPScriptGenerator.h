@@ -330,6 +330,10 @@ namespace VSP
                 }
 
                 // ============= SHAPE AIRFOIL =============
+
+                /// @brief Configures the airfoil shape for a given wing section based on the specified airfoil type and parameters.
+                /// @param wing The Wing object containing the airfoil configuration and parameters
+                /// @param sectionIndex The index of the wing section for which to configure the airfoil
                 inline void shapeAirfoil(const Wing &wing, int sectionIndex)
                 {
                         writeComment(wing.id + " airfoil " + std::to_string(sectionIndex));
@@ -459,6 +463,11 @@ namespace VSP
                 }
 
                 // ============= SHAPE PANEL =============
+
+                /// @brief Configures the shape of a wing panel based on the specified parameters.
+                /// @param wing The Wing object containing the panel configuration and parameters
+                /// @param panelIndex The index of the panel to configure
+                /// @param wingType The type of the wing (e.g. STRAIGHT_TAPERED, CRANKED) which may affect how the panel is shaped
                 inline void shapePanel(Wing &wing, int panelIndex, TypeOfWing wingType)
                 {
                         writeComment(wing.id + " panel " + std::to_string(panelIndex));
@@ -597,7 +606,7 @@ namespace VSP
                                         {
                                                 wing.taperRatio = (*(wing.ctip.end() - 3)) / wing.croot.front();
                                                 // *(wing.ctip.end() - 3) ---> accedo col puntatore al valore dll'iteratore, per prendere la corda tip del terzultimo pannello, dato che è equivalente wing.ctip[wing.ctip.size()-3]
-                                                // Se adesemipi wing.ctip.size() ==3 , dato che indici sono 0-based, per ottenere il penultimo elemento si fa wing.ctip[0] == wing.ctip[wing.ctip.size()-3]
+                                                // Se ad esemipio wing.ctip.size() ==3 , dato che indici sono 0-based, per ottenere il penultimo elemento si fa wing.ctip[0] == wing.ctip[wing.ctip.size()-3]
                                                 wing.MAC = macCalc.getMAC(wingType, wing.croot[0], wing.taperRatio, wing.totalProjectedSpan);
                                                 wing.yMAC = macCalc.getYMAC(wingType, wing.span[0], wing.taperRatio);
 
@@ -919,6 +928,10 @@ namespace VSP
                 }
 
         public:
+
+                /// @brief Constructor of the class
+                /// @param filename The name of the file where the script will be written
+                /// @param parentFolderPath The path of the parent folder where the fuselage preset is located, if empty the current path is used
                 inline ScriptGenerator(const std::string &filename, const std::string &parentFolderPath = "")
                 {
                         file.open(filename);
@@ -943,6 +956,9 @@ namespace VSP
                 }
 
                 // ============= MAKE ADVANCED FUSELAGE =============
+
+                /// @brief This function generates the script for the advanced fuselage, if the advanced fuselage is not selected it writes a comment in the script and returns
+                /// @param fuselage The fuselage object containing the parameters for the advanced fuselage
                 inline void makeAdvancedFuselage(const Fuselage &fuselage)
                 {
                         if (!fuselage.advancedFuselage)
@@ -2028,6 +2044,10 @@ namespace VSP
                         }
                 }
 
+                /// @brief Creates an EOIR in the VSP script.
+                /// @param eoir The EOIR object containing its properties.
+                /// @param i Iterator index for multiple EOIRs.
+                /// @note This function sets up the EOIR geometry and parameters.
                 inline void makeEOIR(EOIR &eoir, int i)
                 {
                         writeComment(eoir.id + " " + std::to_string(i));

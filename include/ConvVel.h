@@ -7,6 +7,11 @@
 #include <type_traits>
 
 template <typename T = std::vector<double>>
+/**
+ * @class ConvVel
+ * @brief Converts speed values between units for scalar values or containers.
+ * @tparam T Input data type (scalar or iterable container of numeric values).
+ */
 class ConvVel
 {
 
@@ -16,6 +21,9 @@ private:
 
     // Per container
     template <typename U = T>
+    /**
+     * @brief Applies conversion to container-like values.
+     */
     typename std::enable_if<std::is_class<U>::value>::type
     convertedValues()
     {
@@ -28,6 +36,9 @@ private:
 
     // Per scalari
     template <typename U = T>
+    /**
+     * @brief Applies conversion to scalar values.
+     */
     typename std::enable_if<!std::is_class<U>::value>::type
     convertedValues()
     {
@@ -35,6 +46,10 @@ private:
         valueToConvertSpeed *= conversionFactor;
     }
 
+    /**
+     * @brief Returns the multiplicative factor for the selected speed-unit conversion.
+     * @return Conversion factor.
+     */
     double getConversionFactor()
     {
         double conversionFactor = 1.0;
@@ -116,18 +131,31 @@ private:
     }
 
 public:
+    /**
+     * @brief Constructs the converter and immediately converts the provided value.
+     * @param inputSpeed Source speed unit.
+     * @param outputSpeed Target speed unit.
+     * @param valueToConvert Input value (scalar or container).
+     */
     ConvVel(Speed inputSpeed, Speed outputSpeed, const T &valueToConvert)
         : inputSpeed(inputSpeed), outputSpeed(outputSpeed), valueToConvertSpeed(valueToConvert)
     {
         convertedValues();
     }
 
+    /**
+     * @brief Returns the converted value.
+     * @return Constant reference to converted data.
+     */
     const T &getConvertedValues() const
     {
         return valueToConvertSpeed;
     }
 };
 
+/**
+ * @brief Class template argument deduction guide for ConvVel.
+ */
 template <typename T>
 ConvVel(Speed, Speed, T) -> ConvVel<T>;
 

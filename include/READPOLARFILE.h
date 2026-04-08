@@ -42,10 +42,37 @@ namespace VSPPolar
         double CMn;
         double FOpt;
 
-        // Inizializzo a 0 tutti i membri
+        /**
+         * @brief Default constructor.
+         */
         PolarPoint() = default;
 
-        // Costruttore con parametri
+        /**
+         * @brief Constructs a polar data point from all supported columns.
+         * @param beta Sideslip angle value.
+         * @param mach Mach number value.
+         * @param aoa Angle of attack value.
+         * @param re_1e6 Reynolds number in millions.
+         * @param cl Lift coefficient.
+         * @param cdo Zero-lift drag coefficient.
+         * @param cdi Induced drag coefficient.
+         * @param cdtot Total drag coefficient.
+         * @param cdt Additional drag coefficient term.
+         * @param cdtot_t Total drag coefficient variant.
+         * @param cs Side-force coefficient.
+         * @param l_d Lift-to-drag ratio.
+         * @param e Efficiency value.
+         * @param cfx Force coefficient along X.
+         * @param cfy Force coefficient along Y.
+         * @param cfz Force coefficient along Z.
+         * @param cmx Moment coefficient around X.
+         * @param cmy Moment coefficient around Y.
+         * @param cmz Moment coefficient around Z.
+         * @param cml Rolling moment coefficient.
+         * @param cmm Pitching moment coefficient.
+         * @param cmn Yawing moment coefficient.
+         * @param fopt Optimization-related output value.
+         */
         PolarPoint(double beta, double mach, double aoa, double re_1e6,
                    double cl, double cdo, double cdi, double cdtot,
                    double cdt, double cdtot_t, double cs, double l_d,
@@ -72,15 +99,27 @@ namespace VSPPolar
         std::vector<std::string> headers;
 
     public:
-        // Method to read the polar file
+        /**
+         * @brief Reads and parses a polar file.
+         * @param filename Path to the input file.
+         * @return true when parsing completes.
+         * @throws std::runtime_error If the file cannot be opened, is empty, or has an unexpected header size.
+         */
         bool readFile(const std::string &filename);
 
-        // Getters of the data
+        /**
+         * @brief Returns parsed polar points.
+         * @return Constant reference to parsed data.
+         */
         const std::vector<PolarPoint> &getData() const
         {
             return data;
         }
 
+        /**
+         * @brief Returns parsed header labels.
+         * @return Constant reference to header names.
+         */
         const std::vector<std::string> &getHeaders() const
         {
             return headers;

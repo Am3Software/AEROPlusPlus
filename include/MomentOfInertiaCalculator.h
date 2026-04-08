@@ -36,6 +36,10 @@ public:
     // Constructor — takes the builder by const reference and
     // reads category, engine type, and MTOW from commonData
     // --------------------------------------------------------
+    /**
+     * @brief Builds the inertia calculator from aircraft builder data.
+     * @param builder Source builder used to read category, engine data, and WTO.
+     */
     explicit MomentOfInertia(const BuildAircraft& builder)
         : aircraftCategory  (builder.getCommonData().getAircraftCategory())
         , engineType(builder.getCommonData().getAircraftEngineType())
@@ -49,6 +53,12 @@ public:
     //   fuselageLength_m  : overall fuselage length [m]
     // Returns Result with Ixx, Iyy, Izz in [kg*m^2]
     // --------------------------------------------------------
+    /**
+     * @brief Computes mass moments of inertia using Roskam-based correlations.
+     * @param wing Wing geometry data.
+     * @param fuselage Fuselage geometry data.
+     * @return Computed inertias in kg*m^2.
+     */
     Result compute(const VSP::Wing& wing, const VSP::Fuselage& fuselage) const
     {
         // --- Unit conversions (Imperial, as per Roskam) ---
@@ -108,6 +118,11 @@ private:
     // --------------------------------------------------------
     // Table selector — mirrors the MATLAB if/elseif chain
     // --------------------------------------------------------
+    /**
+     * @brief Selects the Roskam coefficient table for the current aircraft configuration.
+     * @return Table with weight and Rx/Ry/Rz coefficient vectors.
+     * @throws std::runtime_error If the category/engine combination is not supported.
+     */
     RoskamTable selectTable() const
     {
         const bool isGAorUAV = (aircraftCategory == AircraftCategory::GENERAL_AVIATION ||
@@ -205,6 +220,14 @@ private:
     // x and y need not be sorted on input (they are sorted here).
     // Duplicate x values are averaged.
     // ============================================================
+    /**
+     * @brief Performs PCHIP interpolation in-range and linear extrapolation out-of-range.
+     * @param x Sample x values.
+     * @param y Sample y values.
+     * @param xq Query x value.
+     * @return Interpolated or extrapolated y value at xq.
+     * @throws std::invalid_argument If input data is empty.
+     */
     static double interpPchipLinearExtrap(std::vector<double> x,
                                           std::vector<double> y,
                                           double xq)
@@ -319,6 +342,15 @@ private:
     //   dLeft, dRight : slopes on those intervals
     //   rightEndpoint : if true, mirrors indices for the right end
     // --------------------------------------------------------
+    /**
+     * @brief Computes one-sided endpoint derivative used by PCHIP.
+     * @param h0 Width of the nearest interval.
+     * @param h1 Width of the adjacent interval.
+     * @param del0 Slope on the nearest interval.
+     * @param del1 Slope on the adjacent interval.
+     * @param rightEndpoint True when evaluating the right endpoint rule.
+     * @return Endpoint derivative constrained for shape preservation.
+     */
     static double pchipEndDerivative(double h0, double h1,
                                      double del0, double del1,
                                      bool rightEndpoint = false)

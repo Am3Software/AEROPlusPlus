@@ -25,16 +25,29 @@ struct InterpolableVariable {
     std::vector<double> coefficients; // Interpolation coefficients
     
     // Checks if the variable is valid (X and Y data are not empty and have the same size)
+    /**
+     * @brief Checks whether the variable has valid interpolation data.
+     * @return true if X and Y vectors are non-empty and have the same size.
+     */
     bool isValid() const {
         return !xData.empty() && xData.size() == yData.size();
     }
     
     // Returns the number of available data points
+    /**
+     * @brief Returns the number of available data points.
+     * @return Number of X/Y samples.
+     */
     int getNumDataPoints() const {
         return xData.size();
     }
     
     // Method to interpolate a new value given xValue
+    /**
+     * @brief Interpolates the variable for a given X value.
+     * @param xValue Query X value.
+     * @return Interpolated Y value.
+     */
     double interpolate(double xValue) const {
 
         // Creates an Interpolant object with the current data and settings - The header is Interpolant.h which already contains everything
@@ -59,6 +72,12 @@ struct ComponentData {
     std::map<std::string, InterpolableVariable> variables; // Map of interpolable variables
     
     // Returns a variable given its name (const)
+    /**
+     * @brief Returns a variable by name.
+     * @param varName Variable key.
+     * @return Constant reference to the requested variable.
+     * @throws std::out_of_range If the variable is not found.
+     */
     const InterpolableVariable& getVariable(const std::string& varName) const {
         return variables.at(varName);
     }
@@ -70,11 +89,20 @@ struct ComponentData {
     // If found, returns an iterator to the found element.
     // If NOT found, returns variables.end(), which is an iterator representing "an element past the last".
     // So, if the result is different from end(), the variable exists; otherwise it does not.
+    /**
+     * @brief Checks whether a variable exists in the component.
+     * @param varName Variable key.
+     * @return true if the variable exists, false otherwise.
+     */
     bool hasVariable(const std::string& varName) const {
         return variables.find(varName) != variables.end();
     }
     
     // Returns the list of available variable names
+    /**
+     * @brief Returns the list of available variable names.
+     * @return Vector with all variable keys.
+     */
     std::vector<std::string> getAvailableVariables() const {
         std::vector<std::string> varNames;
         // 'auto' here automatically deduces the type of 'pair' as std::pair<const std::string, InterpolableVariable>
@@ -85,16 +113,32 @@ struct ComponentData {
     }
     
     // Returns the number of available variables
+    /**
+     * @brief Returns how many variables are stored in this component.
+     * @return Number of variables.
+     */
     int getNumVariables() const {
         return variables.size();
     }
     
     // Interpolates a specific variable given its name and the X value
+    /**
+     * @brief Interpolates a specific variable at the requested X value.
+     * @param varName Variable key.
+     * @param xValue Query X value.
+     * @return Interpolated Y value.
+     */
     double interpolate(const std::string& varName, double xValue) const {
         return getVariable(varName).interpolate(xValue);
     }
 
     // Generates and displays the regression chart for a specific variable
+    /**
+     * @brief Generates the regression chart for a specific variable.
+     * @param varName Variable key.
+     * @param enableChart Chart generation/display flag.
+     * @param aircraftName Aircraft name used for chart naming.
+     */
     void getChartOfVariableRegression(const std::string& varName, std::string enableChart, std::string aircraftName) const {
         const InterpolableVariable& var = getVariable(varName);
         Interpolant interp(var.xData, var.yData, var.polynomialDegree, var.method);
@@ -115,6 +159,12 @@ struct AircraftData {
     
     // Returns a reference to the requested component (non-const)
     // Allows modifying the component data - if needed
+    /**
+     * @brief Returns a mutable reference to the requested component.
+     * @param componentName Component key.
+     * @return Mutable reference to the component data.
+     * @throws std::runtime_error If the component name is unknown.
+     */
     ComponentData& getComponent(const std::string& componentName) {
         if (componentName == "FUSELAGE") return fuselage;
         if (componentName == "WING") return wing;
@@ -126,6 +176,12 @@ struct AircraftData {
     }
     
     // Returns a const reference to the requested component
+    /**
+     * @brief Returns a const reference to the requested component.
+     * @param componentName Component key.
+     * @return Constant reference to the component data.
+     * @throws std::runtime_error If the component name is unknown.
+     */
     const ComponentData& getComponent(const std::string& componentName) const {
         if (componentName == "FUSELAGE") return fuselage;
         if (componentName == "WING") return wing;
@@ -136,6 +192,10 @@ struct AircraftData {
         throw std::runtime_error("Unknown component: " + componentName);
     }
 
+    /**
+     * @brief Sets the aircraft name.
+     * @param name Aircraft name.
+     */
     void setAircraftName(const std::string& name) {
         aircraftName = name;
     }

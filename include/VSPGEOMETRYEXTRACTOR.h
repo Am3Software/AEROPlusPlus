@@ -104,6 +104,8 @@ namespace VSPGEOMTRYEXTRACTOR
             return result;
         }
 
+        /// @brief Parses the output from the VSP script execution to extract geometry information and populate the AircraftGeometryData structure.
+        /// @param output The raw output string from the VSP script execution
         inline void parseGeomOutput(const std::string &output)
         {
             geometryData = AircraftGeometryData(); // Reset

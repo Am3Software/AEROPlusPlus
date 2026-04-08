@@ -7,27 +7,39 @@
 
 namespace VSP {
 
+/**
+ * @brief Movable-surface descriptors for a lifting surface.
+ */
 struct WingMovables {
+    /** @brief Movable type identifiers (for example: flap/slat/aileron/rudder/elevator markers). */
     std::vector<char> type;
+    /** @brief Deflection values associated with each movable entry. */
     std::vector<double> defl;
 };
 
+/**
+ * @brief Aircraft control-surface and geometry descriptors used for control-group generation.
+ */
 struct Aircraft {
+    /** @brief Main wing data and movable definitions. */
     struct WingData {
         std::string id = "wing";
         WingMovables mov;
     } wing;
     
+    /** @brief Canard data and movable definitions. */
     struct CanardData {
         std::string id = "canard";
         WingMovables mov;
     } canard;
     
+    /** @brief Horizontal tail data and movable definitions. */
     struct HorizontalData {
         std::string id = "horizontal";
         WingMovables mov;
     } hor;
     
+    /** @brief Vertical tail data and rudder activation options. */
     struct VerticalData {
         std::string id = "vertical";
         WingMovables mov;
@@ -35,6 +47,7 @@ struct Aircraft {
         std::vector<int> activatedRudder;
     } ver;
 
+    /** @brief Fuselage geometric data. */
     struct FuselageData {
         std::string id = "fuselage";
         double length = 0.0;
@@ -42,6 +55,7 @@ struct Aircraft {
         double width = 0.0;
     } fus;
 
+    /** @brief Boom geometric data. */
     struct BoomData {
         std::string id = "boom";
         double length = 0.0;
@@ -53,6 +67,7 @@ struct Aircraft {
         std::vector<double> zloc;
     } boom;
 
+    /** @brief Nacelle geometric data. */
     struct NacelleData {
         std::string id = "nacelle";
         double length = 0.0;
@@ -62,6 +77,7 @@ struct Aircraft {
         std::vector<double> zloc;
     } nac;
 
+    /** @brief Propeller-disk geometric data. */
     struct DiskData {
         std::string id = "disk";
         double diameter = 0.0;
@@ -76,8 +92,17 @@ struct Aircraft {
     std::string config = "";
 };
 
+/**
+ * @brief Utility builder that creates VSPAERO control groups from aircraft movable definitions.
+ */
 class ControlSurfaceBuilder {
 private:
+    /**
+     * @brief Adds flap and slat control groups derived from wing movable definitions.
+     * @param controls Output control-group list.
+     * @param ac Aircraft source data.
+     * @param symmetry Symmetry flag used to choose single-side or mirrored surfaces.
+     */
     static inline void addFlaps(std::vector<ControlSurface>& controls, 
                                 const Aircraft& ac, 
                                 const std::string& symmetry) {
@@ -150,6 +175,12 @@ private:
         }
     }
     
+    /**
+     * @brief Adds aileron control group.
+     * @param controls Output control-group list.
+     * @param ac Aircraft source data.
+     * @param symmetry Symmetry flag used to choose single-side or mirrored surfaces.
+     */
     static inline void addAilerons(std::vector<ControlSurface>& controls, 
                                    const Aircraft& ac, 
                                    const std::string& symmetry) {
@@ -177,6 +208,12 @@ private:
         controls.push_back(aileron);
     }
     
+    /**
+     * @brief Adds elevator control group.
+     * @param controls Output control-group list.
+     * @param ac Aircraft source data.
+     * @param symmetry Symmetry flag used to choose single-side or mirrored surfaces.
+     */
     static inline void addElevators(std::vector<ControlSurface>& controls, 
                                     const Aircraft& ac, 
                                     const std::string& symmetry) {
@@ -198,6 +235,12 @@ private:
         controls.push_back(elevator);
     }
     
+    /**
+     * @brief Adds rudder control group(s), supporting unified or split deflections.
+     * @param controls Output control-group list.
+     * @param ac Aircraft source data.
+     * @param symmetry Symmetry flag (kept for interface consistency).
+     */
     static inline void addRudders(std::vector<ControlSurface>& controls, 
                                   const Aircraft& ac, 
                                   const std::string& symmetry) {
@@ -231,6 +274,12 @@ private:
         }
     }
     
+    /**
+     * @brief Adds canard flap control group.
+     * @param controls Output control-group list.
+     * @param ac Aircraft source data.
+     * @param symmetry Symmetry flag used to choose single-side or mirrored surfaces.
+     */
     static inline void addCanardFlaps(std::vector<ControlSurface>& controls, 
                                       const Aircraft& ac, 
                                       const std::string& symmetry) {
@@ -253,6 +302,12 @@ private:
     }
     
 public:
+    /**
+     * @brief Builds all enabled control groups from aircraft movable configuration.
+     * @param ac Aircraft source data.
+     * @param symmetry Symmetry flag used to construct control-surface naming and gains.
+     * @return List of generated control groups.
+     */
     static inline std::vector<ControlSurface> buildControlSurfaces(
         const Aircraft& ac, 
         const std::string& symmetry) {

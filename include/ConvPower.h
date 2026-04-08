@@ -6,6 +6,11 @@
 #include <iostream>
 
 template <typename Container = std::vector<double>>
+/**
+ * @class ConvPower
+ * @brief Converts power values between supported units for scalar and container inputs.
+ * @tparam Container Input data type (scalar or iterable container of numeric values).
+ */
 class ConvPower
 {
 
@@ -13,6 +18,10 @@ private:
     Power inputPower, outputPower;
     Container valueToConvertPower;
 
+    /**
+     * @brief Applies power conversion to the stored input value.
+     * @return Converted value container/scalar.
+     */
     Container convertedValues()
     {
         double conversionFactor = 1.0;
@@ -52,6 +61,12 @@ private:
     }
 
 public:
+    /**
+     * @brief Constructs the converter and immediately converts the provided value.
+     * @param inputPower Source power unit.
+     * @param outputPower Target power unit.
+     * @param valueToConvert Input value (scalar or container).
+     */
     ConvPower(Power inputPower, Power outputPower, Container valueToConvert)
     {
 
@@ -62,6 +77,10 @@ public:
         convertedValues();
     }
 
+    /**
+     * @brief Returns the converted power value.
+     * @return Constant reference to converted data.
+     */
     const Container &getConvertedValues() const
     {
 
@@ -69,7 +88,9 @@ public:
     }
 };
 
-// Guide di deduzione
+/**
+ * @brief Class template argument deduction guide for ConvPower.
+ */
 template <typename Container>
 ConvPower(Power, Power, Container) -> ConvPower<Container>;
 

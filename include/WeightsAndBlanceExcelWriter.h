@@ -28,6 +28,11 @@ private:
     // Helper: check if structs are empty (all values == 0.0)
     // =========================================================
 
+    /**
+     * @brief Returns the list of component weights with non-zero values.
+     * @param value Input weights structure.
+     * @return Vector of (component name, weight) pairs.
+     */
     std::vector<std::pair<std::string, double>> getNonZeroWeights(const COG::Weights &value) const
     {
 
@@ -69,6 +74,11 @@ private:
     }
 
 
+    /**
+     * @brief Returns the list of component balance entries with non-zero COG coordinates.
+     * @param valueCOG Input COG structure.
+     * @return Vector of tuples (component name, x, y, z).
+     */
     std::vector<std::tuple<std::string, double, double, double>> getNonZeroBalance(const COG::COGDATA &valueCOG) const
     {
 
@@ -116,6 +126,12 @@ private:
     // Helper: common lambdas
     // =========================================================
 
+    /**
+     * @brief Writes component rows (weights or balance) starting from the provided row index.
+     * @param sheet Target worksheet.
+     * @param rowIdx In/out row index updated while writing.
+     * @param setTypeOfWriteRow Row type selector (0 = weights, non-zero = balance).
+     */
     void writeRow(XLWorksheet &sheet, int &rowIdx, int setTypeOfWriteRow = 0)
     {
 
@@ -148,6 +164,12 @@ private:
         }
     }
 
+    /**
+     * @brief Sets worksheet column width based on the longest string among provided contents.
+     * @param sheet Target worksheet.
+     * @param col Column label (for example "A").
+     * @param contents Candidate strings used to compute width.
+     */
     void setColumnWidth(XLWorksheet &sheet,
                         const std::string &col,
                         const std::vector<std::string> &contents)
@@ -158,6 +180,12 @@ private:
         sheet.column(col).setWidth(static_cast<int>(maxLen) + 2);
     }
 
+    /**
+     * @brief Writes the common sheet header with aircraft name and COG reference values.
+     * @param sheet Target worksheet.
+     * @param nameOfAircraft Aircraft name.
+     * @param settings Aerodynamic settings containing COG reference and MAC.
+     */
     void writeHeader(XLWorksheet &sheet, const std::string &nameOfAircraft, VSP::AeroSettings &settings)
     {
         sheet.cell("A1").value() = "Aircraft Name:";
@@ -176,6 +204,10 @@ private:
     // Sheet writers
     // =========================================================
 
+    /**
+     * @brief Writes the component-weights worksheet.
+     * @param sheet Target worksheet.
+     */
     void writeComponentWeight(XLWorksheet &sheet)
     {
         sheet.setName("COMPONENTS_WEIGHTS");
@@ -193,6 +225,10 @@ private:
         setColumnWidth(sheet, "B", {"Value (kg)"});
     }
 
+    /**
+     * @brief Writes the component-balance worksheet.
+     * @param sheet Target worksheet.
+     */
     void writeBalanceSheet(XLWorksheet &sheet)
     {
         sheet.setName("BALANCE");
@@ -251,8 +287,20 @@ private:
     // }
 
 public:
+    /**
+     * @brief Default constructor.
+     */
     WeightsAndBalanceExcelWriter() {}
 
+    /**
+     * @brief Writes weights and balance tables to an Excel file.
+     * @param fileName Output Excel file name.
+     * @param nameOfAircraft Aircraft name.
+     * @param settings Aerodynamic settings.
+     * @param componentWeight Component weights data.
+     * @param componentBalance Component COG/balance data.
+     * @param pathToSaveExcel Output directory path (optional; defaults to current path + "\\ExcelResults").
+     */
     void writeWeightsDataAndBalanceToExcel(
         const std::string fileName,
         const std::string nameOfAircraft,

@@ -293,6 +293,19 @@ public:
         makeRegression();
     }
 
+    // Costruttore template — accetta Eigen::VectorXd, std::array, ecc.
+    template <typename VectorX, typename VectorY>
+    Interpolant(VectorX x, VectorY y, int degree, RegressionMethod method)
+    {
+        // Converte qualsiasi container in std::vector<double>
+        this->xValues = std::vector<double>(x.begin(), x.end());
+        this->yValues = std::vector<double>(y.begin(), y.end());
+        this->Degree = degree;
+        this->Method = method;
+
+        makeRegression();
+    }
+
     // ========================== Public API =================================
 
     /// Method to get the estimated Y value from the regression at a specific X value

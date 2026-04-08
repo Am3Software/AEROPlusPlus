@@ -225,7 +225,34 @@ public:
         : labelX(labelX), labelY(labelY), title(title), autoShow(false)
     {
     }
-    
+
+    // ════════════════════════════════════════════════════════════════
+    // COSTRUTTORE 3: Per scalari (singolo punto)
+    // ════════════════════════════════════════════════════════════════
+    Plot(double x, double y,
+         std::string labelX, std::string labelY, std::string title,
+         std::string legend, std::string typeOfPlot,
+         std::string lineType, std::string thicknessLine,
+         std::string markerType, std::string markerDimension, std::string color)
+        : labelX(labelX), labelY(labelY), title(title), autoShow(true)
+    {
+        ContainerX xContainer = {x};
+        ContainerY yContainer = {y};
+        datasets.emplace_back(std::move(xContainer), std::move(yContainer));
+
+        PlotStyle style;
+        style.legend = legend;
+        style.typeOfPlot = typeOfPlot;
+        style.lineType = lineType;
+        style.thicknessLine = thicknessLine;
+        style.markerType = markerType;
+        style.markerDimension = markerDimension;
+        style.color = color;
+        styles.push_back(style);
+
+        getPlot();
+    }
+
     // Metodo per aggiungere dati (hold on) anche in formato Eigen
     template<typename X, typename Y>
     void addData(X x, Y y, 
@@ -254,7 +281,32 @@ public:
         
         styles.push_back(style);
     }
-    
+
+
+    void addScalar(double x, double y,
+                   std::string legend = "",
+                   std::string typeOfPlot = "points",
+                   std::string lineType = "1",
+                   std::string thicknessLine = "2.0",
+                   std::string markerType = "7",
+                   std::string markerDimension = "1.5",
+                   std::string color = "#0072BD")
+    {
+        ContainerX xContainer = {x};
+        ContainerY yContainer = {y};
+        datasets.emplace_back(std::move(xContainer), std::move(yContainer));
+
+        PlotStyle style;
+        style.legend = legend;
+        style.typeOfPlot = typeOfPlot;
+        style.lineType = lineType;
+        style.thicknessLine = thicknessLine;
+        style.markerType = markerType;
+        style.markerDimension = markerDimension;
+        style.color = color;
+        styles.push_back(style);
+    }
+
     // Metodo per mostrare il plot
     void show()
     {

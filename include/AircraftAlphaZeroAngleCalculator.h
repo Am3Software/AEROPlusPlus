@@ -56,6 +56,8 @@ private:
     double etaMaximumConventionalTail = 0.95;
     std::vector<double> liftCoefficents ;
     double aircrfatAlphaZeroLiftAngle = 0.0;
+    double liftCoeffcientAtAlphaZero = 0.0;
+    double vspAircrfatLiftSlope = 0.0;
 
 public:
     CalculateAircrfatAlphaZeroLiftAngle(const BuildAircraft &builder,
@@ -184,9 +186,25 @@ public:
         
         aircrfatAlphaZeroLiftAngle = zeroLiftAngelInterpolator.getYValueFromRegression(0.0);
 
+        vspAircrfatLiftSlope = std::pow(zeroLiftAngelInterpolator.getCoefficients().front(), -1); // Vsp Aircrfat lift slope 1/deg
+
         settings = settingsRestorer.getSettingsToRestore();
 
         return aircrfatAlphaZeroLiftAngle;
 
+    }
+
+    double getLiftCoefficientAtAlphaZero()
+    {
+
+        liftCoeffcientAtAlphaZero = liftCoefficents.front(); // Assuming the first element corresponds to the lift coefficient at alpha zero
+
+        return liftCoeffcientAtAlphaZero;
+    }
+
+    double getVSPAircraftLiftSlope()
+    {
+
+        return vspAircrfatLiftSlope;
     }
 };

@@ -29,7 +29,6 @@ struct AeroSettings {
     std::string KT;  // "NO", "YES"
     int StabilityType;
     
-    // Rotor data
     std::string IncludePropToAnlysis = "No";
     std::vector<double> rpm;
     std::vector<double> xloc, yloc, zloc;
@@ -50,6 +49,11 @@ private:
     std::ofstream file;
     std::string name;
     
+    /**
+     * @brief Writes a comma-separated vector parameter.
+     * @param paramName Parameter label written before the equals sign.
+     * @param values Numeric values written as a comma-separated list.
+     */
     inline void writeVector(const std::string& paramName, const std::vector<double>& values) {
         file << paramName << " = ";
         for (size_t i = 0; i < values.size(); i++) {
@@ -62,6 +66,11 @@ private:
     }
     
 public:
+    /**
+     * @brief Opens the output file named "<aircraftName>_DegenGeom.vspaero".
+     * @param aircraftName Aircraft name used for file naming.
+     * @throws std::runtime_error If the output file cannot be opened.
+     */
     inline VSPAeroGenerator(const std::string& aircraftName) : name(aircraftName) {
         std::string filename = aircraftName + "_DegenGeom.vspaero";
         file.open(filename);
@@ -70,16 +79,26 @@ public:
         }
     }
     
+    /**
+     * @brief Closes the output file if still open.
+     */
     inline ~VSPAeroGenerator() {
         close();
     }
     
+    /**
+     * @brief Closes the output file stream.
+     */
     inline void close() {
         if (file.is_open()) {
             file.close();
         }
     }
     
+    /**
+     * @brief Writes general aerodynamic settings.
+     * @param settings Settings structure that contains all aerodynamic data to write in the .vspaero file.
+     */
     inline void writeSettings(const AeroSettings& settings) {
         file << "Sref = " << settings.Sref << "\n";
         file << "Cref = " << settings.Cref << "\n";
@@ -103,6 +122,11 @@ public:
         file << "WakeIters = " << settings.WakeIters << "\n";
     }
     
+    /**
+     * @brief Writes rotor blocks when propeller analysis is enabled.
+     * @param settings Settings structure that contains all aerodynamic data to write in the .vspaero file.
+     * @param config Configuration string checked for propeller presence.
+     */
     inline void writeRotors(const AeroSettings& settings, const std::string& config) {
         if (config.find('P') == std::string::npos || 
             settings.IncludePropToAnlysis != "Yes") {
@@ -145,6 +169,10 @@ public:
         }
     }
     
+    /**
+     * @brief Writes control surface group data.
+     * @param controls List of control groups to serialize.
+     */
     inline void writeControlSurfaces(const std::vector<ControlSurface>& controls) {
         if (controls.empty()) {
             return;
@@ -175,6 +203,10 @@ public:
         }
     }
     
+    /**
+     * @brief Writes the fixed footer and stability/correction options.
+     * @param settings Settings structure that contains all aerodynamic data to write in the .vspaero file.
+     */
     inline void writeFooter(const AeroSettings& settings) {
         file << "Preconditioner = Matrix\n";
         file << "Karman-Tsien Correction = " << settings.KT << "\n";

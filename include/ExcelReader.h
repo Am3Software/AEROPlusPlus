@@ -49,6 +49,10 @@ private:
     std::string unitToPassY = "";     // Unità di misura da convertire per Y o unità di misura finale di Y.
     std::string flagChart = "";      // Flag per abilitare il grafico della regressione.
 
+    /**
+     * @brief Counts populated rows starting from the configured start row.
+     * @return Number of non-empty rows in the selected X column.
+     */
     int getLengthOfRow() // Conta quante righe sono popolate a partire da startRow.
     {
         worksheet = workbook.workbook().worksheet(sheetName); // Aggiorna il worksheet in base al nome impostato.
@@ -77,6 +81,10 @@ private:
         return endRow; // Restituisce il numero totale di righe popolate.
     }
 
+    /**
+     * @brief Reads reference units from the INFO worksheet.
+     * @return Vector of detected unit labels.
+     */
     std::vector<std::string> getUnitOfAllData()
     {
         // Svuota il vettore per evitare duplicati se chiamato più volte
@@ -93,6 +101,10 @@ private:
         return units;
     }
 
+    /**
+     * @brief Reads and converts X data from the selected worksheet range.
+     * @return Vector of X values after unit conversion when applicable.
+     */
     std::vector<double> getXData()
     {
 
@@ -252,6 +264,10 @@ private:
         return xData;
     }
 
+    /**
+     * @brief Reads and converts Y data from the selected worksheet range.
+     * @return Vector of Y values after unit conversion when applicable.
+     */
     std::vector<double> getYData()
     {
 
@@ -416,6 +432,10 @@ private:
     //     return (start < end) ? std::string(start, end) : "";
     // }
 
+    /**
+     * @brief Reads the X-axis label from the selected worksheet.
+     * @return X-axis label string.
+     */
     std::string getNameOfXAxis()
     {
 
@@ -424,6 +444,10 @@ private:
         return xLabel;
     }
 
+    /**
+     * @brief Reads the Y-axis label from the selected worksheet.
+     * @return Y-axis label string.
+     */
     std::string getNameOfYAxis()
     {
 
@@ -432,6 +456,11 @@ private:
         return yLabel;
     }
 
+    /**
+     * @brief Reads and resolves the regression method from sheet metadata.
+     * @return Regression method enum value.
+     * @throws std::runtime_error If method extraction is not available.
+     */
     RegressionMethod getTypeOfRegression()
     {
 
@@ -476,6 +505,10 @@ private:
         return methodLabel;
     }
 
+    /**
+     * @brief Reads the polynomial degree from sheet metadata.
+     * @return Polynomial degree, or 0 when extraction is not available.
+     */
     int getDegreeOfPolynomial()
     {
 
@@ -494,6 +527,10 @@ private:
         return degreeOfPolynomial;
     }
 
+    /**
+     * @brief Reads the chart-enable flag from sheet metadata.
+     * @return Chart flag string, or empty string when extraction is not available.
+     */
     std::string getFlagToEnableChart() {
 
 
@@ -511,6 +548,11 @@ private:
         return flagChart;
     }
 
+    /**
+     * @brief Counts variables stored in a worksheet using 3-column variable blocks.
+     * @param sheetName Worksheet name.
+     * @return Number of detected variables.
+     */
      int countVariables(const std::string& sheetName)
     {
         worksheet = workbook.workbook().worksheet(sheetName);
@@ -683,6 +725,7 @@ public:
 
     /// @brief Reads a component's data from the specified Excel sheet.
     /// @param sheetName Name of the worksheet to read data from.
+    /// @param aircraftName Name of the aircraft
     /// @return A ComponentData object populated with data from the Excel sheet.
     AERO::ComponentData readComponent(const std::string &sheetName, const std::string &aircraftName)
     {
