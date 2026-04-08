@@ -16,7 +16,7 @@ C++ header-only API for aircraft preliminary design — aerodynamics, weight & b
 ## Documentation
 
 Full API documentation is available at:
-**[AERO++ Documentation](https://am3software.github.io/AEROPlusPlus/GuideAEROPlusPlus.html)**
+**<a href="https://am3software.github.io/AEROPlusPlus/GuideAEROPlusPlus.html" target="_blank">AERO++ Documentation</a>**
 
 ## Dependencies
 
