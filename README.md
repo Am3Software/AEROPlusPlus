@@ -13,6 +13,11 @@ C++ header-only API for aircraft preliminary design — aerodynamics, weight & b
 - OpenCASCADE integration for STEP/IGES geometry import
 - Cross-platform support (Linux, macOS, Windows)
 
+## Documentation
+
+Full API documentation is available at:
+**[AERO++ Documentation](https://am3software.github.io/AEROPlusPlus/GuideAEROPlusPlus.html)**
+
 ## Dependencies
 
 | Dependency | Required | Purpose |
