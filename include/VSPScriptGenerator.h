@@ -1794,7 +1794,7 @@ namespace VSP
 
                         writeUpdate();
 
-                        static int numSections = wing.span.size();
+                        int numSections = wing.span.size();
 
                         if (wing.useDetailedPanels)
                         {
