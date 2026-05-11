@@ -5,6 +5,7 @@ enum class TypeOfWing
 {
     STRAIGHT_TAPERED,
     CRANKED,
+    ELLIPTICAL,
     UNKNOWN
 };
 
@@ -16,6 +17,9 @@ TypeOfWing stringToTypeOfWing(const std::string& wing)
     }
     if (wing == "cranked" || wing == "Cranked") {
     return TypeOfWing::CRANKED;
+    }
+    if (wing == "elliptical" || wing == "Elliptical") {
+    return TypeOfWing::ELLIPTICAL;
     }
     return TypeOfWing::UNKNOWN;
 }

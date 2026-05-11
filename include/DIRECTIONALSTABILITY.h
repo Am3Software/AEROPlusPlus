@@ -921,7 +921,7 @@ namespace DIRECTIONAL_STABILITY
             VSP::Wing wing,
             VSP::Wing horizontalTail,
             VSP::Fuselage fuselage,
-            VSP::Nacelle nacelle,
+            VSP::Nacelle nacelle = VSP::Nacelle(),
             VSP::Wing verticalTail = VSP::Wing(),
             VSP::Disk disk = VSP::Disk(),
             VSP::Wing canard = VSP::Wing()) : builder(builder),

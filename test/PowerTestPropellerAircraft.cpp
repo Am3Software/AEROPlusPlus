@@ -49,6 +49,7 @@ template class vtkAOSDataArrayTemplate<long long>;
 #include "AircraftAlphaZeroAngleCalculator.h"
 #include "CDCalculator.h"
 #include "PropellerEfficiencyCalculator.h"
+#include "ConvVel.h"
 #include <Eigen/Dense>
 #include <iostream>
 #include <filesystem>
@@ -679,10 +680,6 @@ int main()
     std::vector<double> dragCoefficients;
     // std::vector<double> efficiencyAircraft;
 
-    // CalculateAircrfatAlphaZeroLiftAngle alphaZeroLiftAngleCalc(builder, ac, settings, wing, horizontal, vertical, fus, nac);
-
-    // double aircrfatalphaZeroLiftAngle = alphaZeroLiftAngleCalc.getAircraftAlphaZeroLiftAngle();
-
     // for (double AoA = aircrfatalphaZeroLiftAngle; AoA <= 10; AoA += 1.0)
     // {
 
@@ -714,6 +711,9 @@ int main()
 
     double criticalAltitude = builder.getEngineData().getCriticalAltitude();
 
+    double liftCoeffcientAtFixedWeight = 0.0;
+    double angleOfAttackToEvaluateCD = 0.0;
+
     ConvLength convLength(Length::FT, Length::M, criticalAltitude);
 
     criticalAltitude = convLength.getConvertedValues(); // Convert critical altitude to meters for fuel calculation
@@ -721,8 +721,9 @@ int main()
     double availablePower = 0.0;
     double throttleSetting = 1.0; // Assuming 75% throttle for cruise to evaluate max speed
     double etaPropeller = 0.8;    // Estimated propeller efficiency
+    double degadationFactor = 0.29;
 
-    std::vector<double> machNumbers = {0.2, 0.25, 0.27, 0.3, 0.35};                     // Different Mach numbers to evaluate
+    std::vector<double> machNumbers = {0.17, 0.2, 0.25, 0.27, 0.3};                     // Different Mach numbers to evaluate
     std::vector<double> altitudeEvaluations = {0.0, 5000.0, 10000.0, 15000.0, 20000.0}; // Different altitudes to evaluate
 
     ConvLength convAltitudesToEvaluate(Length::FT, Length::M, altitudeEvaluations);
@@ -732,30 +733,38 @@ int main()
     std::vector<double> requiredPower;
     std::vector<double> availablePowerVec;
     // std::vector<double> TAS;
-    std::vector<double> ROC;
+    // std::vector<double> ROC;
 
-    Eigen::MatrixXd powerRequiredMatrix(machNumbers.size(), altitudeEvaluations.size()); // Matrix to store power values for different Mach numbers and altitudes
-    Eigen::MatrixXd powerAvailableMatrix(machNumbers.size(), altitudeEvaluations.size()); // Matrix to store power values for different Mach numbers and altitudes
-    Eigen::MatrixXd TAS(machNumbers.size(), altitudeEvaluations.size()); // Matrix to store true airspeed values for different Mach numbers and altitudes
-   
+    Eigen::MatrixXd powerRequiredMatrix(altitudeEvaluations.size(), machNumbers.size());  // Matrix to store power values for different Mach numbers and altitudes
+    Eigen::MatrixXd powerAvailableMatrix(altitudeEvaluations.size(), machNumbers.size()); // Matrix to store power values for different Mach numbers and altitudes
+    Eigen::MatrixXd TAS(altitudeEvaluations.size(), machNumbers.size());                  // Matrix to store true airspeed values for different Mach numbers and altitudes
+    Eigen::MatrixXd ROC(altitudeEvaluations.size(), machNumbers.size());                  // Vector to store power excess values for different altitudes
+    Eigen::VectorXd maxROC(altitudeEvaluations.size());                                   // Vector to store maximum rate of climb for each altitude
+
     double propellerEfficiency = 0.0;
 
     for (size_t i = 0; i < altitudeEvaluations.size(); i++)
     {
 
-        double muViscosity = Atmosphere::ISA::viscosity(altitudeEvaluations[i]);                                                                    // Calculate viscosity at sea level for power calculation
+        double muViscosity = Atmosphere::ISA::viscosity(altitudeEvaluations[i]);                                                                    // Calculate viscosity at maxROCSeaLevel = 0.0; level for power calculation
         auto [temperatureToEvaluate, speedOfSoundToEvaluate, pressureToEvaluate, densityToEvaluate] = Atmosphere::atmosisa(altitudeEvaluations[i]); // Atmosisa like in MATLAB
         std::cout << "\n--- Evaluating at altitude: " << altitudeEvaluations[i] << " m ---" << std::endl;
 
-       
-        
         for (size_t j = 0; j < machNumbers.size(); j++)
         {
 
             settings.Mach = machNumbers[j];
-            settings.rho = densityToEvaluate; // Update air density for current altitude
+            settings.rho = densityToEvaluate;                                                                      // Update air density for current altitude
             settings.ReCref = settings.Mach * speedOfSoundToEvaluate * settings.Cref * settings.rho / muViscosity; // Update Reynolds number for current Mach
-            
+
+            CalculateAircrfatAlphaZeroLiftAngle liftCoeffcientAndAoACalculator(builder, ac, settings, wing, horizontal, vertical, fus, nac);
+
+            double aircrfatalphaZeroLiftAngle = liftCoeffcientAndAoACalculator.getAircraftAlphaZeroLiftAngle();
+
+            liftCoeffcientAtFixedWeight = (2 * builder.getCommonData().getWTO() * 9.81) / (densityToEvaluate * std::pow(speedOfSoundToEvaluate * machNumbers[j], 2) * settings.Sref); // Calculate lift coefficient at fixed weight for the first Mach number
+
+            angleOfAttackToEvaluateCD = (liftCoeffcientAtFixedWeight - liftCoeffcientAndAoACalculator.getLiftCoefficientAtAlphaZero()) / liftCoeffcientAndAoACalculator.getVSPAircraftLiftSlope();
+
             PropellerEfficiencyCalculator propEfficiencyCalculator(builder,
                                                                    wing,
                                                                    horizontal,
@@ -771,7 +780,7 @@ int main()
             if (altitudeEvaluations[i] > criticalAltitude)
             {
                 // Power in kW
-                availablePower = 0.7457 * builder.getEngineData().getNumberOfEngines() * builder.getEngineData().getBSHP() * throttleSetting * propellerEfficiency * (1.0 - (altitudeEvaluations[i] - criticalAltitude) * 0.1 / 1e3);
+                availablePower = 0.7457 * builder.getEngineData().getNumberOfEngines() * builder.getEngineData().getBSHP() * throttleSetting * propellerEfficiency * (1.0 - (altitudeEvaluations[i] - criticalAltitude) * degadationFactor / 1e3);
             }
 
             else
@@ -780,24 +789,58 @@ int main()
                 availablePower = 0.7457 * builder.getEngineData().getNumberOfEngines() * builder.getEngineData().getBSHP() * throttleSetting * propellerEfficiency;
             }
 
-            CDCalculator cdCalc(aircraftName, builder, ac, settings, wing, horizontal, vertical, fus, nac);
+            CD0Calculator cd0Calc(aircraftName, builder, ac, settings, wing, horizontal, vertical, fus, nac);
 
-            dragCoefficients.push_back(cdCalc.getCDTotalAircraft(2, machNumbers[j], altitudeEvaluations[i], "CRUISE"));
+            OswaldFactorCalculator oswaldCalc(builder, wing, fus);
+
+            auto [oswaldTakeOff, oswaldClimb, oswaldCruise, oswaldDescent, oswaldLanding] = oswaldCalc.getOswaldFactor();
+
+            dragCoefficients.push_back(cd0Calc.getTotalCD0Aircraft() + (std::pow(liftCoeffcientAtFixedWeight, 2) / (M_PI * wing.aspectRatio * oswaldClimb))); // Total drag coefficient at the evaluated angle of attack
+
+            // CDCalculator cdCalc(aircraftName, builder, ac, settings, wing, horizontal, vertical, fus, nac);
+
+            // dragCoefficients.push_back(cdCalc.getCDTotalAircraft(angleOfAttackToEvaluateCD, machNumbers[j], altitudeEvaluations[i], "CLIMB"));
 
             double tempRequiredPower = 0.5 * settings.rho * std::pow(machNumbers[j] * speedOfSoundToEvaluate, 3) * settings.Sref * dragCoefficients.back() / 1000.0; // Power in kW
 
-            powerRequiredMatrix(i,j) = tempRequiredPower;
-            powerAvailableMatrix(i,j) = availablePower;
+            powerRequiredMatrix(i, j) = tempRequiredPower;
+            powerAvailableMatrix(i, j) = availablePower;
 
+            TAS(i, j) = machNumbers[j] * speedOfSoundToEvaluate;
 
-            TAS(i,j) = machNumbers[j] * speedOfSoundToEvaluate;
+            ROC(i, j) = 1000 * (availablePower - tempRequiredPower) / (9.81 * builder.getCommonData().getWTO()); // Rate of climb in m/s
 
-           
+            ConvVel convROC(Speed::M_TO_S, Speed::FT_TO_MIN, ROC(i, j));
+
+            ROC(i, j) = convROC.getConvertedValues(); // Convert rate of climb from m/s to ft/min
             // ROC.push_back(1000.0 * (availablePowerVec.back() - requiredPower.back()) / (9.81 * builder.getCommonData().getWTO())); // Rate of climb in m/s
 
             // ConvVel rocConverter(Speed::M_TO_S, Speed::FT_TO_MIN, ROC.back()); // Converter for rate of climb from m/s to ft/min
+        }
+    }
 
-            // ROC.back() = rocConverter.getConvertedValues(); // Update ROC with converted value in ft/min
+    double absoluteCeiling = 0.0;
+    double findAltitude100ftROC = 0.0;
+    double findAltitude300ftROC = 0.0;
+    double maxROCSeaLevel = 0.0;
+
+    
+    for (size_t j = 0; j < altitudeEvaluations.size(); j++)
+    {
+        maxROC(j) = ROC.row(j).maxCoeff(); // ← prende il max della riga i
+
+        if (j == 0) {
+
+            maxROCSeaLevel =  maxROC(j);
+        }
+
+        if (j==altitudeEvaluations.size()-1) {
+
+            Interpolant findAltitude(maxROC.tail(maxROC.size()-2),  std::vector<double>(altitudeEvaluations.begin() + 2, altitudeEvaluations.end()),1, RegressionMethod::LINEAR);
+
+            absoluteCeiling = findAltitude.getYValueFromRegression(0.0);        // Interpola per trovare l'altitudine a cui ROC = 0
+            findAltitude100ftROC = findAltitude.getYValueFromRegression(100.0); // Interpola per trovare l'altitudine a cui ROC = 100 ft/min
+            findAltitude300ftROC = findAltitude.getYValueFromRegression(300.0); // Interpola per trovare l'altitudine a cui ROC = 300 ft/min
         }
     }
 
@@ -822,22 +865,32 @@ int main()
 
     for (size_t n = 0; n < altitudeEvaluations.size(); n++)
     {
-         
-         plotPower.addData(TAS.row(n), powerRequiredMatrix.row(n), "Required Power", "lines", "1", "1", "", "", colorsPowerRequired[n]);
-         plotPower.addData(TAS.row(n), powerAvailableMatrix.row(n), "Available Power", "lines", "1", "1", "", "", colorsPowerAvailable[n]);
-      
+        // π con pedice — sintassi Gnuplot enhanced
+        // {/Symbol p} = π greco
+        // _{req}       = pedice
+
+        plotPower.addData(TAS.row(n), powerRequiredMatrix.row(n),
+                          "{/Symbol P}_{req} at " + std::to_string((int)(altitudeEvaluations[n] * 3.281)) + " ft",
+                          "lines", "1", "1", "", "", colorsPowerRequired[n]);
+
+        plotPower.addData(TAS.row(n), powerAvailableMatrix.row(n),
+                          "{/Symbol P}_{av} at " + std::to_string((int)(altitudeEvaluations[n] * 3.281)) + " ft",
+                          "lines", "1", "1", "", "", colorsPowerAvailable[n]);
     }
-   
-    
 
     plotPower.show();
 
-    // Plot rocPlot(TAS, ROC,
-    //              "TAS (m/s)",
-    //              "Rate of Climb (ft/min)",
-    //              "Rate of Climb vs TAS",
-    //              "ROC, M = 0.2-0.35, Alt = 10000 ft",
-    //              "lines", "1", "1", "", "", "blue");
+    Plot rocPlot("Rate of Climb (ft/min)",
+                 "Altitude (m)",
+                 "Altitude vs Rate of Climb");
+
+    rocPlot.addData(maxROC, altitudeEvaluations, "ROC envelope", "lines", "1", "1", "", "", "blue");
+    rocPlot.addScalar(maxROCSeaLevel, altitudeEvaluations.front(), "Max ROC at Sea Level", "points", "1", "2.0", "7","0.95", "purple");
+    rocPlot.addScalar(0.0, absoluteCeiling, "Absolute Ceiling", "points", "1", "2.0", "7","0.95", "red");
+    rocPlot.addScalar(100.0, findAltitude100ftROC, "100 ft/min ROC", "points", "1", "2.0", "7","0.95", "orange");
+    rocPlot.addScalar(300.0, findAltitude300ftROC, "300 ft/min ROC", "points", "1", "2.0", "7","0.95", "green");
+
+    rocPlot.show();
 
     settings = settingsRestorer.getSettingsToRestore(); // Restore previous settings after power calculation and plotting
 

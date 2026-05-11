@@ -45,6 +45,10 @@ template class vtkAOSDataArrayTemplate<long long>;
 #include "ChordCalculator.h"
 #include "DegenGeomParser.h"
 #include "Plotter3D.h"
+#include "FuelMassCalculatorBreguet.h"
+#include "AircraftAlphaZeroAngleCalculator.h"
+#include "CDCalculator.h"
+#include "PropellerEfficiencyCalculator.h"
 #include <Eigen/Dense>
 #include <iostream>
 #include <filesystem>
@@ -95,10 +99,18 @@ int main()
     std::cout << "Working directory: " << std::filesystem::current_path() << std::endl;
     std::cout << std::endl;
 
+    std::string aircraftName = "P2012";
     // ====================  SCRIPT GENERATION ====================
+
+    SaveFiles saveFiles;
+
+    saveFiles.captureExecutionTimestamp(); // Capture the timestamp before script generation
+    
     std::cout << "\n1. Generating AngelScript script (.vspscript)..." << std::endl;
 
-    VSP::ScriptGenerator script("P2012.vspscript");
+    VSP::ScriptGenerator script(aircraftName + ".vspscript");
+
+
 
     // --- CONTROL SURFACES ---
     VSP::Aircraft ac;
@@ -247,6 +259,7 @@ int main()
     vertical.mov.cf_c_inner = {0.25};
     vertical.mov.cf_c_outer = {0.3};
     vertical.mov.tessellation = {10};
+    vertical.mov.defl = {0};
     ac.ver.mov.type = vertical.mov.type;
     ac.ver.isSplittedDeflection = false;
     ac.ver.activatedRudder = {1};
@@ -384,15 +397,15 @@ int main()
     // std::cout << "   - EO/IR sensor created" << std::endl;
 
     // --- DEGEN GEOM ---
-    script.makeDegenGeom("P2012", false);
+    script.makeDegenGeom(aircraftName, false);
     std::cout << "   - DegenGeom configured" << std::endl;
 
-    std::cout << "\n✓ AngelScript script generated: P2012.vspscript" << std::endl;
+    std::cout << "\n✓ AngelScript script generated: " << aircraftName << ".vspscript" << std::endl;
 
     // ==================== GENERATE VSPAERO FILE ====================
     std::cout << "\n2. Generating VSPAERO file (.vspaero)..." << std::endl;
 
-    VSP::VSPAeroGenerator vspaero("P2012");
+    VSP::VSPAeroGenerator vspaero(aircraftName);
 
     // --- AERODYNAMIC SETTINGS ---
     VSP::AeroSettings settings;
@@ -422,7 +435,7 @@ int main()
     settings.X_cg = wing.xloc + 0.25 * settings.Cref;                                                   // Center of gravity
     settings.Y_cg = 0.0;
     settings.Z_cg = 0.25 * fus.diameter;
-    settings.Mach = 0.15;                                                // Mach number
+    settings.Mach = 0.27;                                                // Mach number
     settings.AoA = {-2, 0, 2};                                           // Angles of attack
     settings.Beta = {0};                                                 // Sideslip angle
     settings.Vinf = settings.Mach * speedOfSound;                        // Velocity [m/s]
@@ -477,12 +490,12 @@ int main()
     {
         // ==================== VSPScript execution ====================
 
-        std::string exeVSPScript = "vspscript.exe -script P2012.vspscript";
+        std::string exeVSPScript = "vspscript.exe -script " + aircraftName + ".vspscript";
         std::cout << "\nExecuting: " << exeVSPScript << std::endl;
 
         int retVSPScript = system(exeVSPScript.c_str());
 
-        if (retVSPScript != 0 && !std::filesystem::exists("P2012.vsp3"))
+        if (retVSPScript != 0 && !std::filesystem::exists(aircraftName + ".vsp3"))
         {
             std::cerr << "VSPScript: execution failed" << std::endl;
             return 1;
@@ -490,7 +503,7 @@ int main()
 
         // ==================== OPTIONAL: RUN VSPAERO ANALYSIS ====================
         // Uncomment the following lines to run VSPAero analysis
-        // std::string exeVSPAero = "vspaero.exe -omp 4 MyAircraft_DegenGeom";
+        // std::string exeVSPAero = "vspaero.exe -omp 4 " + aircraftName + "_DegenGeom";
         // std::cout << "\nExecuting: " << exeVSPAero << std::endl;
         // int ret = system(exeVSPAero.c_str());
         // if (ret != 0)
@@ -620,11 +633,11 @@ int main()
     // ==================== 3D - AIRCRAFT REPRESENTATION TEST ====================
 
     // Leggi il file DegenGeom
-    DegenGeomReader reader("P2012_DegenGeom.csv");
+    DegenGeomReader reader(aircraftName + "_DegenGeom.csv");
     auto components = reader.read();
 
     // Crea il plotter
-    AircraftPlotter plotter("P2012");
+    AircraftPlotter plotter(aircraftName);
     plotter.setResolution(2560,1440);
     plotter.setBackground(12, 116, 228);
     std::map<std::string, std::array<double, 3>> colorMap = {
@@ -640,13 +653,13 @@ int main()
         plotter.addComponentWithColorMap(surf, colorMap);
     }
 
-    // Mostra la finestra 3D interattiva
-    plotter.show();
+    // // Mostra la finestra 3D interattiva
+    // plotter.show();
 
-    plotter.saveAllViews(std::filesystem::current_path().string());
+    // plotter.saveAllViews(std::filesystem::current_path().string());
 
-    // ==================== COG CALCULATION ====================
-
+    // ==================== COG CALCULATION AND DRAG CALCULATION ====================
+   
     BuildAircraft builder("P2012", settings);
 
     builder.buildAircraft();
@@ -655,21 +668,169 @@ int main()
 
     COG::COGCalculator calcCenterOfGravity("P2012",
                                            data.commonData,
+                                           builder,
                                            data.wingData,
                                            data.fuselageData,
                                            data.engineData,
+                                           ac,
                                            wing,
                                            horizontal,
                                            vertical,
                                            fus,
                                            nac);
 
+     
+
+    // std::vector<double> liftCoefficients;
+    std::vector<double> dragCoefficients;
+    // std::vector<double> efficiencyAircraft;
+
+    // CalculateAircrfatAlphaZeroLiftAngle alphaZeroLiftAngleCalc(builder, ac, settings, wing, horizontal, vertical, fus, nac);
+
+    // double aircrfatalphaZeroLiftAngle = alphaZeroLiftAngleCalc.getAircraftAlphaZeroLiftAngle();
+
+    // for (double AoA = aircrfatalphaZeroLiftAngle; AoA <= 10; AoA += 1.0)
+    // {
+
+    //     dragCoefficients.push_back(cdCalc.getCDTotalAircraft(AoA, settings.Mach, settings.altitude, "CRUISE"));
+    //     liftCoefficients.push_back(cdCalc.getLiftCoefficient());
+
+    //     efficiencyAircraft.push_back(liftCoefficients.back() / dragCoefficients.back());
+    // }
+
+    // Plot plotDragPolar(dragCoefficients, liftCoefficients,
+    //                    "CD (-)",
+    //                    "CL (-)",
+    //                    "Drag Polar",
+    //                    "DragP, M = 0.27, Alt = 10000 ft",
+    //                    "lines", "1", "1", "", "", "blue");
+
+    // Plot plotEfficinency(liftCoefficients, efficiencyAircraft,
+    //                      "CL (-)",
+    //                      "L/D (-)",
+    //                      "Efficiency",
+    //                      "L/D, M = 0.25, Alt = 10000 ft",
+    //                      "lines", "1", "1", "", "", "orange");
+
+
+    
+    // =========== POWER CALCULATION AND PLOT POWER VS TAS ===========
+
+    RestoreSettings settingsRestorer; // Create an instance of RestoreSettings to automatically restore settings when going out of scope
+
+    settingsRestorer.setSavePrevoiusSettings(settings);
+
+    double criticalAltitude = builder.getEngineData().getCriticalAltitude();
+
+    ConvLength convLength(Length::FT, Length::M, criticalAltitude);
+
+    criticalAltitude = convLength.getConvertedValues(); // Convert critical altitude to meters for fuel calculation
+
+    double availablePower = 0.0;
+    double throttleSetting = 1.0; // Assuming 75% throttle for cruise to evaluate max speed
+    double etaPropeller = 0.8; // Estimated propeller efficiency
+
+    std::vector<double> machNumbers = {0.2, 0.25, 0.27, 0.3,0.35}; // Different Mach numbers to evaluate
+    std::vector<double> requiredPower;
+    std::vector<double> availablePowerVec;
+    std::vector<double> TAS;
+    std::vector<double> ROC;
+
+    double altitudeEvaluation = 0.0;
+    double propellerEfficiency = 0.0;
+    double muViscosity = Atmosphere::ISA::viscosity(altitudeEvaluation);                                                          // Calculate viscosity at sea level for power calculation
+    auto [temperatureToEvaluate, speedOfSoundToEvaluate, pressureToEvaluate, densityToEvaluate] = Atmosphere::atmosisa(altitudeEvaluation); // Atmosisa like in MATLAB
+
+    for (size_t j = 0; j < machNumbers.size(); j++)
+    {
+        settings.Mach = machNumbers[j];
+        settings.ReCref = settings.Mach * speedOfSoundToEvaluate * settings.Cref * settings.rho / muViscosity; // Update Reynolds number for current Mach
+        
+        PropellerEfficiencyCalculator propEfficiencyCalculator(builder,
+                                                               wing,
+                                                               horizontal,
+                                                               fus,
+                                                               disk,
+                                                               nac,
+                                                               machNumbers[j] * speedOfSoundToEvaluate,
+                                                               40.0,
+                                                               altitudeEvaluation);
+
+        propellerEfficiency = propEfficiencyCalculator.getPropellerEfficiency();
+
+        if (altitude > criticalAltitude)
+        {
+            // Power in kW
+            availablePower = 0.7457 * builder.getEngineData().getNumberOfEngines() * builder.getEngineData().getBSHP() * throttleSetting * propellerEfficiency * (1.0 - (altitude - criticalAltitude) * 0.1 / 1e3);
+        }
+
+        else
+        {
+            // Power in kW
+            availablePower = 0.7457 * builder.getEngineData().getNumberOfEngines() * builder.getEngineData().getBSHP() * throttleSetting * propellerEfficiency;
+        }
+
+
+        CDCalculator cdCalc(aircraftName, builder, ac, settings, wing, horizontal, vertical, fus, nac);
+
+        dragCoefficients.push_back(cdCalc.getCDTotalAircraft(2, machNumbers[j], altitudeEvaluation, "CRUISE"));
+
+        double tempRequiredPower = 0.5*settings.rho * std::pow(machNumbers[j]*speedOfSoundToEvaluate,3)* settings.Sref * dragCoefficients.back()/1000.0; // Power in kW
+
+        requiredPower.push_back(tempRequiredPower);
+
+        availablePowerVec.push_back(availablePower);
+
+        TAS.push_back(machNumbers[j] * speedOfSoundToEvaluate);
+
+        ROC.push_back(1000.0*(availablePowerVec.back() - requiredPower.back())/(9.81*builder.getCommonData().getWTO())); // Rate of climb in m/s
+
+        ConvVel rocConverter(Speed::M_TO_S, Speed::FT_TO_MIN, ROC.back()); // Converter for rate of climb from m/s to ft/min
+
+        ROC.back() = rocConverter.getConvertedValues(); // Update ROC with converted value in ft/min
+
+    }
+
+
+    Plot plotPower("TAS(m/s)", "Power(Watt)", "Power vs TAS");
+
+    plotPower.addData(TAS, requiredPower, "Required Power", "lines", "1", "1", "", "", "red");
+    plotPower.addData(TAS, availablePowerVec, "Available Power", "lines", "1", "1", "", "", "green");
+
+
+    plotPower.show();
+
+    Plot rocPlot (TAS, ROC,
+                      "TAS (m/s)",
+                      "Rate of Climb (ft/min)",
+                      "Rate of Climb vs TAS",
+                      "ROC, M = 0.2-0.35, Alt = 10000 ft",
+                      "lines", "1", "1", "", "", "blue");
+
+    settings = settingsRestorer.getSettingsToRestore(); // Restore previous settings after power calculation and plotting
+
+    // ==================== SAVE OUTPUT FILES ====================
+  
+    std::cout << "\n=== SAVING FILES ===" << std::endl;
+    saveFiles.saveFiles(aircraftName + "_folder", aircraftName);
+    std::cout << "✓ Files saved successfully" << std::endl;
+    // ==================== FUEL CALCULATION ====================
+
+    FuelCalculatorBreguet fuelCalc;
+    double fuelMass = fuelCalc.calculateFuelMassPropellerDriven(builder.getEngineData().getAircraftEngineType(), builder.getCommonData().getWTO(),
+                                            builder.getCommonData().getRangeCovered(), builder.getEngineData().getSFC(), builder.getEngineData().getBSHP(), 
+                                            0.65, settings.Vinf, altitude,0.8,builder.getEngineData().getNumberOfEngines(), criticalAltitude);
     calcCenterOfGravity.getWeights();
     calcCenterOfGravity.calculateCOGAircraft();
 
     COG::Weights weightData = calcCenterOfGravity.getWeightsData();
     COG::COGDATA cogData = calcCenterOfGravity.getCOGData();
     COG::COGDATA cogComponents = calcCenterOfGravity.getCOGComponentsData();
+
+
+    // FuelCalculatorBreguet fuelCalc;
+
+    // fuelCalc.calculateFuelMassPropllerDriven(builder.getEngineData().getAircraftEngineType(),)
 
     // double OEW = weightData.totalAircraftWeight -  weightData.payloadWeight - weightData.fuelWeight;
     // double emptyWeight = OEW - 0.05*weightData.fuelWeight - weightData.crewWeight;
@@ -858,8 +1019,8 @@ int main()
                                                                        horizontal,
                                                                        vertical,
                                                                        fus,
-                                                                       nac,
-                                                                       directionalStabilityCalc.getSingleComponentsDerivativesSideForce());
+                                                                       directionalStabilityCalc.getSingleComponentsDerivativesSideForce(),
+                                                                       nac);
 
     lateralStabilityCalc.calculateLateralStabilityDerivatives();
 
@@ -871,7 +1032,7 @@ int main()
     // Case 1
     
     excelWriter.writeDerivativesToExcel("TestExcelDerivatives.xlsx",
-                                        "P2012",
+                                        aircraftName,
                                         settings,
                                         stabilityCalc.getLongitudinalStabilityDerivativesToSingleComponent(),
                                         directionalStabilityCalc.getSingleComponentsDerivativesSideForce(),
@@ -885,7 +1046,7 @@ int main()
     // Case 2
 
     // excelWriter.writeDerivativesToExcel("TestExcelDerivatives.xlsx",
-    //                                     "P2012",
+    //                                     aircraftName,
     //                                     settings,
     //                                     stabilityCalc.getLongitudinalStabilityDerivativesToSingleComponent(),
     //                                     {},
@@ -1044,12 +1205,12 @@ int main()
               "SP response",
               "lines", "1", "1", "", "", "blue");
 
-    // ==================== SAVE OUTPUT FILES ====================
-    SaveFiles saveFiles;
+    // // ==================== SAVE OUTPUT FILES ====================
+    // SaveFiles saveFiles;
 
-    std::cout << "\n=== SAVING FILES ===" << std::endl;
-    saveFiles.saveFiles("MyAircraft_test_folder", "P2012");
-    std::cout << "✓ Files saved successfully" << std::endl;
+    // std::cout << "\n=== SAVING FILES ===" << std::endl;
+    // saveFiles.saveFiles("MyAircraft_test_folder", aircraftName);
+    // std::cout << "✓ Files saved successfully" << std::endl;
 
     return 0;
 }

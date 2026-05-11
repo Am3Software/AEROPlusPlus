@@ -986,8 +986,8 @@ namespace LATERAL_STABILITY
             VSP::Wing horizontalTail,
             VSP::Wing verticalTail,
             VSP::Fuselage fuselage,
-            VSP::Nacelle nacelle,
             DIRECTIONAL_STABILITY::DirectionalStabilityDerivativesSideForceToSingleComponent directionalDerivatives,
+            VSP::Nacelle nacelle = VSP::Nacelle(),
             VSP::Wing canard = VSP::Wing(),
             VSP::Disk disk = VSP::Disk()) : builder(builder),
                                             aircraftInfo(aircraftInfo),
@@ -998,8 +998,8 @@ namespace LATERAL_STABILITY
                                             horizontalTail(horizontalTail),
                                             verticalTail(verticalTail),
                                             fuselage(fuselage),
-                                            nacelle(nacelle),
                                             singleComponentsDerivativesSideForce(directionalDerivatives),
+                                            nacelle(nacelle),
                                             canard(canard),
                                             disk(disk)
         {

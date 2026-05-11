@@ -112,7 +112,7 @@ public:
                  const VSP::Wing &horizontal,
                  const VSP::Wing &vertical,
                  const VSP::Fuselage &fus,
-                 const VSP::Nacelle &nac,
+                 const VSP::Nacelle &nac = VSP::Nacelle(),
                  const VSP::Wing &canard = VSP::Wing(),
                  const VSP::Boom &boom = VSP::Boom(),
                  const VSP::EOIR &eoir = VSP::EOIR())

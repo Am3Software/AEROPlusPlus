@@ -436,7 +436,7 @@ namespace COG
                       VSP::Wing horizontalTail,
                       VSP::Wing verticalTail,
                       VSP::Fuselage fuselage,
-                      VSP::Nacelle nacelle,
+                      VSP::Nacelle nacelle = VSP::Nacelle{},
                       VSP::Wing canard = VSP::Wing{},
                       VSP::Boom boom = VSP::Boom{},
                       VSP::Pod pod = VSP::Pod{},

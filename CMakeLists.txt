@@ -267,6 +267,7 @@ add_test(NAME AircraftData              COMMAND AircraftData)
 add_test(NAME TestLaunchVSP             COMMAND TestLaunchVSP)
 add_test(NAME TestVSPCreator            COMMAND TestVSPCreator)
 add_test(NAME PowerTestPropellerAircraft COMMAND PowerTestPropellerAircraft)
+add_test(NAME SpitFire_Test              COMMAND SpitFire_Test)
 
 # ==========================================
 # Configuration summary

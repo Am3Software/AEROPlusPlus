@@ -576,7 +576,7 @@ namespace LONGITUDINAL_STABILITY
             VSP::Wing &wing,  // Needed if I wanto to modify or add some variables to the wing class
             VSP::Wing &horizontalTail,
             VSP::Fuselage fuselage,
-            VSP::Nacelle nacelle,
+            VSP::Nacelle nacelle = VSP::Nacelle(),
             VSP::Disk disk = VSP::Disk(),
             VSP::Wing *canard = nullptr,
             VSP::Wing *verticalTail = nullptr)

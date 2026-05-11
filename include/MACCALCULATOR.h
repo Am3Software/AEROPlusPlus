@@ -55,6 +55,15 @@ public:
         }
         break;
 
+
+        case TypeOfWing::ELLIPTICAL:
+        {
+
+            MAC = M_PI * rootChord /4.0;
+        }
+        break;
+
+
         case TypeOfWing::CRANKED:
         {
 
@@ -96,6 +105,16 @@ public:
         {
 
             yMAC = (span / 6.0) * ((1 + 2 * taperRatio) / (1 + taperRatio));
+        }
+
+        break;
+
+
+        case TypeOfWing::ELLIPTICAL:
+        {
+
+            yMAC = 4.0/(3.0*M_PI) * (0.5 * span); 
+
         }
 
         break;

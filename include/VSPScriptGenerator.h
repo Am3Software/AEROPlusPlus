@@ -342,10 +342,13 @@ namespace VSP
 
                         if (wing.airfoilType == "XS_FOUR_SERIES")
                         {
-                                if (idx < wing.camber.size())
+                                if (idx < wing.idealcl.size())
                                 {
-                                        writeCommand("SetParmVal(" + wing.id + ",\"Camber\",\"XSecCurve_" +
-                                                     std::to_string(idx) + "\"," + std::to_string(wing.camber[idx]) + ");");
+                                        writeCommand("SetParmVal(" + wing.id + ",\"CamberInputFlag\",\"XSecCurve_" +
+                                                     std::to_string(idx) + "\"," + std::to_string(1.0) + ");"); // Disable camber location and enable IdealCl
+
+                                        writeCommand("SetParmVal(" + wing.id + ",\"IdealCl\",\"XSecCurve_" +
+                                                     std::to_string(idx) + "\"," + std::to_string(wing.idealcl[idx]) + ");");
                                 }
                                 if (idx < wing.camberloc.size())
                                 {
@@ -496,7 +499,7 @@ namespace VSP
                                 writeCommand("SetParmVal(" + wing.id + ",\"Span\",\"" + secID + "\"," +
                                              std::to_string(wing.span[idx]) + ");");
 
-                                if (!wing.blending || equalsIgnoreCase(wing.id, "vertical"))
+                                if (!wing.blending || equalsIgnoreCase(wing.id, "vertical") || wingType == TypeOfWing::ELLIPTICAL)
                                 {
 
                                         wing.totalSpan += wing.span[idx];
@@ -550,7 +553,7 @@ namespace VSP
                                 wing.totalSpan *= equalsIgnoreCase(wing.id, "wing") || equalsIgnoreCase(wing.id, "horizontal") ? 2 : 1; // Perchè totalSpan è la somma delle semiali, e per il calcolo del MAC serve la span totale
 
                                 // Se ci fosse una winglet la penultima sezione è la transition e l'ultima è la winglet
-                                if (wing.blending && equalsIgnoreCase(wing.id, "wing"))
+                                if (wing.blending && equalsIgnoreCase(wing.id, "wing") && wingType != TypeOfWing::ELLIPTICAL)
                                 {
                                         for (size_t i = 0; i < wing.span.size() - 2; i++)
                                         {
@@ -717,6 +720,71 @@ namespace VSP
                                         }
                                 }
 
+                                case TypeOfWing::ELLIPTICAL:
+
+                                {
+
+                                        wing.taperRatio = wing.ctip.back() / wing.croot.front();
+
+                                        wing.MAC = macCalc.getMAC(wingType, wing.croot[0], wing.taperRatio, wing.totalProjectedSpan);
+                                        wing.yMAC = macCalc.getYMAC(wingType, wing.totalProjectedSpan, wing.taperRatio);
+
+                        
+                                        wing.planformArea = (M_PI/4.0) * wing.totalProjectedSpan * wing.croot.front();
+                                        
+
+                                        wing.aspectRatio = std::pow(wing.totalProjectedSpan, 2) / wing.planformArea;
+
+                                        bool addedLocalThicknessToChordRatioInbord = false;
+
+                                        for (size_t n = 0; n < wing.panelsArea.size(); n++)
+                                        {
+                                                if (n == 0)
+                                                {
+
+                                                        wing.panelsYStation.push_back(0.0);
+
+                                                        if (!equalsIgnoreCase(wing.id, "vertical"))
+                                                        {
+                                                                wing.panelsYStation.push_back(wing.span[n]); // Proiezione della lunghezza del pannello sul piano orizzontale, che è la distanza y della stazione del pannello dal centro di proiezione della semiala, che coincide con il centro di proiezione dell'ala intera
+                                                        }
+                                                        else
+                                                        {
+
+                                                                wing.panelsYStation.push_back(wing.span[n]);
+                                                        }
+                                                        wing.chordsAtYStation.push_back(wing.croot.front());
+                                                        wing.chordsAtYStation.push_back(wing.ctip.front());
+                                                        wing.loacalThicknessInbord.push_back(wing.thickchord[n] * wing.croot.front());
+                                                        wing.loacalThicknessInbord.push_back(wing.thickchord[n + 1] * wing.ctip.front());
+                                                }
+
+                                                else
+                                                {
+
+                                                        if (!equalsIgnoreCase(wing.id, "vertical"))
+                                                        {
+                                                                wing.panelsYStation.push_back(wing.panelsYStation.back() + wing.span[n]);
+                                                        }
+                                                        else
+                                                        {
+                                                                wing.panelsYStation.push_back(wing.panelsYStation.back() + wing.span[n]);
+                                                        }
+
+                                                        wing.chordsAtYStation.push_back(wing.ctip[n]);
+
+                                                        if (!addedLocalThicknessToChordRatioInbord)
+                                                        {
+                                                                wing.loacalThicknessOutbord.push_back(wing.loacalThicknessInbord.back());
+
+                                                                addedLocalThicknessToChordRatioInbord = true;
+                                                        }
+
+                                                        wing.loacalThicknessOutbord.push_back(wing.thickchord[n + 1] * wing.ctip[n]);
+                                                }
+                                        }
+                                }
+
                                 break;
 
                                 case TypeOfWing::CRANKED:
@@ -826,7 +894,7 @@ namespace VSP
 
                                 // Calcolo dello spessore medio
                                 
-                                 std::vector<double> yStationInboardThicknessToChordRatio = {wing.panelsYStation.front(), wing.panelsYStation[1]};
+                                std::vector<double> yStationInboardThicknessToChordRatio = {wing.panelsYStation.front(), wing.panelsYStation[1]};
                                 std::vector<double> yStationOutboardThicknessToChordRatio = {wing.panelsYStation[1], wing.panelsYStation.back()};
 
                                 double integretionStepInboard = (yStationInboardThicknessToChordRatio.back() - yStationInboardThicknessToChordRatio.front()) / 100; // Suddivido la semiala in 100 step per l'integrazione numerica
@@ -1154,6 +1222,31 @@ namespace VSP
                                 file << "\r\n";
 
                                 writeCommand("string fuselageName = \"FuselageGeom\";");
+                                file << "\r\n";
+
+                                writeCommand("array< string > @geom_ids = FindGeomsWithName( fuselageName );");
+                                file << "\r\n";
+
+                                writeCommand("string " + fuselage.id + " = geom_ids[0];");
+                                file << "\r\n";
+
+                                writeCommand("SetGeomName(" + fuselage.id + ", \"" + fuselage.id + "\");");
+                                file << "\r\n";
+
+                                writeUpdate();
+                        }
+
+                        else if  (fuselage.fuselagePresetName == "Spitfire_fuselage") 
+                        {
+
+                                writeCommand("string fnamePreset = \"" + cwdEscaped + "\\\\" +
+                                             fuselage.fuselagePresetName + ".vsp3\";");
+                                file << "\r\n";
+
+                                writeCommand("ReadVSPFile( fnamePreset );");
+                                file << "\r\n";
+
+                                writeCommand("string fuselageName = \"fuselage\";");
                                 file << "\r\n";
 
                                 writeCommand("array< string > @geom_ids = FindGeomsWithName( fuselageName );");
@@ -1701,7 +1794,7 @@ namespace VSP
 
                         writeUpdate();
 
-                        int numSections = wing.span.size();
+                        static int numSections = wing.span.size();
 
                         if (wing.useDetailedPanels)
                         {
@@ -1838,7 +1931,7 @@ namespace VSP
                                 {
                                         std::string secID = "XSec_" + std::to_string(i);
 
-                                        if (i > 0) // era i > 0: il blending inboard parte da i=2, come in MATLAB (if i > 1)
+                                        if (i > 0 || typeOfWing ==  TypeOfWing::ELLIPTICAL) // era i > 0: il blending inboard parte da i=2, come in MATLAB (if i > 1)
                                         {
                                                 // -------- InLE --------
                                                 writeCommand("SetParmVal(" + wingID + ",\"InLEMode\",\"" + secID + "\"," +
@@ -1914,6 +2007,16 @@ namespace VSP
                                                                 writeCommand("SetParmVal(" + wingID + ",\"InTEStrength\",\"" + secID + "\"," +
                                                                              std::to_string(wing.blend.InTEStrength[i]) + ");");
                                                         }
+
+                                                        else if (wing.blend.InTEMode[i] == 6) // IN_ANGLES
+                                                        {
+                                                                writeCommand("SetParmVal(" + wingID + ",\"InTEStrength\",\"" + secID + "\"," +
+                                                                             std::to_string(wing.blend.InTEStrength[i]) + ");");
+                                                        }
+                                                        {
+                                                                writeCommand("SetParmVal(" + wingID + ",\"InTEStrength\",\"" + secID + "\"," +
+                                                                             std::to_string(wing.blend.InTEStrength[i]) + ");");
+                                                        }
                                                 }
 
                                                 if (i < nsec) // outboard blending: solo se non siamo all'ultima sezione
@@ -1949,6 +2052,12 @@ namespace VSP
                                                                                      std::to_string(wing.blend.OutLEStrength[i]) + ");");
                                                                 }
                                                                 else if (wing.blend.OutLEMode[i] == 5)
+                                                                {
+                                                                        writeCommand("SetParmVal(" + wingID + ",\"OutLEStrength\",\"" + secID + "\"," +
+                                                                                     std::to_string(wing.blend.OutLEStrength[i]) + ");");
+                                                                }
+
+                                                                 else if (wing.blend.OutLEMode[i] == 6) // IN_ANGLES
                                                                 {
                                                                         writeCommand("SetParmVal(" + wingID + ",\"OutLEStrength\",\"" + secID + "\"," +
                                                                                      std::to_string(wing.blend.OutLEStrength[i]) + ");");
@@ -1990,6 +2099,18 @@ namespace VSP
                                                                                      std::to_string(wing.blend.OutTEStrength[i]) + ");");
                                                                 }
                                                                 else if (wing.blend.OutTEMode[i] == 5)
+                                                                {
+                                                                        writeCommand("SetParmVal(" + wingID + ",\"OutTEStrength\",\"" + secID + "\"," +
+                                                                                     std::to_string(wing.blend.OutTEStrength[i]) + ");");
+                                                                }
+
+                                                                else if (wing.blend.OutTEMode[i] == 6) // IN_ANGLES
+                                                                {
+                                                                        writeCommand("SetParmVal(" + wingID + ",\"OutTEStrength\",\"" + secID + "\"," +
+                                                                                     std::to_string(wing.blend.OutTEStrength[i]) + ");");
+                                                                }
+
+                                                                else if (wing.blend.OutTEMode[i] == 7) // LE_ANGLES
                                                                 {
                                                                         writeCommand("SetParmVal(" + wingID + ",\"OutTEStrength\",\"" + secID + "\"," +
                                                                                      std::to_string(wing.blend.OutTEStrength[i]) + ");");

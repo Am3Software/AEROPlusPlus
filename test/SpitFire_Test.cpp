@@ -66,7 +66,7 @@ template class vtkAOSDataArrayTemplate<long long>;
 int main()
 {
 
-    std::string aircraftName = "A320Neo";
+    std::string aircraftName = "Spitfire";
 
     // ==================== DETERMINE BUILD DIRECTORY ====================
     // Get the current directory and go to build/
@@ -120,72 +120,71 @@ int main()
     VSP::Wing wing;
     wing.id = "wing";
     ac.wing.id = wing.id;
-    wing.typeOfWing = TypeOfWing::CRANKED;
+    wing.typeOfWing = TypeOfWing::ELLIPTICAL;
     wing.useDetailedPanels = true;
-    wing.airfoilType = "XS_FILE_AIRFOIL";
-    wing.affile = {"airfoil/SC_02_0714.dat",
-                   "airfoil/SC_02_0714.dat",
-                   "airfoil/SC_02_0712.dat",
-                   "airfoil/SC_02_0712.dat",
-                   "airfoil/SC_02_0712.dat"};
-    wing.camber = {0.2, 0.2, 0.2, 0.2, 0.2};
-    wing.camberloc = {0.4, 0.4, 0.4, 0.4, 0.4};
-    wing.twist = {-1.5, -3.0, -3.0,-3.5};
-    wing.twistloc = {0, 0, 0, 0};
-    // wing.idealcl = {0.3, 0.3, 0.3, 0.3};
-    wing.thickchord = {0.147, 0.122, 0.105, 0.105, 0.09};
-    wing.xloc = 11.765;
+    wing.airfoilType = "XS_FOUR_SERIES";
+    // wing.affile = {"airfoil/SC_02_0714.dat",
+    //                "airfoil/SC_02_0714.dat",
+    //                "airfoil/SC_02_0712.dat",
+    //                "airfoil/SC_02_0712.dat",
+    //                "airfoil/SC_02_0712.dat"};
+    wing.idealcl = {0.24, 0.24, 0.24, 0.24};
+    wing.camberloc = {0.2, 0.2, 0.2, 0.2};
+    wing.thickchord = {0.13, 0.13, 0.10, 0.094};
+    wing.twist = {2.0, 1.73,-0.5};
+    wing.twistloc = {0, 0, 0};
+    wing.xloc = 2.209;
     wing.yloc = 0.0;
-    wing.zloc = -0.570;
+    wing.zloc = -0.636;
     wing.xrot = 0;
-    wing.yrot = 0;
+    wing.yrot = -3.000;
     wing.zrot = 0;
 
-    wing.span = {6.39327, 10.64270, 0.37267, 2.44506};
-    wing.ctip = {3.779, 1.143, 0.884, 0.382};
-    wing.croot = {7.25, 3.779, 1.143, 0.884};
+    wing.span = {0.60000, 3.98611, 0.97000};
+    wing.ctip = {2.33000, 1.35000, 0.25000};
+    wing.croot = {4.00000, 2.33000, 1.35000};
 
-    wing.kinkStation = 6.39327; 
-    wing.taperInbord = wing.ctip.front() / wing.croot.front();
+    // wing.kinkStation = 6.39327; 
+    // wing.taperInbord = wing.ctip.front() / wing.croot.front();
 
-    wing.sectessU = {15, 15, 15, 15};
+    wing.sectessU = {15, 15, 15};
     wing.wtess = 25;
 
     // Control surfaces
-    wing.mov.type = {'s', 's', 's', 's', 's', 'f', 'f', 'a'};
-    wing.mov.eta_inner = {0.113480, 0.315809, 0.466194, 0.598461, 0.723475, 0.10, 0.324019, 0.693484};
-    wing.mov.eta_outer = {0.272845, 0.464194, 0.598461, 0.721475, 0.828508, 0.320019, 0.688484, 0.831076};
-    wing.mov.cf_c_inner = {0.110063, 0.14, 0.14, 0.14, 0.14, 0.25, 0.25, 0.286600};
+    wing.mov.type = {'f', 'f', 'a'};
+    wing.mov.eta_inner = {0.07,0.28,0.47};
+    wing.mov.eta_outer = {0.28, 0.47, 0.97};
+    wing.mov.cf_c_inner = {0.24,0.24,0.22};
     wing.mov.cf_c_outer = wing.mov.cf_c_inner;
-    wing.mov.tessellation = {10, 10, 10, 10, 10, 10, 10, 10};
-    wing.mov.defl = {0, 0, 0, 0, 0, 0, 0, 0};
+    wing.mov.tessellation = {10, 10, 10};
+    wing.mov.defl = {0, 0, 0};
 
     ac.wing.mov.type = wing.mov.type;
     ac.wing.mov.defl = wing.mov.defl;
 
-    wing.sweep = {28.31, 28.31, 55.34, 39.62};
-    wing.sweeploc = {0, 0, 0, 0};
-    wing.secsweeploc = {1, 1, 1, 1};
-    wing.dihedral = {6.0, 6.0, 24.5, 75.37};
+    wing.sweep = {6.00000, 9.00000, 25.00000};
+    wing.sweeploc = {0, 0, 0};
+    wing.secsweeploc = {1, 1, 1};
+    wing.dihedral = {-2.0, 5.0,5.0};
 
     wing.blending = true;
 
-    wing.blend.InLEMode = {0,0,0,4,0};
-    wing.blend.InTEMode = {0,0,0,5,0};
-    wing.blend.OutLEMode = {0,0,2,0,0};
-    wing.blend.OutTEMode = {0,0,0,0,0};
-    wing.blend.InLESweep = {0,0,0,0,0};
-    wing.blend.OutLESweep = {0,0,0,0,0};
-    wing.blend.InLEDihedral = {0,0,0,0,0};
-    wing.blend.OutLEDihedral = {0,0,0,0,0};
-    wing.blend.InTESweep = {0,0,0,0,0};
-    wing.blend.OutTESweep = {0,0,0,0,0};
-    wing.blend.InTEDihedral = {0,0,0,0,0};
-    wing.blend.OutTEDihedral = {0,0,0,0,0};
-    wing.blend.InLEStrength = {1,1,1,0.75,1};
-    wing.blend.InTEStrength = {1,1,1,0.75,1};
-    wing.blend.OutLEStrength = {1,1,0.75,1,1};
-    wing.blend.OutTEStrength = {1,1,1,1,1};
+    wing.blend.InLEMode = {0,0,1,1};
+    wing.blend.InTEMode = {0,1,1,1};
+    wing.blend.OutLEMode = {0,1,6,0};
+    wing.blend.OutTEMode = {0,1,6,0};
+    wing.blend.InLESweep = {0,0,16,55};
+    wing.blend.OutLESweep = {0,6,0,0};
+    wing.blend.InLEDihedral = {0,0,0,-11.31};
+    wing.blend.OutLEDihedral = {0,5.29,0,0};
+    wing.blend.InTESweep = {0,4,-21,-60};
+    wing.blend.OutTESweep = {0,4,0,0};
+    wing.blend.InTEDihedral = {0,0,0,0};
+    wing.blend.OutTEDihedral = {0,5,0,0};
+    wing.blend.InLEStrength = {1,1,0.75,1.10};
+    wing.blend.InTEStrength = {1,0.3,1,1};
+    wing.blend.OutLEStrength = {1,1,1,1.59};
+    wing.blend.OutTEStrength = {1,1,1,1.64};
 
     script.makeWing(wing, 2,  wing.typeOfWing);
     std::cout << "   - Main wing created (with flap and aileron)" << std::endl;
@@ -199,52 +198,66 @@ int main()
     //--- HORIZONTAL TAIL ---
     VSP::Wing horizontal;
     horizontal.id = "horizontal";
-    horizontal.typeOfWing = TypeOfWing::STRAIGHT_TAPERED;
+    horizontal.typeOfWing = TypeOfWing::ELLIPTICAL;
     ac.hor.id = horizontal.id;
     horizontal.type = "WING";
     horizontal.useDetailedPanels = true;
     horizontal.airfoilType = "XS_FOUR_SERIES";
-    horizontal.camber = {0.2, 0.2};
-    horizontal.camberloc = {0.4, 0.4};
-    horizontal.thickchord = {0.12, 0.12};
+    horizontal.idealcl = {0.0, 0.0, 0.0};
+    horizontal.camberloc = {0.2, 0.2, 0.2};
+    horizontal.thickchord = {0.09, 0.09, 0.08};
     horizontal.twist = {0,0};
     horizontal.twistloc = {0,0};
-    horizontal.xloc = 31.77;
+    horizontal.xloc = 8.010;
     horizontal.yloc = 0.0;
-    horizontal.zloc = 1.089;
+    horizontal.zloc = 0.170;
     horizontal.xrot = 0;
     horizontal.yrot = 0;
     // horizontal.span = {2.622};
-    horizontal.span = {5.97783};
+    horizontal.capTreatment = false;
+    horizontal.span = {1.00659,0.50};
     // horizontal.ctip = {0.698};
-    horizontal.ctip = {1.318};
-    // horizontal.croot = {1.298};
+    horizontal.ctip = {0.87500,0.21825};
+    horizontal.croot = {1.10000, 0.87500};
+    
 
-    horizontal.capTreatment = true;
-    horizontal.croot = {4.0, 1.318};
-    horizontal.capLength = {0.31468};
-    horizontal.capOffset = {0.0};
-    horizontal.capStrength = {1.0};
-    horizontal.capType = {"Round"};
-
-    horizontal.sweep = {33.040};
-    horizontal.sweeploc = {0};
-    horizontal.secsweeploc = {1};
-    horizontal.dihedral = {8.4};
-    horizontal.sectessU = {15};
+    horizontal.sweep = {8.0,36.92857};
+    horizontal.sweeploc = {0,0};
+    horizontal.secsweeploc = {1,1};
+    horizontal.dihedral = {0,0};
+    horizontal.sectessU = {15,6};
     horizontal.wtess = {25};
     horizontal.mov.type = {'e'};
-    horizontal.mov.eta_inner = {0.190068};
-    horizontal.mov.eta_outer = {1.0};
-    horizontal.mov.cf_c_inner = {0.28};
-    horizontal.mov.cf_c_outer = {0.28};
+    horizontal.mov.eta_inner = {0.05};
+    horizontal.mov.eta_outer = {0.97};
+    horizontal.mov.cf_c_inner = {0.365};
+    horizontal.mov.cf_c_outer = {0.365};
     horizontal.mov.tessellation = {10};
     horizontal.mov.defl = {0};
 
     ac.hor.mov.type = horizontal.mov.type;
     ac.hor.mov.defl = horizontal.mov.defl;
 
-    script.makeWing(horizontal, 2);
+    horizontal.blending = true;
+
+    horizontal.blend.InLEMode = {0,1,1};
+    horizontal.blend.InTEMode = {0,1,1};
+    horizontal.blend.OutLEMode = {1,1,0};
+    horizontal.blend.OutTEMode = {1,1,0};
+    horizontal.blend.InLESweep = {0,15,60};
+    horizontal.blend.OutLESweep = {0,15,0};
+    horizontal.blend.InLEDihedral = {0,0,0};
+    horizontal.blend.OutLEDihedral = {-0,-0,-0};
+    horizontal.blend.InTESweep = {0,-9.50,-55.0};
+    horizontal.blend.OutTESweep = {0,-9.50,0};
+    horizontal.blend.InTEDihedral = {0,-0,-0};
+    horizontal.blend.OutTEDihedral = {0,0,0};
+    horizontal.blend.InLEStrength = {1,1,1};
+    horizontal.blend.InTEStrength = {1,1,1};
+    horizontal.blend.OutLEStrength = {1,1,1.59};
+    horizontal.blend.OutTEStrength = {1,1,1.51};
+
+    script.makeWing(horizontal, 2, horizontal.typeOfWing);
     std::cout << "   - Horizontal tail created (with elevator)" << std::endl;
 
     std::cout << "     - Calculating MAC..." << std::endl;
@@ -255,70 +268,66 @@ int main()
     // --- VERTICAL TAIL ---
     VSP::Wing vertical;
     vertical.id = "vertical";
-    vertical.typeOfWing = TypeOfWing::STRAIGHT_TAPERED;
+    vertical.typeOfWing = TypeOfWing::ELLIPTICAL;
     ac.ver.id = vertical.id;
     vertical.type = "WING";
     vertical.airfoilType = "XS_FOUR_SERIES";
     vertical.useDetailedPanels = true;
-    vertical.camber = {0, 0, 0, 0, 0};
-    vertical.camberloc = {0.2, 0.2, 0.2, 0.2, 0.2};
-    vertical.thickchord = {0.12, 0.12, 0.12, 0.12, 0.12};
-    vertical.twist = {0, 0, 0, 0};
-    vertical.twistloc = {0, 0, 0, 0};
-    vertical.xloc = 28.304;
-    vertical.zloc = 2.787;
+    vertical.idealcl = {0, 0, 0, 0};
+    vertical.camberloc = {0.2, 0.2, 0.2, 0.2};
+    vertical.thickchord = {0.09,0.09,0.09,0.08};
+    vertical.twist = {0, 0, 0};
+    vertical.twistloc = {0, 0, 0};
+    vertical.xloc = 8.238;
+    vertical.zloc = -0.236;
     vertical.yloc = 0.0;
 
     vertical.xrot = 90;
     vertical.yrot = 0;
-    vertical.zrot = -2.5;
+    vertical.zrot = 5.0;
 
-    vertical.span = {0.469, 0.734, 4.20030, 0.46670};
-    vertical.ctip = {5.404, 4.66825, 1.996, 1.615};
-    vertical.croot = {7.40267, 5.404, 4.66825, 1.996};
-    vertical.sweep = {77.37, 50.560, 40.050, 46.190};
-    vertical.sweeploc = {0, 0, 0, 0};
-    vertical.secsweeploc = {1, 1, 1, 1};
-    vertical.dihedral = {0, 0, 0, 0};
+    vertical.span = {0.35,0.90,0.35};
+    vertical.ctip = {1.40, 0.7, 0.15};
+    vertical.croot = {1.0, 1.4, 0.7};
+    vertical.sweep = {-18,32,40};
+    vertical.sweeploc = {0, 0, 0};
+    vertical.secsweeploc = {1, 1, 1};
+    vertical.dihedral = {0, 0, 0};
 
     vertical.blending = true;
 
-    vertical.blend.InLEMode = {0, 4, 0, 0, 0};
-    vertical.blend.InTEMode = {0, 0, 0, 0, 0};
-    vertical.blend.OutLEMode = {0, 0, 0, 2, 0};
-    vertical.blend.OutTEMode = {0, 0, 0, 0, 0};
-    vertical.blend.InLESweep = {0, 0, 0, 0, 0};
-    vertical.blend.OutLESweep = {0, 0, 0, 0, 0};
-    vertical.blend.InLEDihedral = {0, 0, 0, 0, 0};
-    vertical.blend.OutLEDihedral = {0, 0, 0, 0, 0};
-    vertical.blend.InTESweep = {0, 0, 0, 0, 0};
-    vertical.blend.OutTESweep = {0, 0, 0, 0, 0};
-    vertical.blend.InTEDihedral = {0, 0, 0, 0, 0};
-    vertical.blend.OutTEDihedral = {0, 0, 0, 0, 0};
-    vertical.blend.InLEStrength = {1, 0.4, 1, 1, 1};
-    vertical.blend.InTEStrength = {1, 1, 1, 1, 1};
-    vertical.blend.OutLEStrength = {1, 1, 1, 1.30, 1};
-    vertical.blend.OutTEStrength = {1, 1, 1, 1, 1};
-    // vertical.sweep = {60, 32.85714};
-    // vertical.sweep = {73.84152, 30.12277};
-    // vertical.sweeploc = {0, 0};
-    // vertical.secsweeploc = {1, 1};
-    // vertical.dihedral = {0, 0};
-    vertical.sectessU = {15, 15, 15, 15};
+    vertical.blend.InLEMode = {0, 1, 1, 0};
+    vertical.blend.InTEMode = {0, 1, 1, 0};
+    vertical.blend.OutLEMode = {1, 1, 1, 0};
+    vertical.blend.OutTEMode = {1, 1, 1, 0};
+    vertical.blend.InLESweep = {0, 20, 36, 0};
+    vertical.blend.OutLESweep = {-50, 20, 36, 0};
+    vertical.blend.InLEDihedral = {0, 0, 0, 0};
+    vertical.blend.OutLEDihedral = {0, 0, 0, 0};
+    vertical.blend.InTESweep = {0, 6, -22.5, 0};
+    vertical.blend.OutTESweep = {70, 6, -22.5, 0};
+    vertical.blend.InTEDihedral = {0, 0, 0, 0};
+    vertical.blend.OutTEDihedral = {0, 0, 0, 0};
+    vertical.blend.InLEStrength = {1, 1, 1, 1};
+    vertical.blend.InTEStrength = {1, 1, 1, 1};
+    vertical.blend.OutLEStrength = {1, 0.75, 1, 1.06};
+    vertical.blend.OutTEStrength = {2, 1, 1, 1.23};
+   
+    vertical.sectessU = {15, 15, 15};
     vertical.wtess = {25};
     vertical.mov.type = {'r'};
     vertical.mov.defl = {0};
-    vertical.mov.eta_inner = {0.141176};
-    vertical.mov.eta_outer = {1.0};
-    vertical.mov.cf_c_inner = {0.367212};
-    vertical.mov.cf_c_outer = {0.367212};
+    vertical.mov.eta_inner = {0.18};
+    vertical.mov.eta_outer = {0.97};
+    vertical.mov.cf_c_inner = {0.35};
+    vertical.mov.cf_c_outer = {0.35};
     vertical.mov.tessellation = {10};
     ac.ver.mov.type = vertical.mov.type;
     ac.ver.isSplittedDeflection = false;
     ac.ver.activatedRudder = {1};
     ac.ver.mov.defl = {0};
 
-    script.makeWing(vertical, 0);
+    script.makeWing(vertical, 0, vertical.typeOfWing);
     std::cout << "   - Vertical tail created (with rudder)" << std::endl;
 
     // --- FUSELAGE ---
@@ -326,15 +335,15 @@ int main()
     fus.id = "Fuselage";
     // fus.type = "TransportFuse";
     fus.advancedFuselage = true;
-    fus.fuselagePresetName = "AirbusGenericTransportJet";
+    fus.fuselagePresetName = "Spitfire_fuselage";
     fus.customFuselage = false;
 
     // fus.length         = 37.57;
     // fus.diameter       = 4.14;
     // fus.width          = 3.95010;
-    fus.length = 37.57;
-    fus.diameter = 4.141;
-    fus.width = 3.95010;
+    fus.length = 9.20;
+    fus.diameter = 1.21;
+    fus.width = 0.8250;
 
     fus.utess = 30;
     fus.wtess = 15;
@@ -350,45 +359,45 @@ int main()
     std::cout << "Tail arm: " << fus.tailArm << " m" << std::endl;
 
     // // --- NACELLE (engines) ---
-    VSP::Nacelle nac;
-    nac.id = "nacelle";
-    nac.advancedNacelle = true;
-    nac.nacellePresetName = "GeneralTurbofan";
-    // nac.nacellePresetName = "GeneralTurboProp_Spec2";
-    // nac.nacellePresetName = "GeneralTurboProp_Spec1";
+    // VSP::Nacelle nac;
+    // nac.id = "nacelle";
+    // nac.advancedNacelle = true;
+    // nac.nacellePresetName = "GeneralTurbofan";
+    // // nac.nacellePresetName = "GeneralTurboProp_Spec2";
+    // // nac.nacellePresetName = "GeneralTurboProp_Spec1";
+    // // nac.length = 3.458;
+    // // nac.diameter = 2.735;
+    // // nac.xloc = {13.06,13.06};
+    // // nac.yloc = {5.75,-5.75};
+    // // nac.zloc = {-1.283,-1.283};
+    // // nac.length = 2.72821;
     // nac.length = 3.458;
     // nac.diameter = 2.735;
-    // nac.xloc = {13.06,13.06};
-    // nac.yloc = {5.75,-5.75};
-    // nac.zloc = {-1.283,-1.283};
-    // nac.length = 2.72821;
-    nac.length = 3.458;
-    nac.diameter = 2.735;
-    nac.xloc = {13.006,13.006};
-    nac.yloc = {5.75, -5.75};
-    nac.zloc = {-1.283, -1.283};
-    nac.xrot = {0.0, 0.0};
-    nac.yrot = {0.0, 0.0};
-    nac.zrot = {0.0, 0.0};
+    // nac.xloc = {13.006,13.006};
+    // nac.yloc = {5.75, -5.75};
+    // nac.zloc = {-1.283, -1.283};
+    // nac.xrot = {0.0, 0.0};
+    // nac.yrot = {0.0, 0.0};
+    // nac.zrot = {0.0, 0.0};
 
-    // VSP::Disk disk;
-    // disk.id = "disk";
-    // disk.type = "Disk";
-    // disk.diameter = {1.950, 1.950};
-    // disk.xloc = {3.443, 3.443};
-    // disk.yloc = {2.295, -2.295};
-    // disk.zloc = {0.820, 0.820};
-    // disk.xrot = {0.0, 0.0};
-    // disk.yrot = {0.0, 0.0};
-    // disk.zrot = {0.0, 0.0};
-    // disk.utess = {8, 8};
-    // disk.wtess = {9, 9};
+    VSP::Disk disk;
+    disk.id = "disk";
+    disk.type = "Disk";
+    disk.diameter = {3.277};
+    disk.xloc = {0.0};
+    disk.yloc = {0.0};
+    disk.zloc = {0.0};
+    disk.xrot = {0.0};
+    disk.yrot = {0.0};
+    disk.zrot = {0.0};
+    disk.utess = {8};
+    disk.wtess = {9};
 
-    for (size_t i = 1; i <= nac.xloc.size(); i++)
+    for (size_t i = 1; i <= disk.xloc.size(); i++)
     {
 
-        script.makeNacelle(nac, i);
-        // script.MakeDisk(disk, i - 1);
+        //script.makeNacelle(nac, i);
+        script.MakeDisk(disk, i - 1);
     }
 
     // nac.type = "STACK";
@@ -689,7 +698,7 @@ int main()
         {horizontal.id, {0, 255, 0}},
         {vertical.id, {255, 0, 255}},
         {fus.id, {180, 180, 180}},
-        {nac.id, {100, 200, 255}}}; // matcha nacelle_1 e nacelle_2
+        {disk.id, {100, 200, 255}}}; // matcha nacelle_1 e nacelle_2
         // {&disk.id, {80, 80, 80}}};
 
     for (const auto &surf : components)
@@ -698,9 +707,9 @@ int main()
     }
 
     // Mostra la finestra 3D interattiva
-    // plotter.show();
+    plotter.show();
 
-    // plotter.saveAllViews(std::filesystem::current_path().string());
+    plotter.saveAllViews(std::filesystem::current_path().string());
 
     // ==================== COG CALCULATION ====================
 
@@ -723,13 +732,13 @@ double fuelMass = builder.getCommonData().getFuelWeight();
 
 // double CD0TotalAircraft = cd0Calc.getTotalCD0Aircraft();
 
-CDCalculator cdCalc (aircraftName, builder, ac, settings, wing, horizontal, vertical, fus, nac);
+CDCalculator cdCalc (aircraftName, builder, ac, settings, wing, horizontal, vertical, fus);
 
 std::vector<double> liftCoefficients;
 std::vector<double> dragCoefficients;
 std::vector<double> efficiencyAircraft; 
 
-CalculateAircrfatAlphaZeroLiftAngle alphaZeroLiftAngleCalc(builder, ac, settings, wing, horizontal, vertical, fus, nac);
+CalculateAircrfatAlphaZeroLiftAngle alphaZeroLiftAngleCalc(builder, ac, settings, wing, horizontal, vertical, fus);
 
 double aircrfatalphaZeroLiftAngle = alphaZeroLiftAngleCalc.getAircraftAlphaZeroLiftAngle();
 
