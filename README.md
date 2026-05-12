@@ -22,17 +22,21 @@ Full API documentation is available at:
 
 | Dependency | Required | Purpose |
 |------------|----------|---------|
-| **Boost** | Optional | gnuplot-iostream plotting |
-| **gnuplot** | Optional | 2D data visualization |
-| **Eigen** | Included | Linear algebra |
-| **gnuplot-iostream** | Included | gnuplot C++ wrapper |
-| **OpenXLSX** | Auto-downloaded | Excel file I/O |
-| **tinyxml2** | Auto-downloaded | XML parsing |
-| **VTK** | Optional | 3D aircraft visualization |
+| **Git** | Required | Clone AERO++ and vendored OpenXLSX |
+| **GCC / G++ MinGW64** | Required | C/C++ compilation |
+| **CMake + Ninja** | Required | Configure and build the project |
+| **Boost** | Required | gnuplot-iostream plotting and utility libraries |
+| **Eigen3** | Required via MSYS2 | Linear algebra include path |
+| **tinyxml2** | Required via MSYS2 | XML parsing |
+| **libzip** | Required | OpenXLSX ZIP backend; avoids MinGW/miniz FetchContent issues |
+| **OpenXLSX** | Vendored | Excel file I/O; pinned to commit `5723411d47643ce3b5b9994064c26ca8cd841f13` |
+| **gnuplot** | Recommended | 2D data visualization |
+| **VTK** | Recommended | 3D aircraft visualization |
+| **Python3** | Recommended | Build integration / scripting support |
 | **OpenCASCADE** | Optional | STEP/IGES geometry import |
-| **Python3** | Optional | Scripting / bindings |
+| **GDB** | Recommended | Debugging from MSYS2 or VS Code |
 
-> OpenXLSX and tinyxml2 are automatically downloaded via CMake FetchContent if not found.
+> On Windows/MSYS2, OpenXLSX is intentionally vendored in `third_party/OpenXLSX` instead of being downloaded by CMake FetchContent. This makes the student installation reproducible and avoids repeated network/tag/miniz issues.
 
 ---
 
@@ -51,55 +55,177 @@ sudo apt-get install build-essential cmake libboost-all-dev gnuplot libvtk9-dev
 brew install cmake boost gnuplot vtk
 ```
 
-### Windows (MSYS2 — Recommended)
+### Windows (MSYS2 — Recommended and tested)
 
-1. **Download and install MSYS2** from [msys2.org](https://www.msys2.org/)
+The validated Windows workflow is based on **MSYS2 MinGW64**. For best reliability, clone and build the repository inside the MSYS2 home directory:
 
-2. **Open MSYS2 MinGW 64-bit terminal** and run:
-
-```bash
-pacman -Syu                                    # Update package database
-pacman -S mingw-w64-x86_64-gcc
-pacman -S mingw-w64-x86_64-cmake
-pacman -S mingw-w64-x86_64-boost
-pacman -S mingw-w64-x86_64-gnuplot
-pacman -S mingw-w64-x86_64-vtk                 # 3D visualization
-pacman -S mingw-w64-x86_64-opencascade         # STEP/IGES import (optional)
-pacman -S mingw-w64-x86_64-python              # Python bindings (optional)
+```text
+C:\msys64\home\<your-user>\AEROPlusPlus
 ```
 
-> **Important:** Always use the **MSYS2 MinGW 64-bit** terminal, not the default MSYS2 terminal.
+In the MSYS2 MinGW64 terminal this is:
+
+```bash
+~/AEROPlusPlus
+```
+
+> **Important:** do not clone/build the project under `C:\Users\...\Documents` for the student workflow. Building under the MSYS2 home directory avoids Windows permission issues, incomplete CMake cache generation, and runtime-folder copy problems observed during installation tests.
+
+1. **Download and install MSYS2** from [msys2.org](https://www.msys2.org/).
+
+2. Open **MSYS2 MinGW 64-bit** and update the system:
+
+```bash
+pacman -Syu
+```
+
+If MSYS2 asks you to close the terminal, close it, reopen **MSYS2 MinGW 64-bit**, and run again:
+
+```bash
+pacman -Syu
+```
+
+3. Install the base toolchain and AERO++ dependencies:
+
+```bash
+pacman -S --needed \
+  git \
+  mingw-w64-x86_64-gcc \
+  mingw-w64-x86_64-cmake \
+  mingw-w64-x86_64-ninja \
+  mingw-w64-x86_64-boost \
+  mingw-w64-x86_64-eigen3 \
+  mingw-w64-x86_64-tinyxml2 \
+  mingw-w64-x86_64-libzip \
+  mingw-w64-x86_64-gnuplot \
+  mingw-w64-x86_64-gdb \
+  mingw-w64-x86_64-python
+```
+
+4. Install VTK and the dependency targets commonly required by MSYS2 VTK:
+
+```bash
+pacman -S --needed \
+  mingw-w64-x86_64-vtk \
+  mingw-w64-x86_64-nlohmann-json \
+  mingw-w64-x86_64-fast_float \
+  mingw-w64-x86_64-utf8cpp \
+  mingw-w64-x86_64-cli11 \
+  mingw-w64-x86_64-openvr \
+  mingw-w64-x86_64-hdf5 \
+  mingw-w64-x86_64-netcdf \
+  mingw-w64-x86_64-libogg \
+  mingw-w64-x86_64-libtheora \
+  mingw-w64-x86_64-cgns \
+  mingw-w64-x86_64-gl2ps \
+  mingw-w64-x86_64-proj \
+  mingw-w64-x86_64-qt6-declarative \
+  mingw-w64-x86_64-openslide \
+  mingw-w64-x86_64-adios2
+```
+
+5. Optional STEP/IGES support:
+
+```bash
+pacman -S --needed mingw-w64-x86_64-opencascade
+```
+
+6. Verify the installation:
+
+```bash
+git --version
+g++ --version
+cmake --version
+ninja --version
+gnuplot --version
+gdb --version
+python --version
+```
+
+> **Important:** always use the **MSYS2 MinGW 64-bit** terminal, not the default MSYS2 terminal.
 
 ---
 
 ## Quick Start
 
-### Build with CMake (Recommended)
+### Build with CMake (Windows/MSYS2 validated workflow)
+
+Run these commands from the **MSYS2 MinGW 64-bit** terminal.
 
 ```bash
+cd ~
 git clone https://github.com/Am3Software/AEROPlusPlus.git
 cd AEROPlusPlus
-mkdir build && cd build
-cmake ..
-cmake --build .
 ```
 
-CMake will automatically:
-- Download OpenXLSX and tinyxml2 if not found
-- Auto-detect VTK in common installation paths
-- Print a configuration summary with all detected dependencies
-- Skip unavailable optional features with a warning (no hard failures)
+Vendor the tested OpenXLSX version:
+
+```bash
+mkdir -p third_party
+git clone --no-checkout https://github.com/troldal/OpenXLSX.git third_party/OpenXLSX
+git -C third_party/OpenXLSX checkout 5723411d47643ce3b5b9994064c26ca8cd841f13
+```
+
+Verify that the OpenXLSX checkout is clean and at the expected commit:
+
+```bash
+git -C third_party/OpenXLSX describe --tags --always --dirty
+git -C third_party/OpenXLSX rev-parse HEAD
+git -C third_party/OpenXLSX status --short
+```
+
+Expected output:
+
+```text
+v0.3.2-227-g5723411
+5723411d47643ce3b5b9994064c26ca8cd841f13
+```
+
+Configure and build:
+
+```bash
+rm -rf build
+cmake -S . -B build -G Ninja \
+  -DCMAKE_BUILD_TYPE=Debug \
+  -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
+  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+  -Wno-dev
+
+cmake --build build
+```
+
+A successful CMake configuration must end with:
+
+```text
+-- Configuring done
+-- Generating done
+-- Build files have been written to: .../AEROPlusPlus/build
+```
+
+Then `build/CMakeCache.txt` and `build/build.ninja` must both exist.
 
 ### Run the tests
 
 ```bash
-./TestVSPCreator                  # Linux/macOS/MSYS2
-./PowerTestPropellerAircraft      # Linux/macOS/MSYS2
-TestVSPCreator.exe                # Windows CMD
-PowerTestPropellerAircraft.exe    # Windows CMD
+./build/SpitFire_Test.exe
+./build/TestVSPCreator.exe
+./build/PowerTestPropellerAircraft.exe
 ```
 
+If you want to build only one target:
+
+```bash
+cmake --build build --target SpitFire_Test
+```
+
+CMake will:
+- use the vendored OpenXLSX checkout;
+- use MSYS2 `tinyxml2`, `libzip`, Boost, Eigen3, Python3 and VTK;
+- request only the VTK components needed by the AERO++ visualization module;
+- copy runtime folders such as `AircraftSettings`, `FuselagePreset`, `NacellePreset` and `ExcelFiles` to the build directory when configured to do so.
+
 ### Custom VTK path
+
 
 If VTK is installed in a non-standard location:
 ```bash
@@ -218,10 +344,15 @@ AEROPlusPlus/
 │   └── A320Neo_Test.cpp
 ├── logo/                       # Project logo (used in PNG exports)
 │   └── AeroPlusPLus_logo.png
+├── AircraftSettings/           # Runtime aircraft XML settings
+├── FuselagePreset/             # OpenVSP fuselage presets
+├── NacellePreset/              # OpenVSP nacelle presets
 ├── ExcelFiles/                 # Example Excel data files
+├── third_party/OpenXLSX/       # Vendored OpenXLSX checkout
 ├── CMakeLists.txt
 ├── README.md
 └── LICENSE
+```
 
 ---
 
@@ -252,6 +383,45 @@ std::cout << "Xcg: " << cog.getCOGData().xCG << " m\n";
 ---
 
 ## Troubleshooting
+
+
+### Windows/MSYS2 path rule
+
+Clone and build AERO++ inside the MSYS2 home directory:
+
+```bash
+cd ~
+git clone https://github.com/Am3Software/AEROPlusPlus.git
+cd AEROPlusPlus
+```
+
+Do not use `C:\Users\...\Documents` for the validated student workflow. If the project is placed outside the MSYS2 home tree, Windows permissions can interfere with CMake cache generation, file copying, and runtime data folders.
+
+### CMakeCache.txt missing
+
+If `build/CMakeCache.txt` is missing, the CMake configure step did not complete successfully. Do not run `cmake --build build`. Instead:
+
+```bash
+rm -rf build
+cmake -S . -B build -G Ninja \
+  -DCMAKE_BUILD_TYPE=Debug \
+  -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
+  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+  -Wno-dev 2>&1 | tee configure.log
+
+grep -n "CMake Error" configure.log
+tail -80 configure.log
+```
+
+### OpenXLSX API errors
+
+If the compiler reports missing `XLForceOverwrite` or `XLWorksheet::column(std::string const&)`, the wrong OpenXLSX version is being used. Recreate the vendored checkout:
+
+```bash
+rm -rf third_party/OpenXLSX
+git clone --no-checkout https://github.com/troldal/OpenXLSX.git third_party/OpenXLSX
+git -C third_party/OpenXLSX checkout 5723411d47643ce3b5b9994064c26ca8cd841f13
+```
 
 ### "VTK not found"
 ```bash

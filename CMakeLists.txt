@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(AEROPlusPlus LANGUAGES CXX)
+project(AEROPlusPlus LANGUAGES C CXX)
 
 # ============================================================
 # AERO++ student/portable CMakeLists
@@ -50,17 +50,31 @@ add_compile_definitions(
 )
 
 # ------------------------------------------------------------
-# MinGW compatibility shim for OpenXLSX
+# MinGW compatibility shim for OpenXLSX  [MODIFICA 1: robusto]
+# - Riscrive il file solo se manca o se il contenuto è cambiato
+# - Evita touch inutili che forzerebbero ricompile di tutto OpenXLSX
 # ------------------------------------------------------------
 if(MINGW)
     set(AEROPP_OPENXLSX_COMPAT_HEADER "${CMAKE_BINARY_DIR}/AEROPlusPlusOpenXLSXCompat.h")
-    file(WRITE "${AEROPP_OPENXLSX_COMPAT_HEADER}"
+    set(AEROPP_OPENXLSX_COMPAT_CONTENT
 "#pragma once
 #include <cstdint>
 #include <algorithm>
 ")
+    set(_aeropp_write_compat ON)
+    if(EXISTS "${AEROPP_OPENXLSX_COMPAT_HEADER}")
+        file(READ "${AEROPP_OPENXLSX_COMPAT_HEADER}" _aeropp_existing_compat)
+        if(_aeropp_existing_compat STREQUAL "${AEROPP_OPENXLSX_COMPAT_CONTENT}")
+            set(_aeropp_write_compat OFF)
+        endif()
+    endif()
+    if(_aeropp_write_compat)
+        file(WRITE "${AEROPP_OPENXLSX_COMPAT_HEADER}" "${AEROPP_OPENXLSX_COMPAT_CONTENT}")
+        message(STATUS "Generated OpenXLSX MinGW compat header: ${AEROPP_OPENXLSX_COMPAT_HEADER}")
+    else()
+        message(STATUS "OpenXLSX MinGW compat header up to date: ${AEROPP_OPENXLSX_COMPAT_HEADER}")
+    endif()
     add_compile_options(-include "${AEROPP_OPENXLSX_COMPAT_HEADER}")
-    message(STATUS "Generated OpenXLSX MinGW compat header: ${AEROPP_OPENXLSX_COMPAT_HEADER}")
 endif()
 
 # ------------------------------------------------------------
@@ -104,8 +118,30 @@ if(NOT pugixml_FOUND)
     find_package(pugixml QUIET)
 endif()
 
-find_package(VTK CONFIG REQUIRED)
+# ------------------------------------------------------------
+# VTK: request only the components needed by AERO++ visualization
+# ------------------------------------------------------------
+set(AEROPP_VTK_COMPONENTS
+    CommonCore
+    CommonColor
+    CommonDataModel
+    CommonExecutionModel
+    FiltersCore
+    FiltersGeneral
+    FiltersGeometry
+    FiltersSources
+    IOImage
+    IOGeometry
+    RenderingCore
+    RenderingOpenGL2
+    RenderingFreeType
+    RenderingAnnotation
+    InteractionStyle
+)
+
+find_package(VTK CONFIG REQUIRED COMPONENTS ${AEROPP_VTK_COMPONENTS})
 message(STATUS "VTK found: ${VTK_VERSION}")
+message(STATUS "VTK components: ${AEROPP_VTK_COMPONENTS}")
 
 find_package(OpenCASCADE CONFIG QUIET)
 if(OpenCASCADE_FOUND)
@@ -176,10 +212,16 @@ target_compile_definitions(AEROPlusPlusCommon INTERFACE
     _HAS_STD_BYTE=0
 )
 
+# [MODIFICA 2] Boost moderno: target nominati invece di ${Boost_LIBRARIES}
 target_link_libraries(AEROPlusPlusCommon INTERFACE
     OpenXLSX
     Python3::Python
-    ${Boost_LIBRARIES}
+    Boost::atomic
+    Boost::chrono
+    Boost::container
+    Boost::date_time
+    Boost::serialization
+    Boost::thread
     ${VTK_LIBRARIES}
 )
 
@@ -285,7 +327,9 @@ foreach(cpp_file IN LISTS AEROPP_TEST_CPP)
 endforeach()
 
 # ------------------------------------------------------------
-# Copy runtime data folders into build/
+# Copy runtime data folders into build/  [MODIFICA 5: niente REMOVE_RECURSE]
+# - file(COPY) di default non sovrascrive file più recenti
+# - Non cancella più tutto a ogni configure: output di test/run preservati
 # ------------------------------------------------------------
 set(AEROPP_RUNTIME_DIRS
     AircraftSettings
@@ -296,9 +340,12 @@ set(AEROPP_RUNTIME_DIRS
 )
 
 foreach(runtime_dir IN LISTS AEROPP_RUNTIME_DIRS)
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${runtime_dir}")
-        file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/${runtime_dir}" DESTINATION "${CMAKE_BINARY_DIR}")
-        message(STATUS "Copied runtime directory to build/: ${runtime_dir}")
+    set(runtime_src "${CMAKE_CURRENT_SOURCE_DIR}/${runtime_dir}")
+    set(runtime_dst_parent "${CMAKE_BINARY_DIR}")
+
+    if(EXISTS "${runtime_src}")
+        file(COPY "${runtime_src}" DESTINATION "${runtime_dst_parent}")
+        message(STATUS "Synced runtime directory to build/: ${runtime_dir}")
     else()
         message(STATUS "Runtime directory not present, skipping: ${runtime_dir}")
     endif()

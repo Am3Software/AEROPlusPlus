@@ -286,14 +286,14 @@
         <tr><td class="name">gnuplot</td><td class="desc">Optional</td><td class="desc">2D data visualization</td></tr>
         <tr><td class="name">Eigen</td><td class="desc">Included</td><td class="desc">Linear algebra</td></tr>
         <tr><td class="name">gnuplot-iostream</td><td class="desc">Included</td><td class="desc">gnuplot C++ wrapper</td></tr>
-        <tr><td class="name">OpenXLSX</td><td class="desc">Auto-downloaded</td><td class="desc">Excel file I/O</td></tr>
-        <tr><td class="name">tinyxml2</td><td class="desc">Auto-downloaded</td><td class="desc">XML parsing</td></tr>
+        <tr><td class="name">OpenXLSX</td><td class="desc">Vendored</td><td class="desc">Excel file I/O; pinned to commit <code style="font-family:var(--mono);font-size:12px">5723411d47643ce3b5b9994064c26ca8cd841f13</code></td></tr>
+        <tr><td class="name">tinyxml2</td><td class="desc">Required via MSYS2</td><td class="desc">XML parsing</td></tr>
         <tr><td class="name">VTK</td><td class="desc">Optional</td><td class="desc">3D aircraft visualization</td></tr>
         <tr><td class="name">OpenCASCADE</td><td class="desc">Optional</td><td class="desc">STEP/IGES geometry import</td></tr>
         <tr><td class="name">Python3</td><td class="desc">Optional</td><td class="desc">Scripting / bindings</td></tr>
       </tbody>
     </table>
-    <div class="note-block" style="margin-top:12px">OpenXLSX and tinyxml2 are automatically downloaded via CMake <code style="font-family:var(--mono);font-size:12px">FetchContent</code> if not found on the system.</div>
+    <div class="note-block" style="margin-top:12px">On Windows/MSYS2, OpenXLSX is intentionally vendored under <code style="font-family:var(--mono);font-size:12px">third_party/OpenXLSX</code> instead of being downloaded by CMake FetchContent. This keeps the student installation reproducible and avoids network/tag/miniz issues.</div>
     <h2>Project Structure</h2>
     <pre style="background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:var(--mono);font-size:12.5px;color:var(--text-muted);overflow-x:auto;margin-bottom:32px;">AEROPlusPlus/
 ├── include/                    # All API headers (header-only)
@@ -303,8 +303,11 @@
 │   ├── DegenGeomParser.h       # OpenVSP DegenGeom CSV parser
 │   └── *.h                     # Other AERO++ API headers
 ├── test/                       # Test / example files
-├── logo/                       # Project logo (PNG exports)
+├── AircraftSettings/           # Runtime aircraft XML settings
+├── FuselagePreset/             # OpenVSP fuselage presets
+├── NacellePreset/              # OpenVSP nacelle presets
 ├── ExcelFiles/                 # Example Excel data files
+├── third_party/OpenXLSX/       # Vendored OpenXLSX checkout
 ├── CMakeLists.txt
 ├── README.md
 └── LICENSE</pre>
@@ -326,17 +329,53 @@
 sudo apt-get install build-essential cmake libboost-all-dev gnuplot libvtk9-dev</pre>
     <h2 id="installation-macos">macOS</h2>
     <pre style="background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:var(--mono);font-size:12.5px;color:var(--green);overflow-x:auto;margin-bottom:24px;">brew install cmake boost gnuplot vtk</pre>
-    <h2 id="installation-windows">Windows (MSYS2 — Recommended)</h2>
+    <h2 id="installation-windows">Windows (MSYS2 — Recommended and tested)</h2>
     <p class="description" style="margin-bottom:12px">1. Download and install <strong>MSYS2</strong> from <a href="https://www.msys2.org/" style="color:var(--accent)">msys2.org</a>.</p>
-    <p class="description" style="margin-bottom:12px">2. Open the <strong>MSYS2 MinGW 64-bit</strong> terminal and run:</p>
-    <pre style="background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:var(--mono);font-size:12.5px;color:var(--green);overflow-x:auto;margin-bottom:12px;">pacman -Syu                                    <span style="color:var(--text-dim)"># Update package database</span>
-pacman -S mingw-w64-x86_64-gcc
-pacman -S mingw-w64-x86_64-cmake
-pacman -S mingw-w64-x86_64-boost
-pacman -S mingw-w64-x86_64-gnuplot
-pacman -S mingw-w64-x86_64-vtk                 <span style="color:var(--text-dim)"># 3D visualization</span>
-pacman -S mingw-w64-x86_64-opencascade         <span style="color:var(--text-dim)"># STEP/IGES import (optional)</span>
-pacman -S mingw-w64-x86_64-python              <span style="color:var(--text-dim)"># Python bindings (optional)</span></pre>
+    <div class="note-block" style="margin-bottom:12px">For the validated student workflow, clone and build AERO++ inside the MSYS2 home directory: <code style="font-family:var(--mono);font-size:12px">C:\msys64\home\&lt;user&gt;\AEROPlusPlus</code>, which corresponds to <code style="font-family:var(--mono);font-size:12px">~/AEROPlusPlus</code> in MSYS2. Do not use <code style="font-family:var(--mono);font-size:12px">C:\Users\...\Documents</code> for the recommended installation.</div>
+    <p class="description" style="margin-bottom:12px">2. Open the <strong>MSYS2 MinGW 64-bit</strong> terminal and update the system:</p>
+    <pre style="background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:var(--mono);font-size:12.5px;color:var(--green);overflow-x:auto;margin-bottom:12px;">pacman -Syu</pre>
+    <p class="description" style="margin-bottom:12px">If MSYS2 asks you to close the terminal, close it, reopen <strong>MSYS2 MinGW 64-bit</strong>, and run <code style="font-family:var(--mono);font-size:12px">pacman -Syu</code> again.</p>
+    <p class="description" style="margin-bottom:12px">3. Install the base toolchain and AERO++ dependencies:</p>
+    <pre style="background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:var(--mono);font-size:12.5px;color:var(--green);overflow-x:auto;margin-bottom:12px;">pacman -S --needed \
+  git \
+  mingw-w64-x86_64-gcc \
+  mingw-w64-x86_64-cmake \
+  mingw-w64-x86_64-ninja \
+  mingw-w64-x86_64-boost \
+  mingw-w64-x86_64-eigen3 \
+  mingw-w64-x86_64-tinyxml2 \
+  mingw-w64-x86_64-libzip \
+  mingw-w64-x86_64-gnuplot \
+  mingw-w64-x86_64-gdb \
+  mingw-w64-x86_64-python</pre>
+    <p class="description" style="margin-bottom:12px">4. Install VTK and the dependency targets commonly required by the MSYS2 VTK package:</p>
+    <pre style="background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:var(--mono);font-size:12.5px;color:var(--green);overflow-x:auto;margin-bottom:12px;">pacman -S --needed \
+  mingw-w64-x86_64-vtk \
+  mingw-w64-x86_64-nlohmann-json \
+  mingw-w64-x86_64-fast_float \
+  mingw-w64-x86_64-utf8cpp \
+  mingw-w64-x86_64-cli11 \
+  mingw-w64-x86_64-openvr \
+  mingw-w64-x86_64-hdf5 \
+  mingw-w64-x86_64-netcdf \
+  mingw-w64-x86_64-libogg \
+  mingw-w64-x86_64-libtheora \
+  mingw-w64-x86_64-cgns \
+  mingw-w64-x86_64-gl2ps \
+  mingw-w64-x86_64-proj \
+  mingw-w64-x86_64-qt6-declarative \
+  mingw-w64-x86_64-openslide \
+  mingw-w64-x86_64-adios2</pre>
+    <p class="description" style="margin-bottom:12px">5. Optional STEP/IGES support:</p>
+    <pre style="background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:var(--mono);font-size:12.5px;color:var(--green);overflow-x:auto;margin-bottom:12px;">pacman -S --needed mingw-w64-x86_64-opencascade</pre>
+    <p class="description" style="margin-bottom:12px">6. Verify the installation:</p>
+    <pre style="background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:var(--mono);font-size:12.5px;color:var(--green);overflow-x:auto;margin-bottom:12px;">git --version
+g++ --version
+cmake --version
+ninja --version
+gnuplot --version
+gdb --version
+python --version</pre>
     <div class="note-block">Always use the <strong>MSYS2 MinGW 64-bit</strong> terminal, not the default MSYS2 terminal.</div>
   </div>
   <hr class="section-divider">
@@ -352,20 +391,35 @@ pacman -S mingw-w64-x86_64-python              <span style="color:var(--text-dim
       <div class="class-brief">Clone the repository, build with CMake, and run the test suite in minutes.</div>
     </div>
     <h2 id="quickstart-build">Build with CMake</h2>
-    <pre style="background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:var(--mono);font-size:12.5px;color:var(--green);overflow-x:auto;margin-bottom:12px;">git clone https://github.com/Am3Software/AEROPlusPlus.git
+    <pre style="background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:var(--mono);font-size:12.5px;color:var(--green);overflow-x:auto;margin-bottom:12px;">cd ~
+git clone https://github.com/Am3Software/AEROPlusPlus.git
 cd AEROPlusPlus
-mkdir build &amp;&amp; cd build
-cmake ..
-cmake --build .</pre>
-    <p class="description" style="margin-top:8px;margin-bottom:24px">CMake will automatically download <strong>OpenXLSX</strong> and <strong>tinyxml2</strong> if not found, auto-detect VTK, and print a configuration summary. Optional features that are not available are skipped with a warning (no hard failures).</p>
-    <h2 id="quickstart-run">Run the tests</h2>
-    <pre style="background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:var(--mono);font-size:12.5px;color:var(--green);overflow-x:auto;margin-bottom:12px;"><span style="color:var(--text-dim)"># Linux / macOS / MSYS2</span>
-./TestVSPCreator
-./PowerTestPropellerAircraft
 
-<span style="color:var(--text-dim)"># Windows CMD</span>
-TestVSPCreator.exe
-PowerTestPropellerAircraft.exe</pre>
+mkdir -p third_party
+git clone --no-checkout https://github.com/troldal/OpenXLSX.git third_party/OpenXLSX
+git -C third_party/OpenXLSX checkout 5723411d47643ce3b5b9994064c26ca8cd841f13
+
+git -C third_party/OpenXLSX describe --tags --always --dirty
+git -C third_party/OpenXLSX rev-parse HEAD
+git -C third_party/OpenXLSX status --short
+
+rm -rf build
+cmake -S . -B build -G Ninja \
+  -DCMAKE_BUILD_TYPE=Debug \
+  -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
+  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+  -Wno-dev
+
+cmake --build build</pre>
+    <p class="description" style="margin-top:8px;margin-bottom:24px">The validated Windows/MSYS2 workflow builds from <code style="font-family:var(--mono);font-size:12px">~/AEROPlusPlus</code>. OpenXLSX is vendored at commit <code style="font-family:var(--mono);font-size:12px">5723411d47643ce3b5b9994064c26ca8cd841f13</code>, while tinyxml2, libzip, Boost, Eigen3, Python3 and VTK are provided by MSYS2 packages. A successful configure ends with <code style="font-family:var(--mono);font-size:12px">Configuring done</code>, <code style="font-family:var(--mono);font-size:12px">Generating done</code>, and creates both <code style="font-family:var(--mono);font-size:12px">build/CMakeCache.txt</code> and <code style="font-family:var(--mono);font-size:12px">build/build.ninja</code>.</p>
+    <h2 id="quickstart-run">Run the tests</h2>
+    <pre style="background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:var(--mono);font-size:12.5px;color:var(--green);overflow-x:auto;margin-bottom:12px;"><span style="color:var(--text-dim)"># MSYS2 MinGW64, from ~/AEROPlusPlus</span>
+./build/SpitFire_Test.exe
+./build/TestVSPCreator.exe
+./build/PowerTestPropellerAircraft.exe
+
+<span style="color:var(--text-dim)"># Build one target only</span>
+cmake --build build --target SpitFire_Test</pre>
     <h2 id="quickstart-integrate">Use in your project</h2>
     <h3 style="color:var(--accent2);font-size:14px;margin-bottom:8px">Method 1 — Include directly</h3>
     <pre style="background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:var(--mono);font-size:12.5px;color:var(--text-muted);overflow-x:auto;margin-bottom:16px;"><span style="color:var(--accent)">#include</span> <span style="color:var(--green)">"AEROPlusPlus/include/Plotter3D.h"</span>
@@ -383,6 +437,17 @@ PowerTestPropellerAircraft.exe</pre>
     <h2>Custom VTK path</h2>
     <p class="description" style="margin-bottom:8px">If VTK is installed in a non-standard location:</p>
     <pre style="background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:var(--mono);font-size:12.5px;color:var(--green);overflow-x:auto;margin-bottom:24px;">cmake -DVTK_DIR=/path/to/vtk/cmake ..</pre>
+    <h2>Windows/MSYS2 Troubleshooting</h2>
+    <div class="note-block" style="margin-bottom:12px">If <code style="font-family:var(--mono);font-size:12px">build/CMakeCache.txt</code> is missing, CMake did not complete successfully. Remove the build folder and re-run the configure command; do not run <code style="font-family:var(--mono);font-size:12px">cmake --build build</code> until both <code style="font-family:var(--mono);font-size:12px">CMakeCache.txt</code> and <code style="font-family:var(--mono);font-size:12px">build.ninja</code> exist.</div>
+    <pre style="background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:var(--mono);font-size:12.5px;color:var(--green);overflow-x:auto;margin-bottom:24px;">rm -rf build
+cmake -S . -B build -G Ninja \
+  -DCMAKE_BUILD_TYPE=Debug \
+  -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
+  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+  -Wno-dev 2&gt;&amp;1 | tee configure.log
+
+grep -n "CMake Error" configure.log
+tail -80 configure.log</pre>
   </div>
   <hr class="section-divider">
 
