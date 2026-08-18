@@ -49,7 +49,7 @@ Makefile
 
 # Test outputs
 Testing/
-*.png
-*.jpg
+#*.png
+#*.jpg
 *.pdf
 plot_*.txt
