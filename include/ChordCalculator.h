@@ -48,7 +48,7 @@ public:
         {
 
         case TypeOfWing::STRAIGHT_TAPERED:
-
+        case TypeOfWing::ELLIPTICAL:
         {
 
             std::vector<double> etaStationInboard;
