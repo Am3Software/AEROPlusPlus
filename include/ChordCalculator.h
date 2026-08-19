@@ -167,10 +167,21 @@ public:
 
                 bool foundEta = (etaStation >= etaStationVecMin - eps && etaStation <= etaStationVecMax + eps);
                
+                if (typeOfWing ==TypeOfWing::STRAIGHT_TAPERED) {
 
                 Interpolant chordInterp(etaStationVec, chords, 1, RegressionMethod::LINEAR);
 
-                return foundEta ? chordInterp.getYValueFromRegression(etaStation) : throw std::invalid_argument("Eta station not found in the stations vector.");
+                 return foundEta ? chordInterp.getYValueFromRegression(etaStation) : throw std::invalid_argument("Eta station not found in the stations vector.");
+                }
+
+                else {
+
+                double kFactorToEllipticalApproximation = 1.0 - std::pow((wingPtr->ctip.back() / wingPtr->croot.front()), 2); // This factor can be adjusted based on the specific wing geometry
+                return wingPtr->croot.front() * std::sqrt(1 - kFactorToEllipticalApproximation * std::pow(etaStation, 2));
+
+                }
+
+               
             }
         }
 
