@@ -7,7 +7,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/C%2B%2B-17-blue?style=flat-square" alt="C++17">
   <img src="https://img.shields.io/badge/license-Apache--2.0-green?style=flat-square" alt="License">
-  <img src="https://img.shields.io/badge/platform-20Windows-lightgrey?style=flat-square" alt="Platforms">
+  <img src="https://img.shields.io/badge/platform-Windows-lightgrey?style=flat-square" alt="Platforms">
 </p>
 
 ---
