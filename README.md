@@ -18,8 +18,6 @@
 
 AERO++ is a header-only C++ API for aircraft preliminary design — covering aerodynamics, weight & balance, inertia, performance, statistical analysis, 3D visualization, and data export.
 
-## Features
-...
 
 ## Features
 
