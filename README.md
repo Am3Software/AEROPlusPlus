@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="logo/AeroPlusPLus_logo.png" alt="AERO++ logo" width="500">
+  <img src="logo_README/AeroPlusPlus_logo_cropped.png" alt="AERO++ logo" width="500">
 </p>
 <p align="center">
   <em>A modern C++ header-only API for aircraft preliminary design</em>
