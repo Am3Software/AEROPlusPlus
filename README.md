@@ -1,4 +1,8 @@
-# AERO++
+<p align="center">
+  <img src="logo/AeroPlusPLus_logo.png" alt="AERO++ logo" width="200">
+</p>
+
+<h1 align="center">AERO++</h1>
 
 C++ header-only API for aircraft preliminary design — aerodynamics, weight & balance, inertia, performance, statistical analysis, 3D visualization, and data export.
 
