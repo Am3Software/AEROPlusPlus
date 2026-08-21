@@ -3,7 +3,8 @@ Copyright 2024-2026 Amedeo Falco
 
 This product includes software developed by Amedeo Falco
 as part of the AERO++ project (C++17 header-only API for
-stability derivatives, inertia calulation, mass&balance,data visualization, statistical anlysis ), 
+stability derivatives,aerodynamic evaluation, inertia calulation, 
+mass&balance,data visualization, statistical analysis ), 
 developed by the author during his reaserch fellowship.
 
 Licensed under the Apache License, Version 2.0 (the "License");
